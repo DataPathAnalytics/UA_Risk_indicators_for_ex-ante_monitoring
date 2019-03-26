@@ -14,7 +14,7 @@ public class CpvCatalogue {
     private Integer id;
     @Column(name = "cpv_code")
     private String cpvCode;
-    @Column(name = "name", length = 600)
+    @Column(name = "name", length = 300)
     private String name;
     @Column(name = "cpv")
     private String cpv;

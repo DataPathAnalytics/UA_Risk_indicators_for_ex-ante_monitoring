@@ -8,8 +8,6 @@ import com.datapath.integration.utils.DateUtils;
 import com.datapath.integration.utils.ProzorroRequestUrlCreator;
 import com.datapath.persistence.entities.*;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -52,10 +50,8 @@ public class ProzorroTenderLoaderService implements TenderLoaderService {
     public TenderResponseEntity loadTender(TenderUpdateInfo tenderUpdateInfo) {
         final String tenderUrl = ProzorroRequestUrlCreator.createTenderUrl(
                 TENDERS_SEARCH_URL, tenderUpdateInfo.getId());
-        log.info("Fetching url: {}", tenderUrl);
-        ResponseEntity<String> exchange = restTemplate.exchange(tenderUrl, HttpMethod.GET, null, String.class);
-        log.info("Fetched url: {}, status: {}", tenderUrl, exchange.getStatusCodeValue());
-        final String responseData = exchange.getBody();
+
+        final String responseData = restTemplate.getForObject(tenderUrl, String.class);
         TenderResponseEntity tender = new TenderResponseEntity();
         tender.setData(responseData);
         tender.setId(tenderUpdateInfo.getId());

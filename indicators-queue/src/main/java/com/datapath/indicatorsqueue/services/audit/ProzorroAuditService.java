@@ -8,9 +8,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static java.util.Objects.nonNull;
 
 @Slf4j
 @Service
@@ -24,6 +30,10 @@ public class ProzorroAuditService {
         this.restTemplate = restTemplate;
     }
 
+    public static ZonedDateTime parseZonedDateTime(String zonedDateTimeStr) {
+        return ZonedDateTime.parse(zonedDateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss[.SSSSSS]XXX"));
+    }
+
     public List<Monitoring> getMonitorings() throws IOException {
         log.info("Fetching monitorings by url {}", AUDIT_API_URL);
         List<Monitoring> monitorings = new ArrayList<>();
@@ -31,19 +41,40 @@ public class ProzorroAuditService {
         String auditApiUrl = AUDIT_API_URL;
         do {
             pageMonitorings = new ArrayList<>();
-            String rawMonitorings = restTemplate.getForObject(auditApiUrl, String.class);
+            log.info("Fetching monitorings by url {}", auditApiUrl);
+            String rawMonitorings = restTemplate.getForObject(URLDecoder.decode(auditApiUrl, "utf8"), String.class);
             ObjectMapper mapper = new ObjectMapper();
             JsonNode jsonNode = mapper.readTree(rawMonitorings);
             for (JsonNode node : jsonNode.get("data")) {
                 String monitoringId = node.at("/id").asText();
                 String rawMonitoring = restTemplate.getForObject(
-                        auditApiUrl + "/" + monitoringId, String.class);
+                        AUDIT_API_URL + "/" + monitoringId, String.class);
 
                 JsonNode monitoringNode = mapper.readTree(rawMonitoring);
+
+                String startDate = monitoringNode.at("/data/monitoringPeriod/startDate").asText();
+                String endDate = monitoringNode.at("/data/monitoringPeriod/endDate").asText();
+
 
                 Monitoring monitoring = new Monitoring();
                 monitoring.setId(monitoringNode.at("/data/tender_id").asText());
                 monitoring.setStatus(monitoringNode.at("/data/status").asText());
+                monitoring.setCauses(new ArrayList<>());
+                for (JsonNode tempNode : monitoringNode.at("/data/reasons")) {
+                    monitoring.getCauses().add(tempNode.asText());
+                }
+                monitoring.setStartDate(parseZonedDateTime(startDate));
+                monitoring.setEndDate(nonNull(endDate)
+                        ? parseZonedDateTime(endDate)
+                        : parseZonedDateTime(startDate).plusDays(15)
+                );
+                String appealDocUrl = auditApiUrl + "/" + monitoringId + "/appeal";
+                String appealDoc = restTemplate.getForObject(
+                        appealDocUrl, String.class);
+                JsonNode monitoringAppealNode = mapper.readTree(appealDoc);
+                monitoring.setAppeal(monitoringAppealNode.has("/data/documents"));
+                monitoring.setMonitoringId(monitoringId);
+                monitoring.setOffice(getOfficeFromMonitoringNode(monitoringNode));
 
                 pageMonitorings.add(monitoring);
             }
@@ -51,9 +82,34 @@ public class ProzorroAuditService {
             monitorings.addAll(pageMonitorings);
             auditApiUrl = jsonNode.at("/next_page/uri").asText();
 
-        } while (!pageMonitorings.isEmpty());
+        } while (pageMonitorings.size() > 10);
 
         log.info("Fetched {} monitorings", monitorings.size());
+        return monitorings;
+    }
+
+    private String getOfficeFromMonitoringNode(JsonNode monitoringNode) {
+        Iterator<JsonNode> parties = monitoringNode.at("/data/parties").elements();
+        String monitoringOffice = null;
+        while (parties.hasNext()) {
+            JsonNode party = parties.next();
+            Iterator<JsonNode> roles = party.at("/roles").elements();
+            while (roles.hasNext()) {
+                if (roles.next().asText().equals("sas")) {
+                    monitoringOffice = party.at("/name").asText();
+                    break;
+                }
+            }
+            if (monitoringOffice != null) {
+                break;
+            }
+        }
+        return monitoringOffice;
+    }
+
+
+    public List<Monitoring> getActiveMonitorings() throws IOException {
+        List<Monitoring> monitorings = getMonitorings();
 
         List<Monitoring> activeMonitorings = monitorings.stream()
                 .filter(monitoring -> monitoring.getStatus().equals("active"))

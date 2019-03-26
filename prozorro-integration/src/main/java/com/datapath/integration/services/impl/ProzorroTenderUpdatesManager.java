@@ -1,6 +1,7 @@
 package com.datapath.integration.services.impl;
 
 import com.datapath.integration.domain.*;
+import com.datapath.integration.email.EmailSender;
 import com.datapath.integration.parsers.exceptions.TenderValidationException;
 import com.datapath.integration.parsers.impl.ContractParser;
 import com.datapath.integration.parsers.impl.TenderParser;
@@ -22,10 +23,14 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 
+import java.io.IOException;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -36,6 +41,7 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
     private TenderLoaderService tenderLoaderService;
     private ContractLoaderService contractLoaderService;
     private TransactionVariablesResolver tvResolver;
+    private Map<String, ZonedDateTime> failedTenders;
     private TenderDataValidator tenderDataValidator;
 
     private boolean updatesAvailable;
@@ -50,6 +56,7 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
         this.contractLoaderService = contractLoaderService;
         this.tenderDataValidator = tenderDataValidator;
         this.serviceStatus = ServiceStatus.ENABLED;
+        this.failedTenders = new HashMap<>();
     }
 
     @Async
@@ -65,7 +72,7 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
                 log.info("Fetch tenders from Prozorro: url = {}", url);
                 try {
                     TendersPageResponseEntity tendersPageResponseEntity = tenderLoaderService.loadTendersPage(url);
-                    String nextPageUrl = URLDecoder.decode(tendersPageResponseEntity.getNextPage().getUri(), "UTF-8");
+                    String nextPageUrl = URLDecoder.decode(tendersPageResponseEntity.getNextPage().getUri(), StandardCharsets.UTF_8.name());
                     log.info("Next page url {}", nextPageUrl);
                     log.info("Fetched {} items", tendersPageResponseEntity.getItems().size());
                     List<TenderUpdateInfo> items = tendersPageResponseEntity.getItems();
@@ -77,7 +84,7 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
                                 return;
                             }
                             TenderResponseEntity tenderResponseEntity = tenderLoaderService.loadTender(tenderUpdateInfo);
-                            log.info("Fetched tender: id = {}", tenderResponseEntity.getId());
+                            log.info("Fetching tender: id = {}", tenderResponseEntity.getId());
                             TenderParser tenderParser = TenderParser.create(tenderResponseEntity.getData());
                             Tender tender = tenderParser.buildTenderEntity();
                             tender.setSource(EntitySource.TENDERING.toString());
@@ -104,14 +111,14 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
                                     contract.setTenderContract(tenderContract);
                                     tenderContract.setContract(contract);
                                 } catch (Exception ex) {
-                                    ex.printStackTrace();
                                     tenderContract.setContract(null);
-                                    log.warn("Contract with outer id {} not found", tenderContract.getOuterId());
+                                    log.warn("Contract with outer id {} not found", tenderContract.getOuterId(), ex);
                                 }
                             }
 
                             if (!tenderDataValidator.isValidTender(tender)) {
-                                log.error("Tender validation failed.");
+                                log.error("Tender validation failed. Tender outer id = {}", tender.getOuterId());
+                                sendValidationFailedReport(tender);
                                 continue;
                             }
 
@@ -119,23 +126,20 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
                             setUpdatesAvailability(true);
                             log.info("Tender saved, id = {}", savedTender.getId());
                         } catch (TenderValidationException e) {
-                            e.printStackTrace();
-                            log.warn("Tender expired or it is test tender: outerId = {}", tenderUpdateInfo.getId());
+                            log.warn("Tender expired or it is test tender: outerId = {}", tenderUpdateInfo.getId(), e);
                         } catch (ConstraintViolationException e) {
-                            e.printStackTrace();
-                            log.error("Error while processing the tender: outerId = {} ", tenderUpdateInfo.getId());
+                            log.error("Error while processing the tender: outerId = {} ", tenderUpdateInfo.getId(), e);
                             removeTender(tenderUpdateInfo.getId());
                             changeServiceStatus(ServiceStatus.ENABLED);
                             return;
                         } catch (ResourceAccessException e) {
-                            e.printStackTrace();
-                            log.error("Error in loading tenders: outerId = {}", e.getMessage());
+                            log.error("Error in loading tenders: outerId = {}", e.getMessage(), e);
                             changeServiceStatus(ServiceStatus.ENABLED);
                             return;
                         } catch (Exception e) {
-                            e.printStackTrace();
-                            log.error("Error while processing the tender: outerId = {}", tenderUpdateInfo.getId());
+                            log.error("Error while processing the tender: outerId = {}", tenderUpdateInfo.getId(), e);
                             changeServiceStatus(ServiceStatus.ENABLED);
+                            sendNotification(tenderUpdateInfo);
                             return;
                         }
                     }
@@ -144,20 +148,17 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
                         log.info("No items found on page. Tenders loading break");
                         break;
                     }
-
                     log.info("All tenders from page {} saved.", url);
                     url = nextPageUrl;
                 } catch (ResourceAccessException e) {
-                    log.error("Error in loading tenders. {}", e.getMessage());
-                    e.printStackTrace();
+                    log.error("Error in loading tenders. {}", e.getMessage(), e);
                     changeServiceStatus(ServiceStatus.ENABLED);
                     return;
                 }
             }
         } catch (Exception e) {
             changeServiceStatus(ServiceStatus.ENABLED);
-            log.error("Error in processing tenders. {}", e.getMessage());
-            e.printStackTrace();
+            log.error("Error in processing tenders. {}", e.getMessage(), e);
         }
 
         changeServiceStatus(ServiceStatus.ENABLED);
@@ -186,6 +187,10 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
                 String tenderCPV = tvResolver.getTenderCPV(tender);
                 tender.setTvTenderCPV(tenderCPV);
 
+//                if (tenderDataValidator.isTenderFromFinanceCategory(tender)) {
+//                    return;
+//                }
+
                 // Contracts loading
                 for (TenderContract tenderContract : tender.getTenderContracts()) {
                     ContractUpdateInfo contractUpdateInfo = new ContractUpdateInfo();
@@ -201,29 +206,41 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
                         e.printStackTrace();
                         changeServiceStatus(ServiceStatus.ENABLED);
                         return;
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                        tenderContract.setContract(null);
-                        log.warn("Contract with outer id {} not found", tenderContract.getOuterId());
                     }
                 }
 
                 if (!tenderDataValidator.isValidTender(tender)) {
                     log.error("Tender validation failed. Tender outer id = {}", tender.getOuterId());
+                    sendValidationFailedReport(tender);
                     continue;
                 }
 
                 Tender savedTender = tenderLoaderService.saveTender(tender);
                 log.info("Tender saved {} ", savedTender.getId());
             } catch (ResourceAccessException e) {
-                log.error("Error in loading tender {}", tenderUpdateInfo.getId());
-                e.printStackTrace();
+                log.error("Error in loading tender {}", tenderUpdateInfo.getId(), e);
             } catch (Exception ex) {
-                ex.printStackTrace();
-                log.info("Failed to load tender {}", tenderUpdateInfo.getId());
+                log.info("Failed to load tender {}", tenderUpdateInfo.getId(), ex);
             }
         }
     }
+
+    private boolean newTendersVersionExists(TenderUpdateInfo tenderUpdateInfo, Tender tender) {
+        if (tenderUpdateInfo.getDateModified().isBefore(tender.getDateModified())) {
+            log.info("Newest version of tender {} exists.", tenderUpdateInfo.getId());
+            return true;
+        }
+        return false;
+    }
+
+    private void updateTenderContract(TenderContract tenderContract, ContractUpdateInfo contractUpdateInfo) throws IOException {
+        ContractResponseEntity contractResponseEntity = contractLoaderService.loadContract(contractUpdateInfo);
+        Contract contract = ContractParser.create(contractResponseEntity.getData()).buildContractEntity();
+        contract.setSource(EntitySource.TENDERING.toString());
+        contract.setTenderContract(tenderContract);
+        tenderContract.setContract(contract);
+    }
+
 
     @Async
     @Override
@@ -258,8 +275,27 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
             tenderLoaderService.removeTenderByOuterId(outerId);
             log.info("Tender {} deleted", outerId);
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.info("Tender delete error. Tender outer id: {}", outerId);
+            log.info("Tender delete error. Tender outer id: {}", outerId, ex);
         }
+    }
+
+    private void sendNotification(TenderUpdateInfo tenderUpdateInfo) {
+        ZonedDateTime failedTenderTime = failedTenders.get(tenderUpdateInfo.getId());
+        if (failedTenderTime != null) {
+            if (ZonedDateTime.now().minusHours(1).isAfter(failedTenderTime)) {
+                log.info("Tender {} loading failed. Send email notification...");
+                boolean isSent = EmailSender.sendFailedTenderNotification(tenderUpdateInfo.getId());
+                log.info("Notification {} sent", isSent ? "" : "not");
+                failedTenders.remove(tenderUpdateInfo.getId());
+            }
+        } else {
+            failedTenders.put(tenderUpdateInfo.getId(), ZonedDateTime.now());
+        }
+    }
+
+    private void sendValidationFailedReport(Tender tender) {
+        log.info("Tender {} validation failed. Send email notification...");
+        boolean isSent = EmailSender.sendTenderValidationFailedNotification(tender.getOuterId());
+        log.info("Notification {} sent", isSent ? "" : "not");
     }
 }

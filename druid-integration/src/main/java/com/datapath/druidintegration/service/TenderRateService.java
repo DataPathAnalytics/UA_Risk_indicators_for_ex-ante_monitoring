@@ -9,8 +9,7 @@ import com.datapath.druidintegration.model.druid.response.common.Event;
 import com.datapath.persistence.entities.Indicator;
 import com.datapath.persistence.repositories.IndicatorRepository;
 import com.datapath.persistence.repositories.TenderRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -25,19 +24,17 @@ import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
 @Service
+@Slf4j
 public class TenderRateService {
 
-    protected static final Logger LOG = LoggerFactory.getLogger(TenderRateService.class);
-
-    private final static Double RISK_IMPORTANCE_SHARE = 0.5;
-    private final static Double AMOUNT_IMPORTANCE_SHARE = 0.5;
-
-    private final static String TENDER_OUTER_ID = "tenderOuterId";
-    private final static String INDICATOR_ID = "indicatorId";
-    private final static String INDICATOR_VALUE = "indicatorValue";
-    private final static String INDICATOR_IMPACT = "indicatorImpact";
-    private final static String ITERATION_ID = "iterationId";
-    private final static String STATUS = "status";
+    private static final Double RISK_IMPORTANCE_SHARE = 0.5;
+    private static final Double AMOUNT_IMPORTANCE_SHARE = 0.5;
+    private static final String TENDER_OUTER_ID = "tenderOuterId";
+    private static final String INDICATOR_ID = "indicatorId";
+    private static final String INDICATOR_VALUE = "indicatorValue";
+    private static final String INDICATOR_IMPACT = "indicatorImpact";
+    private static final String ITERATION_ID = "iterationId";
+    private static final String STATUS = "status";
 
     private String druidUrl;
     private String tenderIndex;
@@ -70,22 +67,9 @@ public class TenderRateService {
         this.indicatorRepository = indicatorRepository;
     }
 
-
     public List<TenderScore> getResult() {
 
-        GroupByRequest tendersWithAtLeastOneRiskRequest = GroupByRequest
-                .builder()
-                .queryType("groupBy")
-                .granularity("all")
-                .intervals("2017/2020")
-                .dataSource(GroupByRequest.DataSource.builder().type("table").name(tenderIndex).build())
-                .dimensions(Collections.singletonList(TENDER_OUTER_ID))
-                .filter(new IntFilter("selector", INDICATOR_VALUE, 1))
-                .limitSpec(GroupByRequest.LimitSpec.builder()
-                        .type("default")
-                        .limit(1000000)
-                        .build())
-                .build();
+        GroupByRequest tendersWithAtLeastOneRiskRequest = buildRequestWithLeastOneRiskTender();
 
         GroupByResponse[] tendersWithAtLeastOneRiskResponse = restTemplate.postForObject(druidUrl,
                 tendersWithAtLeastOneRiskRequest, GroupByResponse[].class);
@@ -107,8 +91,7 @@ public class TenderRateService {
 
         Map<String, Double> tenderAmountMap = topTendersWithAmount.stream()
                 .map(item -> (Object[]) item)
-                .collect(Collectors.toMap(
-                        i -> i[0].toString(), i -> Double.valueOf(i[1].toString()), (oldTender, newTender) -> newTender));
+                .collect(Collectors.toMap(i -> i[0].toString(), i -> Double.valueOf(i[1].toString()), (oldTender, newTender) -> newTender));
 
         List<String> topTenders = new ArrayList<>(tenderAmountMap.keySet());
         Map<String, Double> tenderIdScoreMap = new HashMap<>();
@@ -116,7 +99,7 @@ public class TenderRateService {
         if (!topTenders.isEmpty()) {
             for (int start = 0; start < topTenders.size(); start += chunkSize) {
                 int end = Math.min(topTenders.size(), start + chunkSize);
-                LOG.info(start + " - " + end + " of " + topTenders.size() + " are checking");
+                log.info(start + " - " + end + " of " + topTenders.size() + " are checking");
 
                 GroupByRequest tendersIndicatorsMaxIteration = new GroupByRequest(tenderIndex, "2017/2020");
                 tendersIndicatorsMaxIteration.setDimensions(Arrays.asList(TENDER_OUTER_ID, INDICATOR_ID));
@@ -128,9 +111,9 @@ public class TenderRateService {
 
                     List<Event> response = Arrays.stream(tendersIndicatorsMaxIterationResponse).map(GroupByResponse::getEvent).collect(Collectors.toList());
 
-                    List<Filter> filterList = response.stream().map((event) -> {
-                        StringFilter tenderIdFilter = new StringFilter("selector", TENDER_OUTER_ID, event.getTenderOuterId());
+                    List<Filter> filterList = response.stream().map(event -> {
                         StringFilter indicatorIdFilter = new StringFilter("selector", INDICATOR_ID, event.getIndicatorId());
+                        StringFilter tenderIdFilter = new StringFilter("selector", TENDER_OUTER_ID, event.getTenderOuterId());
                         IntFilter iterationIdFilter = new IntFilter("selector", ITERATION_ID, event.getMaxIteration().intValue());
                         IntFilter indicatorValueFilter = new IntFilter("selector", INDICATOR_VALUE, 1);
                         ListStringFilter indicatorsFilter = new ListStringFilter("in", INDICATOR_ID, indicatorIds);
@@ -197,7 +180,6 @@ public class TenderRateService {
                     .boxed()
                     .collect(Collectors.toMap(tenderAmounts::get, i -> i + 1));
 
-
             tenderIdScoreSortedMap.forEach((tenderOuterId, value) -> {
                 Double tenderRiskScore = Double.valueOf(tenderRiskScoreRankMap.get(value)) * RISK_IMPORTANCE_SHARE;
                 Double amountScore = Double.valueOf(tenderAmountsRankMap.get(tenderAmountMap.get(tenderOuterId))) * AMOUNT_IMPORTANCE_SHARE;
@@ -205,11 +187,9 @@ public class TenderRateService {
             });
 
             Map<String, Double> sortedTenderRiskScoreMap = tenderRiskScoreMap.entrySet().stream()
-                    .sorted(Map.Entry.comparingByValue())
                     .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-            List outerIds = sortedTenderRiskScoreMap.entrySet().stream()
-                    .map(Map.Entry::getKey).collect(Collectors.toList());
+            List outerIds = new ArrayList<>(sortedTenderRiskScoreMap.keySet());
 
             int partitionSize = 1000;
             List<List<String>> partitions = new ArrayList<>();
@@ -226,24 +206,15 @@ public class TenderRateService {
                         .stream()
                         .map(obj -> {
                             Object[] objArr = (Object[]) obj;
-
                             String tenderOuterId = (String) objArr[0];
-                            String tenderId = (String) objArr[1];
-                            Double amount = (Double) objArr[2];
-                            String procuringEntityId = (String) objArr[3];
-                            String region = (String) objArr[4];
-                            Double score = sortedTenderRiskScoreMap.get(tenderOuterId);
-                            Double impact = tenderIdScoreMap.get(tenderOuterId);
-
                             TenderScore tenderScore = new TenderScore();
                             tenderScore.setOuterId(tenderOuterId);
-                            tenderScore.setTenderId(tenderId);
-                            tenderScore.setScore(score);
-                            tenderScore.setExpectedValue(amount);
-                            tenderScore.setRegion(region);
-                            tenderScore.setImpact(impact);
-                            tenderScore.setProcuringEntityId(procuringEntityId);
-
+                            tenderScore.setTenderId((String) objArr[1]);
+                            tenderScore.setScore(sortedTenderRiskScoreMap.get(tenderOuterId));
+                            tenderScore.setExpectedValue((Double) objArr[2]);
+                            tenderScore.setRegion((String) objArr[4]);
+                            tenderScore.setImpact(tenderIdScoreMap.get(tenderOuterId));
+                            tenderScore.setProcuringEntityId((String) objArr[3]);
                             return tenderScore;
                         })
                         .sorted(Comparator.comparing(TenderScore::getScore))
@@ -252,11 +223,26 @@ public class TenderRateService {
             });
 
             Collections.reverse(finalTenderScores);
-
             return finalTenderScores;
         }
 
         return Collections.emptyList();
+    }
+
+    GroupByRequest buildRequestWithLeastOneRiskTender() {
+        return GroupByRequest
+                .builder()
+                .queryType("groupBy")
+                .granularity("all")
+                .intervals("2017/2020")
+                .dataSource(GroupByRequest.DataSource.builder().type("table").name(tenderIndex).build())
+                .dimensions(Collections.singletonList(TENDER_OUTER_ID))
+                .filter(new IntFilter("selector", INDICATOR_VALUE, 1))
+                .limitSpec(GroupByRequest.LimitSpec.builder()
+                        .type("default")
+                        .limit(1000000)
+                        .build())
+                .build();
     }
 
 

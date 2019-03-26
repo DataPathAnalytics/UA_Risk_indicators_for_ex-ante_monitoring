@@ -2,11 +2,15 @@ package com.datapath.persistence.migration;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
 public class MigrationActuator implements InitializingBean {
+
+    @Value("${com.datapath.scheduling.enabled}")
+    private boolean schedulingEnabled;
 
     private MigrationRegistry migrationRegistry;
 
@@ -28,6 +32,8 @@ public class MigrationActuator implements InitializingBean {
 
     @Override
     public void afterPropertiesSet() {
-        startMigration();
+        if (schedulingEnabled) {
+            startMigration();
+        }
     }
 }

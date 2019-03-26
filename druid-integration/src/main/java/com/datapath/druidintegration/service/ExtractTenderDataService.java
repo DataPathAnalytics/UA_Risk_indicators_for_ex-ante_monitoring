@@ -6,12 +6,12 @@ import com.datapath.druidintegration.model.druid.request.GroupByRequest;
 import com.datapath.druidintegration.model.druid.request.SelectRequest;
 import com.datapath.druidintegration.model.druid.request.TopNRequest;
 import com.datapath.druidintegration.model.druid.request.common.Filter;
-import com.datapath.druidintegration.model.druid.request.common.Metric;
 import com.datapath.druidintegration.model.druid.request.common.impl.*;
 import com.datapath.druidintegration.model.druid.response.GroupByResponse;
 import com.datapath.druidintegration.model.druid.response.SelectResponse;
 import com.datapath.druidintegration.model.druid.response.TopNResponse;
 import com.datapath.druidintegration.model.druid.response.common.Event;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -27,28 +27,10 @@ import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
 @Service
-public class ExtractTenderDataService {
+@Slf4j
+public class ExtractTenderDataService extends ExtractorService {
 
-    private static final String UTC_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
-
-    private final static String DATE = "date";
-    private final static String TENDER_ID = "tenderId";
-    private final static String TENDER_OUTER_ID = "tenderOuterId";
-    private final static String CONTRACT_ID = "contractId";
-    private final static String CONTRACT_OUTER_ID = "contractOuterId";
-    private final static String INDICATOR_TYPE = "indicatorType";
-    private final static String INDICATOR_ID = "indicatorId";
-    private final static String INDICATOR_VALUE = "indicatorValue";
-    private final static String INDICATOR_IMPACT = "indicatorImpact";
-    private final static String ITERATION_ID = "iterationId";
-    private final static String PROCEDURE_TYPE = "procedureType";
-    private final static String STATUS = "status";
-    private final static String LOT_IDS = "lotIds";
-
-    private String druidUrl;
     private String tenderIndex;
-    private RestTemplate restTemplate;
-
     @Value("${druid.url}")
     public void setDruidUrl(String url) {
         this.druidUrl = url;
@@ -68,10 +50,6 @@ public class ExtractTenderDataService {
         return getFilterByTenderIds(Collections.singletonList(tenderId));
     }
 
-    private StringFilter getFilterByIndicatorId(String indicatorId) {
-        return new StringFilter("selector", INDICATOR_ID, indicatorId);
-    }
-
     private StringFilter getFilterByTenderIds(List<String> tenderIds) {
         StringFilter filter = new StringFilter();
         filter.setType("or");
@@ -79,29 +57,6 @@ public class ExtractTenderDataService {
         ListStringFilter outerIdsFilter = new ListStringFilter("in", TENDER_OUTER_ID, tenderIds);
         filter.setFields(Arrays.asList(tenderIdsFilter, outerIdsFilter));
         return filter;
-    }
-
-    private Filter getFilterByTenderIndicator(DruidTenderIndicator druidIndicator) {
-        FilterImpl filter = new FilterImpl();
-        List<Filter> filters = new ArrayList<>();
-        filter.setType("and");
-
-        filters.add(new StringFilter("selector", TENDER_ID, druidIndicator.getTenderId()));
-        filters.add(new StringFilter("selector", INDICATOR_ID, druidIndicator.getIndicatorId()));
-        filters.add(new IntFilter("selector", INDICATOR_VALUE, druidIndicator.getIndicatorValue()));
-
-        if (!druidIndicator.getLotIds().isEmpty()) {
-            ListStringFilter lotsFilter = new ListStringFilter();
-            lotsFilter.setType("and");
-            lotsFilter.setFields(druidIndicator.getLotIds()
-                    .stream()
-                    .map(item -> new StringFilter("selector", LOT_IDS, item))
-                    .collect(Collectors.toList()));
-            filters.add(lotsFilter);
-        }
-        filter.setFields(filters);
-        return filter;
-
     }
 
     public List<Event> getLastIterationData(String tenderId, String indicatorId, Long iterationId) {
@@ -134,7 +89,7 @@ public class ExtractTenderDataService {
             aggregation.setFieldName(ITERATION_ID);
 
             groupByRequest.setAggregations(Collections.singletonList(aggregation));
-            groupByRequest.setFilter(getFilterByTenderIndicator(indicator));
+            groupByRequest.setFilter(getFilterByIndicator(indicator));
             GroupByResponse[] postForObject = restTemplate.postForObject(druidUrl, groupByRequest, GroupByResponse[].class);
             return isNull(postForObject) || postForObject.length == 0 ? null : postForObject[0].getEvent().getMaxIteration().intValue();
         }).collect(Collectors.toList());
@@ -145,7 +100,7 @@ public class ExtractTenderDataService {
     }
 
     public Boolean theLastTenderEquals(String tenderId, String indicatorId, List<DruidTenderIndicator> druidIndicator) {
-        return Objects.equals(findLastIterationForTenderIndicatorsData(druidIndicator), getMaxTenderIndicatorIteration(tenderId, indicatorId));
+        return Objects.equals(findLastIterationForTenderIndicatorsData(druidIndicator), getMaxIndicatorIteration(getFilterByTenderId(tenderId), indicatorId, tenderIndex));
     }
 
     public List<Event> getTenderDataByTenderId(TendersFilter tendersFilter) {
@@ -177,20 +132,6 @@ public class ExtractTenderDataService {
                 : postForObject[0].getResult().getEvents().stream().map(SelectResponse.Result.Events::getEvent).collect(Collectors.toList());
     }
 
-    private Metric getTopNMetricByDate(String order) {
-        if (order.equals("desc")) {
-            SimpleMetricImpl metric = new SimpleMetricImpl();
-            metric.setMetric("tmax");
-            return metric;
-        } else {
-            MetricWithInnerImpl metric = new MetricWithInnerImpl();
-            metric.setType("inverted");
-            MetricWithInnerImpl.InnerMetric innerMetric = new MetricWithInnerImpl.InnerMetric();
-            innerMetric.setMetric("tmax");
-            metric.setMetric(innerMetric);
-            return metric;
-        }
-    }
 
     private List<Event> getTimePeriodRiskTenderData(String startDate, String endDate, Integer limit, String order, TendersFilter tendersFilter) {
         Set<String> tenderIds = new HashSet<>();
@@ -290,7 +231,6 @@ public class ExtractTenderDataService {
         return getTendersHistoryByIds(tenderIds);
     }
 
-
     private TopNResponse[] getTopNLastTenders(String startDate, String endDate, Integer limit, String order) {
         TopNRequest topTenders = TopNRequest.builder()
                 .dataSource(tenderIndex)
@@ -321,7 +261,6 @@ public class ExtractTenderDataService {
 
         return restTemplate.postForObject(druidUrl, topTenders, TopNResponse[].class);
     }
-
 
     private GroupByResponse[] getGroupByLastTenders(String startDate, String endDate, Integer limit, String order, TendersFilter tendersFilter) {
 
@@ -524,31 +463,10 @@ public class ExtractTenderDataService {
         return resultList;
     }
 
-
     private ZonedDateTime convertStringDate(String date) {
         return ZonedDateTime.parse(date, DateTimeFormatter.ofPattern(UTC_DATE_TIME_FORMAT)).withZoneSameLocal(ZoneOffset.UTC);
     }
 
-
-    public Long getMaxTenderIndicatorIteration(String tenderId, String indicatorId) {
-        GroupByRequest groupByRequest = new GroupByRequest(tenderIndex, "2015/2020");
-        SimpleAggregationImpl aggregation = new SimpleAggregationImpl();
-        aggregation.setType("longMax");
-        aggregation.setName("maxIteration");
-        aggregation.setFieldName(ITERATION_ID);
-
-        groupByRequest.setAggregations(Collections.singletonList(aggregation));
-        FilterImpl filter = new FilterImpl();
-        filter.setType("and");
-        filter.setFields(Arrays.asList(getFilterByTenderId(tenderId), getFilterByIndicatorId(indicatorId)));
-        groupByRequest.setFilter(filter);
-
-        GroupByResponse[] postForObject = restTemplate.postForObject(druidUrl, groupByRequest, GroupByResponse[].class);
-        if (postForObject != null) {
-            return postForObject.length == 0 ? 0 : postForObject[0].getEvent().getMaxIteration();
-        }
-        return 0L;
-    }
 
     public Map<String, Long> getMaxTenderIndicatorIteration(Set<String> tenderIds, String indicatorId) {
 
@@ -556,24 +474,20 @@ public class ExtractTenderDataService {
         GroupByRequest groupByRequest = new GroupByRequest(tenderIndex, "2015/2020");
         SimpleAggregationImpl aggregation = new SimpleAggregationImpl();
         aggregation.setType("longMax");
-        aggregation.setName("maxIteration");
         aggregation.setFieldName(ITERATION_ID);
-
         groupByRequest.setAggregations(Collections.singletonList(aggregation));
-
         groupByRequest.setDimensions(Collections.singletonList(TENDER_OUTER_ID));
 
-        FilterImpl resultFilter = new FilterImpl();
         List<Filter> filterList = tenderIds.stream().map(tenderId -> {
             FilterImpl filter = new FilterImpl();
             filter.setType("and");
-            filter.setFields(Arrays.asList(getFilterByTenderId(tenderId), getFilterByIndicatorId(indicatorId)));
+            filter.setFields(Arrays.asList(getFilterByTenderId(tenderId), new StringFilter("selector", INDICATOR_ID, indicatorId)));
             return filter;
         }).collect(Collectors.toList());
 
+        FilterImpl resultFilter = new FilterImpl();
         resultFilter.setType("or");
         resultFilter.setFields(filterList);
-
         groupByRequest.setFilter(resultFilter);
 
         try {
@@ -590,7 +504,7 @@ public class ExtractTenderDataService {
                 }
             });
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error(ex.getMessage(), ex);
         }
         return result;
     }
@@ -601,24 +515,10 @@ public class ExtractTenderDataService {
 
         GroupByRequest groupByRequest = new GroupByRequest(tenderIndex, "2015/2020");
         groupByRequest.setDimensions(Arrays.asList(TENDER_OUTER_ID, INDICATOR_VALUE));
-        List<Filter> filterList = tenderIterations.entrySet().stream().map(item -> {
-            String tenderId = item.getKey();
-            Long iteration = item.getValue();
-            FilterImpl filter = new FilterImpl();
-            filter.setType("and");
-            StringFilter tenderIdFilter = new StringFilter("selector", TENDER_OUTER_ID, tenderId);
-            IntFilter iterationFilter = new IntFilter("selector", ITERATION_ID, iteration.intValue());
-            StringFilter indicatorFilter = new StringFilter("selector", INDICATOR_ID, indicatorId);
-            filter.setFields(Arrays.asList(tenderIdFilter, iterationFilter, indicatorFilter));
-            return filter;
-        }).collect(Collectors.toList());
-
         FilterImpl filter = new FilterImpl();
         filter.setType("or");
-        filter.setFields(filterList);
-
+        filter.setFields(getFilters(tenderIterations, indicatorId));
         groupByRequest.setFilter(filter);
-
         GroupByResponse[] postForObject = restTemplate.postForObject(druidUrl, groupByRequest, GroupByResponse[].class);
 
         if (postForObject != null && postForObject.length != 0) {
@@ -630,15 +530,8 @@ public class ExtractTenderDataService {
         return result;
     }
 
-    public Map<String, Map<String, Integer>> getMaxTendersLotIterationData(Map<String, Long> tenderIterations, String indicatorId) {
-
-        Map<String, Map<String, Integer>> result = new HashMap<>();
-        tenderIterations.keySet().forEach(tenderId->{
-            result.put(tenderId, new HashMap<>());
-        });
-        GroupByRequest groupByRequest = new GroupByRequest(tenderIndex, "2015/2020");
-        groupByRequest.setDimensions(Arrays.asList(TENDER_OUTER_ID, INDICATOR_VALUE, LOT_IDS));
-        List<Filter> filterList = tenderIterations.entrySet().stream().map(item -> {
+    private List<Filter> getFilters(Map<String, Long> tenderIterations, String indicatorId) {
+        return tenderIterations.entrySet().stream().map(item -> {
             String tenderId = item.getKey();
             Long iteration = item.getValue();
             FilterImpl filter = new FilterImpl();
@@ -649,11 +542,19 @@ public class ExtractTenderDataService {
             filter.setFields(Arrays.asList(tenderIdFilter, iterationFilter, indicatorFilter));
             return filter;
         }).collect(Collectors.toList());
+    }
 
+    public Map<String, Map<String, Integer>> getMaxTendersLotIterationData(Map<String, Long> tenderIterations, String indicatorId) {
+
+        Map<String, Map<String, Integer>> result = new HashMap<>();
+        tenderIterations.keySet().forEach(tenderId -> {
+            result.put(tenderId, new HashMap<>());
+        });
+        GroupByRequest groupByRequest = new GroupByRequest(tenderIndex, "2015/2020");
+        groupByRequest.setDimensions(Arrays.asList(TENDER_OUTER_ID, INDICATOR_VALUE, LOT_IDS));
         FilterImpl filter = new FilterImpl();
         filter.setType("or");
-        filter.setFields(filterList);
-
+        filter.setFields(getFilters(tenderIterations, indicatorId));
         groupByRequest.setFilter(filter);
 
         GroupByResponse[] postForObject = restTemplate.postForObject(druidUrl, groupByRequest, GroupByResponse[].class);
@@ -666,5 +567,75 @@ public class ExtractTenderDataService {
             });
         }
         return result;
+    }
+
+    public List<String> getListTenders(String previousStop, String interval) {
+
+        TopNRequest request = TopNRequest.builder()
+                .queryType("topN")
+                .dataSource(tenderIndex)
+                .granularity("all")
+                .intervals(interval)
+                .dimension(TENDER_OUTER_ID)
+                .threshold(1000)
+                .aggregations(new ArrayList<>())
+                .metric(SimpleMetricImpl.builder().type("dimension").ordering("lexicographic").previousStop(previousStop).build())
+                .build();
+        log.info("before request");
+        TopNResponse[] response = restTemplate.postForObject(druidUrl, request, TopNResponse[].class);
+        log.info("after request");
+        return response[0].getResult().stream().map(TopNResponse.Result::getTenderOuterId).collect(Collectors.toList());
+    }
+
+    public List<String> getListTenders(String previousStop) {
+        return getListTenders(previousStop, "2017/2020");
+    }
+
+    public List<Event> getLastTendersData(List<String> tenderIds) {
+
+        GroupByRequest tendersIndicatorsMaxIteration = new GroupByRequest(tenderIndex, "2017/2020");
+        tendersIndicatorsMaxIteration.setDimensions(Arrays.asList(TENDER_OUTER_ID, INDICATOR_ID));
+        tendersIndicatorsMaxIteration.setAggregations(Collections.singletonList(new SimpleAggregationImpl("doubleMax", "maxIteration", ITERATION_ID)));
+        tendersIndicatorsMaxIteration.setFilter(new ListStringFilter("in", TENDER_OUTER_ID, tenderIds));
+        GroupByResponse[] tendersIndicatorsMaxIterationResponse = restTemplate.postForObject(druidUrl, tendersIndicatorsMaxIteration, GroupByResponse[].class);
+
+        if (nonNull(tendersIndicatorsMaxIterationResponse) && tendersIndicatorsMaxIterationResponse.length > 0) {
+
+            List<Event> response = Arrays.stream(tendersIndicatorsMaxIterationResponse).map(GroupByResponse::getEvent).collect(Collectors.toList());
+
+            List<Filter> filterList = response.stream().map((event) -> {
+                StringFilter tenderIdFilter = new StringFilter("selector", TENDER_OUTER_ID, event.getTenderOuterId());
+                StringFilter indicatorIdFilter = new StringFilter("selector", INDICATOR_ID, event.getIndicatorId());
+                IntFilter iterationIdFilter = new IntFilter("selector", ITERATION_ID, event.getMaxIteration().intValue());
+                FilterImpl filter = new FilterImpl();
+                filter.setType("and");
+                filter.setFields(Arrays.asList(tenderIdFilter, indicatorIdFilter, iterationIdFilter));
+                return filter;
+            }).collect(Collectors.toList());
+
+            GroupByRequest filteredByTendersGroupBy = new GroupByRequest(tenderIndex, "2017/2020");
+            filteredByTendersGroupBy.setDimensions(Arrays.asList(TENDER_OUTER_ID, INDICATOR_ID, ITERATION_ID, INDICATOR_VALUE, INDICATOR_IMPACT));
+            filteredByTendersGroupBy.setFilter(new ListStringFilter("in", TENDER_OUTER_ID, tenderIds));
+
+            GroupByRequest resultRequest = GroupByRequest
+                    .builder()
+                    .queryType("groupBy")
+                    .granularity("all")
+                    .intervals("2017/2020")
+                    .dataSource(GroupByRequest.DataSource.builder().type("query").query(filteredByTendersGroupBy).build())
+                    .dimensions(Arrays.asList(TENDER_OUTER_ID, INDICATOR_ID, INDICATOR_VALUE, INDICATOR_IMPACT))
+                    .aggregations(new ArrayList<>())
+                    .filter(FilterImpl.builder().type("or").fields(filterList).build())
+                    .build();
+
+            GroupByResponse[] tenderWithLastIndicatorResult = restTemplate.postForObject(druidUrl, resultRequest, GroupByResponse[].class);
+            return Arrays.stream(tenderWithLastIndicatorResult).map(GroupByResponse::getEvent).collect(Collectors.toList());
+        }
+
+        return new ArrayList<>();
+    }
+
+    public Long getMaxIndicatorIteration(String tenderId, String indicatorId) {
+        return super.getMaxIndicatorIteration(getFilterByTenderId(tenderId), indicatorId, tenderIndex);
     }
 }

@@ -3,6 +3,7 @@ package com.datapath.web.mappers;
 import com.datapath.druidintegration.model.druid.response.common.Event;
 import com.datapath.web.domain.DruidIndicator;
 
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -28,7 +29,18 @@ public class DruidEventMapper {
         return indicator;
     }
 
+
+    private static final ZoneId DEFAULT_TIMEZONE = ZoneId.of("Europe/Kiev");
+    private static final String ZONED_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXX";
     private static final String UTC_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
+
+    private static ZonedDateTime parseZonedDateTime(String zonedDateTimeStr) {
+        if (zonedDateTimeStr == null) {
+            return null;
+        }
+        return ZonedDateTime.parse(zonedDateTimeStr, DateTimeFormatter.ofPattern(ZONED_DATE_TIME_FORMAT))
+                .withZoneSameLocal(DEFAULT_TIMEZONE);
+    }
 
     private static ZonedDateTime parseZonedDateTimeFromUTC(String zonedDateTimeStr) {
         if (zonedDateTimeStr == null) {

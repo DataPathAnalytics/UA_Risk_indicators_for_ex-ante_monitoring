@@ -3,6 +3,7 @@ package com.datapath.persistence;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
@@ -13,6 +14,9 @@ import javax.sql.DataSource;
 @Slf4j
 @Component
 public class DBInitializer implements InitializingBean {
+
+    @Value("${com.datapath.scheduling.enabled}")
+    private boolean schedulingEnabled;
 
     private DataSource dataSource;
 
@@ -36,6 +40,8 @@ public class DBInitializer implements InitializingBean {
 
     @Override
     public void afterPropertiesSet() {
-        initIndicators();
+        if (schedulingEnabled) {
+            initIndicators();
+        }
     }
 }

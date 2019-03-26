@@ -1105,4 +1105,30 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
 
     @Query(value = "SELECT outer_id, status from Tender where tender.outer_id in ?1", nativeQuery = true)
     List<Object[]> findTenderOuterIdAndStatusByTendersOuterIdIn(List<String> outerIds);
+
+
+    @Query(value = "select tender.outer_id,\n" +
+            "       tender.tender_id,\n" +
+            "       tender.status,\n" +
+            "       tender.procurement_method_type,\n" +
+            "       tender.amount,\n" +
+            "       tender.currency,\n" +
+            "       tender.tv_tender_cpv,\n" +
+            "       cpv.name,\n" +
+            "       cpv2.cpv  cpv2,\n" +
+            "       cpv2.name cpv2_name,\n" +
+            "       tender.tv_procuring_entity,\n" +
+            "       tender.procuring_entity_kind,\n" +
+            "       procuring_entity.identifier_legal_name,\n" +
+            "       indicators_queue_region.correct_name,\n" +
+            "       (select count(*) > 0\n" +
+            "        from (select * from award\n" +
+            "                              join complaint c2 on award.id = c2.award_id where award.tender_id = tender.id)a) \n" +
+            "from tender\n" +
+            "       left join procuring_entity on tender.procuring_entity_id = procuring_entity.id\n" +
+            "       left join cpv_catalogue cpv on tender.tv_tender_cpv = cpv.cpv\n" +
+            "       left join cpv_catalogue cpv2 on cpv.cpv2 = cpv2.cpv\n" +
+            "       left join indicators_queue_region on procuring_entity.region = indicators_queue_region.original_name " +
+            "where tender.outer_id = ANY (SELECT regexp_split_to_table(?1, ','))", nativeQuery = true)
+    List<Object[]> getTendersCommonInfo(String tenderIds);
 }

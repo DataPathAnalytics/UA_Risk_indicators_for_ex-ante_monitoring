@@ -5,11 +5,13 @@ import com.datapath.persistence.entities.queue.IndicatorsQueueConfiguration;
 import com.datapath.web.api.version.ApiVersion;
 import com.datapath.web.domain.queue.IndicatorsQueueDataPage;
 import com.datapath.web.services.RegionIndicatorsQueueService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.Set;
 
+@Slf4j
 @RestController
 @CrossOrigin(origins = "*")
 public class RegionIndicatorsQueueController {
@@ -82,7 +84,7 @@ public class RegionIndicatorsQueueController {
     @ApiVersion({0.1})
     @RequestMapping(value = "/region-indicators-queue/configuration", method = RequestMethod.POST)
     public IndicatorsQueueConfiguration updateConfiguration(@RequestBody IndicatorsQueueConfiguration indicatorsQueueConfiguration) {
-        System.out.println(indicatorsQueueConfiguration);
+        log.info(indicatorsQueueConfiguration.toString());
         return indicatorsQueueConfigurationService.save(indicatorsQueueConfiguration);
     }
 }

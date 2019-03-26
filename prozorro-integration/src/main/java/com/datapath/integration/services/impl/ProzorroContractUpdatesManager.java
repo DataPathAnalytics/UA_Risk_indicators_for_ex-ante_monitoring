@@ -94,20 +94,16 @@ public class ProzorroContractUpdatesManager implements ContractUpdatesManager {
                         }
 
                     } catch (TenderValidationException ex) {
-                        log.error("Contract not saved. Tender is invalid");
-                        ex.printStackTrace();
+                        log.error("Contract not saved. Tender is invalid", ex);
                         setUpdatesAvailability(true);
-                        continue;
                     } catch (ResourceAccessException e) {
                         changeServiceStatus(ServiceStatus.ENABLED);
-                        log.error("Error in loading tender {}", contractUpdateInfo.getId());
-                        e.printStackTrace();
+                        log.error("Error in loading tender {}", contractUpdateInfo.getId(), e);
                         return;
                     } catch (Exception ex) {
                         log.error("Error in processing the contract: outerId = {} {}",
-                                contractUpdateInfo.getId(), ex.getMessage());
+                                contractUpdateInfo.getId(), ex.getMessage(), ex);
                         changeServiceStatus(ServiceStatus.ENABLED);
-                        ex.printStackTrace();
                         return;
                     }
                 }
@@ -120,11 +116,9 @@ public class ProzorroContractUpdatesManager implements ContractUpdatesManager {
                 url = nextPageUrl;
                 nextDateOffset = DateUtils.parseZonedDateTime(contractsPageResponseEntity.getNextPage().getOffset());
             } catch (ResourceAccessException e) {
-                log.error("Error in loading contracts {}", e.getMessage());
-                e.printStackTrace();
+                log.error("Error in loading contracts {}", e.getMessage(), e);
             } catch (Exception e) {
-                log.error("Error in processing contracts {}", e.getMessage());
-                e.printStackTrace();
+                log.error("Error in processing contracts {}", e.getMessage(), e);
                 changeServiceStatus(ServiceStatus.ENABLED);
                 return;
             }

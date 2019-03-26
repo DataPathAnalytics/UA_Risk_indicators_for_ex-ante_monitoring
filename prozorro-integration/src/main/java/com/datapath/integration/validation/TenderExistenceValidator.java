@@ -1,0 +1,185 @@
+package com.datapath.integration.validation;
+
+import com.datapath.integration.domain.TenderResponseEntity;
+import com.datapath.integration.domain.TenderUpdateInfo;
+import com.datapath.integration.domain.TendersPageResponseEntity;
+import com.datapath.integration.services.TenderLoaderService;
+import com.datapath.integration.services.impl.ProzorroTenderUpdatesManager;
+import com.datapath.integration.services.impl.TenderService;
+import com.datapath.integration.utils.DateUtils;
+import com.datapath.integration.utils.JsonUtils;
+import com.datapath.integration.utils.ProzorroRequestUrlCreator;
+import com.datapath.persistence.entities.validation.TenderValidationHistory;
+import com.datapath.persistence.repositories.validation.TenderValidationHistoryRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Component;
+
+import java.net.URLDecoder;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Component
+public class TenderExistenceValidator {
+
+    private static final int TENDERS_LIMIT = 1000;
+
+    private TenderService tenderService;
+    private TenderLoaderService tenderLoaderService;
+    private TenderValidationHistoryRepository tenderValidationHistoryRepository;
+
+    public TenderExistenceValidator(TenderService tenderService,
+                                    TenderLoaderService tenderLoaderService,
+                                    TenderValidationHistoryRepository tenderValidationHistoryRepository) {
+
+        this.tenderService = tenderService;
+        this.tenderLoaderService = tenderLoaderService;
+        this.tenderValidationHistoryRepository = tenderValidationHistoryRepository;
+    }
+
+    @Async
+    public void validate() {
+        ZonedDateTime yearEarlier = DateUtils.yearEarlierFromNow();
+        ZonedDateTime lastDateModified = tenderService.findLastModifiedEntry().getDateModified();
+
+        log.info("Start tenders existence validation. StartDate: {}, EndDate: {}", yearEarlier, lastDateModified);
+
+        ZonedDateTime dateOffset = yearEarlier.withZoneSameInstant(ZoneId.of("Europe/Kiev"));
+
+        String url = ProzorroRequestUrlCreator.createTendersUrl(
+                ProzorroTenderUpdatesManager.TENDERS_SEARCH_URL, dateOffset, TENDERS_LIMIT);
+
+        List<TenderUpdateInfo> tenderUpdateInfos = new ArrayList<>();
+
+        while (true) {
+            try {
+                TendersPageResponseEntity tendersPageResponseEntity = tenderLoaderService.loadTendersPage(url);
+                List<TenderUpdateInfo> items = tendersPageResponseEntity.getItems()
+                        .stream().filter(item -> item.getDateModified().isBefore(lastDateModified))
+                        .collect(Collectors.toList());
+
+                log.info("Fetched {} items by url {}", items.size(), url);
+
+                tenderUpdateInfos.addAll(items);
+
+                if (items.size() < TENDERS_LIMIT) {
+                    break;
+                }
+
+                url = URLDecoder.decode(tendersPageResponseEntity.getNextPage().getUri(), "UTF-8");
+
+            } catch (Exception e) {
+                log.error(e.getMessage(), e);
+            }
+        }
+
+        log.info("Tenders loading finished. Fetched {} items", tenderUpdateInfos.size());
+
+        Set<String> tendersOuterIds = tenderUpdateInfos.stream()
+                .map(TenderUpdateInfo::getId)
+                .collect(Collectors.toSet());
+
+        Set<String> existingTendersOuterIds = fetchExistingTendersOuterIds(tendersOuterIds);
+        Set<String> notExistingTenderOuterIds = findNotExistingTendersOuterIds(
+                tendersOuterIds, existingTendersOuterIds);
+
+        log.info("Existing tenders count: {}. Not existing tenders count: {}",
+                existingTendersOuterIds.size(), notExistingTenderOuterIds.size());
+
+        Set<String> testAndExpiredTendersOuterIds = findTestAndExpiredTendersOuterIds(notExistingTenderOuterIds);
+
+
+        int missingTenderCount = tendersOuterIds.size() - existingTendersOuterIds.size()
+                - testAndExpiredTendersOuterIds.size();
+
+        int tendersCount = tendersOuterIds.size();
+
+        log.info("Found {} test or expired tenders.", testAndExpiredTendersOuterIds.size());
+        log.info("");
+        log.info("Totals | Tenders count: {}", tendersCount);
+        log.info("Totals | Existing tenders count: {}", existingTendersOuterIds.size());
+        log.info("Totals | Test or expired tenders count: {}", testAndExpiredTendersOuterIds.size());
+        log.info("Totals | Number of missing tenders: {}", missingTenderCount);
+        log.info("Totals | Missing tenders:");
+
+        tendersOuterIds.removeAll(existingTendersOuterIds);
+        tendersOuterIds.removeAll(testAndExpiredTendersOuterIds);
+        tendersOuterIds.forEach(outerId -> log.info("{}", outerId));
+
+        String[] missingTenders = tendersOuterIds.toArray(new String[tendersOuterIds.size()]);
+
+        TenderValidationHistory history = new TenderValidationHistory();
+        history.setTendersCount(tendersCount);
+        history.setExistingTendersCount(existingTendersOuterIds.size());
+        history.setTestOrExpiredTendersCount(testAndExpiredTendersOuterIds.size());
+        history.setMissingTendersCount(missingTenderCount);
+        history.setMissingTenders(missingTenders);
+        history.setDate(ZonedDateTime.now());
+
+        tenderValidationHistoryRepository.save(history);
+
+        log.info("Tenders validation result saved.");
+    }
+
+    private Set<String> fetchExistingTendersOuterIds(Set<String> tendersOuterIds) {
+        Set<String> existingTendersOuterIds = new TreeSet<>();
+        int pageSize = 1000;
+        int currentIndex = 0;
+
+        while (currentIndex <= tendersOuterIds.size() - 1) {
+            int nextIndex = currentIndex + pageSize < tendersOuterIds.size() - 1 ?
+                    currentIndex + pageSize : tendersOuterIds.size();
+            List<String> tenderIds = new ArrayList<>(tendersOuterIds).subList(currentIndex, nextIndex);
+            List<String> existingTenderIds = tenderService.getExistingTenderOuterIdsByOuterIds(tenderIds);
+            existingTendersOuterIds.addAll(existingTenderIds);
+            currentIndex += pageSize;
+        }
+
+        return existingTendersOuterIds;
+    }
+
+    private Set<String> findNotExistingTendersOuterIds(Set<String> tendersOuterIds,
+                                                       Set<String> existingTendersOuterIds) {
+        return tendersOuterIds.stream()
+                .filter(item -> !existingTendersOuterIds.contains(item))
+                .collect(Collectors.toSet());
+    }
+
+    private Set<String> findTestAndExpiredTendersOuterIds(Set<String> notExistingTendersOuterIds) {
+        List<String> testOrExpiredTenders = new ArrayList<>();
+        notExistingTendersOuterIds.forEach(outerId -> {
+            TenderUpdateInfo updateInfo = new TenderUpdateInfo();
+            updateInfo.setId(outerId);
+            TenderResponseEntity tenderResponseEntity = tenderLoaderService.loadTender(updateInfo);
+            if (isTestOrExpiredTender(tenderResponseEntity)) {
+                testOrExpiredTenders.add(tenderResponseEntity.getId());
+            }
+        });
+        return new HashSet<>(testOrExpiredTenders);
+    }
+
+    private boolean isTestOrExpiredTender(TenderResponseEntity responseEntity) {
+        try {
+            JsonNode node = new ObjectMapper().readTree(responseEntity.getData());
+            ZonedDateTime date = JsonUtils.getDate(node, "/data/date");
+
+            if (date == null || date.isBefore(DateUtils.yearEarlierFromNow())) {
+                return true;
+            }
+
+            if (node.at("/data/mode").asText().equals("test")) {
+                return true;
+            }
+
+        } catch (Exception e) {
+            log.error("Error while check tender {} for existence.", responseEntity.getId());
+            log.error(e.getMessage(), e);
+        }
+        return false;
+    }
+}

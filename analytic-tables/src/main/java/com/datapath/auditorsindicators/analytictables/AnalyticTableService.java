@@ -6,6 +6,7 @@ import com.datapath.persistence.repositories.derivatives.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -13,6 +14,9 @@ import java.util.List;
 @Component
 @Slf4j
 public class AnalyticTableService implements InitializingBean {
+
+    @Value("${com.datapath.scheduling.enabled}")
+    private boolean schedulingEnabled;
 
     private MutualParticipationRepository participationRepository;
     private SuppliersSingleBuyerRepository suppliersSingleBuyerRepository;
@@ -150,8 +154,10 @@ public class AnalyticTableService implements InitializingBean {
     }
 
     @Override
-    public void afterPropertiesSet() throws Exception {
-        recalculate();
+    public void afterPropertiesSet() {
+        if (schedulingEnabled) {
+            recalculate();
+        }
     }
 
     public void recalculate() {

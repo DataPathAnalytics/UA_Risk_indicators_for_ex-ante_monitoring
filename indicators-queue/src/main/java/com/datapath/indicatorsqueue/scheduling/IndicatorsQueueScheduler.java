@@ -4,6 +4,7 @@ import com.datapath.indicatorsqueue.services.IndicatorsQueueUpdaterService;
 import com.datapath.indicatorsqueue.services.RegionIndicatorsQueueUpdaterService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -11,22 +12,24 @@ import org.springframework.stereotype.Component;
 @Component
 public class IndicatorsQueueScheduler implements InitializingBean {
 
+    @Value("${com.datapath.scheduling.enabled}")
+    private boolean schedulingEnabled;
+
     private IndicatorsQueueUpdaterService indicatorsQueueUpdaterService;
     private RegionIndicatorsQueueUpdaterService regionIndicatorsQueueUpdaterService;
 
     public IndicatorsQueueScheduler(IndicatorsQueueUpdaterService indicatorsQueueUpdaterService,
-                                    RegionIndicatorsQueueUpdaterService regionIndicatorsQueueUpdaterService){
+                                    RegionIndicatorsQueueUpdaterService regionIndicatorsQueueUpdaterService) {
         this.indicatorsQueueUpdaterService = indicatorsQueueUpdaterService;
         this.regionIndicatorsQueueUpdaterService = regionIndicatorsQueueUpdaterService;
     }
 
-//    @Scheduled(cron = "0 0 0 * * *")
+    //    @Scheduled(cron = "0 0 0 * * *")
     public void updateIndicatorsQueue() {
         try {
             indicatorsQueueUpdaterService.updateIndicatorsQueue();
         } catch (Exception e) {
-            e.printStackTrace();
-            log.error("Updating indicators queue failed.");
+            log.error("Updating indicators queue failed.", e);
         }
     }
 
@@ -35,14 +38,15 @@ public class IndicatorsQueueScheduler implements InitializingBean {
         try {
             regionIndicatorsQueueUpdaterService.updateIndicatorsQueue();
         } catch (Exception e) {
-            e.printStackTrace();
-            log.error("Updating indicators queue failed.");
+            log.error("Updating indicators queue failed.", e);
         }
     }
 
     @Override
     public void afterPropertiesSet() {
 //        updateIndicatorsQueue();
-        updateRegionIndicatorsQueue();
+        if (schedulingEnabled) {
+            updateRegionIndicatorsQueue();
+        }
     }
 }

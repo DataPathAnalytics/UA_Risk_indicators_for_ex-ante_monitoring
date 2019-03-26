@@ -300,12 +300,12 @@ public class BaseExtractor extends BaseService {
         }
     }
 
-    TenderDimensions getTenderDimensionsWithIndicatorLastIteration(String tenderId, String indicatorId) {
-        TenderDimensions tenderDimensions = getTenderDimensionsMap(tenderId);
-        Long maxIteration = extractDataService.getMaxTenderIndicatorIteration(tenderDimensions.getId(), indicatorId);
-        tenderDimensions.setDruidCheckIteration(maxIteration);
-        return tenderDimensions;
-    }
+//    TenderDimensions getTenderDimensionsWithIndicatorLastIteration(String tenderId, String indicatorId) {
+//        TenderDimensions tenderDimensions = getTenderDimensionsMap(tenderId);
+//        Long maxIteration = extractDataService.getMaxTenderIndicatorIteration(tenderDimensions.getId(), indicatorId);
+//        tenderDimensions.setDruidCheckIteration(maxIteration);
+//        return tenderDimensions;
+//    }
 
     private TenderDimensions getTenderDimensionsMap(String tenderId) {
         Tender tender = tenderRepository.findFirstByOuterId(tenderId);
@@ -361,7 +361,7 @@ public class BaseExtractor extends BaseService {
     Map<String, ContractDimensions> getContractDimensionsWithIndicatorLastIteration(Set<String> contractIds, String indicatorId) {
         Map<String, ContractDimensions> contractDimensions = getContractDimensionsMap(contractIds);
         contractDimensions.entrySet().stream().forEach(item -> {
-            Long maxIteration = extractContractDataService.getMaxContractIndicatorIteration(item.getKey(), indicatorId);
+            Long maxIteration = extractContractDataService.getMaxIndicatorIteration(item.getKey(), indicatorId);
             item.getValue().setDruidCheckIteration(maxIteration);
         });
         return contractDimensions;

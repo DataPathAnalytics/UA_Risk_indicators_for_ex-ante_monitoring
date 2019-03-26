@@ -2,6 +2,7 @@ package com.datapath.indicatorsqueue.services;
 
 import com.datapath.persistence.entities.queue.IndicatorsQueueRegion;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -14,6 +15,9 @@ import java.util.stream.Collectors;
 @Service
 public class IndicatorsQueueRegionProvider implements InitializingBean {
 
+    @Value("${com.datapath.scheduling.enabled}")
+    private boolean schedulingEnabled;
+
     private static final long REGIONS_LOADING_RATE = 60_000;
 
     private List<IndicatorsQueueRegion> regions;
@@ -22,13 +26,15 @@ public class IndicatorsQueueRegionProvider implements InitializingBean {
 
     private IndicatorsQueueRegionService indicatorsQueueRegionService;
 
-    public IndicatorsQueueRegionProvider (IndicatorsQueueRegionService indicatorsQueueRegionService) {
+    public IndicatorsQueueRegionProvider(IndicatorsQueueRegionService indicatorsQueueRegionService) {
         this.indicatorsQueueRegionService = indicatorsQueueRegionService;
     }
 
     @Override
     public void afterPropertiesSet() {
-        init();
+        if (schedulingEnabled) {
+            init();
+        }
     }
 
     @Scheduled(fixedRate = REGIONS_LOADING_RATE)

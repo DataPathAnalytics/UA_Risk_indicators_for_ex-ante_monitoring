@@ -1035,9 +1035,7 @@ public class IndicatorsResolver extends BaseService {
             }
             LOG.info("Daily recalculation finished");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            LOG.error("Failed to execute recalculation");
-            LOG.error(ex.getMessage());
+            LOG.error("Failed to execute recalculation", ex);
         }
         tendersIndicatorsResolverAvailable = true;
     }

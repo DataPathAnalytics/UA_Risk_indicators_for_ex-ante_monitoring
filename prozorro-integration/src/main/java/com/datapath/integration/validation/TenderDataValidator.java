@@ -82,4 +82,12 @@ public class TenderDataValidator {
                 .collect(Collectors.toList())
                 .isEmpty();
     }
+
+    public boolean isTenderFromFinanceCategory(Tender tender) {
+        if (tender.getTvTenderCPV().startsWith("6611")) {
+            log.info("Tender {} from category 'Банківські послуги' skipped.", tender.getId());
+            return true;
+        }
+        return false;
+    }
 }

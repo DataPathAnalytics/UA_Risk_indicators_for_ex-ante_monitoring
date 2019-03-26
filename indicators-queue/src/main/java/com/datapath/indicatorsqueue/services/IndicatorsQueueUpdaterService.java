@@ -198,7 +198,7 @@ public class IndicatorsQueueUpdaterService {
 
     private void disableTendersOnMonitoring(List<IndicatorsQueueItem> items) {
         try {
-            List<String> activeMonitorings = auditService.getMonitorings().stream()
+            List<String> activeMonitorings = auditService.getActiveMonitorings().stream()
                     .map(Monitoring::getId)
                     .collect(Collectors.toList());
             items.forEach(item -> {

@@ -1,124 +1,290 @@
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (1,'Вінницька область','Вiнницька область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (2,'Вінницька область','Вінницька область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (3,'Вінницька область','Вінницька обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (4,'Вінницька область','Винницкая область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (5,'Вінницька область','ВІННИЦЬКА ОБЛ') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (6,'Вінницька область','ВИННИЦКАЯ ОБЛ.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (7,'Волинська область','Волинська обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (8,'Волинська область','Волинська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (9,'Дніпропетровська область','Дніпропетровська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (10,'Дніпропетровська область','Днiпропетровська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (11,'Дніпропетровська область','Дніпропетровська обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (12,'Дніпропетровська область','ДНІПРОПЕТРОВСЬКА ОБЛ') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (13,'Дніпропетровська область','ДНЕПРОПЕТРОВСКАЯ ОБЛ') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (14,'Дніпропетровська область','Днепропетровская область Украина') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (15,'Дніпропетровська область','Днепропетровская обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (16,'Дніпропетровська область','Днепропетровская') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (17,'Дніпропетровська область','Днепр') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (18,'Дніпропетровська область','Дніпропетровська') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (19,'Дніпропетровська область','Днепропетровская область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (20,'Дніпропетровська область','Дніпропетровька обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (21,'Донецька область','Донецька область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (22,'Донецька область','Донецька обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (23,'Донецька область','ДОНЕЦЬКА ОБЛ.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (24,'Донецька область','ДОНЕЦЬКА ОБЛ') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (25,'Донецька область','Донецкая область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (26,'Житомирська область','Житомирська обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (27,'Житомирська область','Житомирська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (28,'Житомирська область','Житомирская область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (29,'Житомирська область','Житомирська обл') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (30,'Житомирська область','Коростишівський') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (31,'Закарпатська область','Закарпатська обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (32,'Закарпатська область','Закарпатська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (33,'Закарпатська область','Закарпатская область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (34,'Запорізька область','Запорізька область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (35,'Запорізька область','Запорiзька область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (36,'Запорізька область','Запорізька обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (37,'Запорізька область','Запорізька') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (38,'Запорізька область','Запорізька область Токмацький район') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (39,'Запорізька область','Запорожская область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (40,'Запорізька область','Україна, Запорізька область,Чернігівський район') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (41,'Запорізька область','Запорізька область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (42,'Запорізька область','Запорізька область, Великобілозерський район') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (43,'Івано-Франківська область','Івано-Франківська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (44,'Івано-Франківська область','Івано-Франківська обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (45,'Івано-Франківська область','Ивано-Франковская область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (46,'Київська область','КИЕВСКАЯ ОБЛ.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (47,'Київська область','Київська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (48,'Київська область','Київська обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (49,'Київська область','Киевская область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (50,'Київська область','Київська') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (51,'Кіровоградська область','Кiровоградська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (52,'Кіровоградська область','Кіровоградська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (53,'Кіровоградська область','КІРОВОГРАДСЬКА ОБЛ') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (54,'Кіровоградська область','Кіровоградська обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (55,'Кіровоградська область','Новомиргородський район') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (56,'Луганська область','Луганська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (57,'Луганська область','ЛУГАНСКАЯ ОБЛ.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (58,'Луганська область','Луганська обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (59,'Луганська область','Луганская область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (60,'Луганська область','ЛУГАНСЬКА ОБЛ') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (61,'Львівська область','Львівська обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (62,'Львівська область','Львівська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (63,'Львівська область','Львовская область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (64,'Миколаївська область','Миколаївська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (65,'Миколаївська область','Миколаївська обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (66,'Миколаївська область','Николаевская область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (67,'Миколаївська область','смт.Воскресенське') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (68,'Одеська область','Одеська обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (69,'Одеська область','Одеська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (70,'Одеська область','Одесская область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (71,'Одеська область','Одесская обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (72,'Одеська область','Одеська') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (73,'Полтавська область','Полтавська обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (74,'Полтавська область','Полтавська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (75,'Полтавська область','Полтавська') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (76,'Полтавська область','Полтавская') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (77,'Полтавська область','Полтавская область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (78,'Рівненська область','Рівненська обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (79,'Рівненська область','Рівненська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (80,'Рівненська область','Rivnens''ka oblast') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (81,'Рівненська область','Ровенская область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (82,'Сумська область','Сумська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (83,'Сумська область','Сумська обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (84,'Сумська область','Сумська обл., Великописарівський р-н') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (85,'Тернопільська область','Тернопільська обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (86,'Тернопільська область','Тернопільська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (87,'Тернопільська область','Тернопольская область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (88,'Тернопільська область','Тернопільська') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (89,'Харківська область','Харківська обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (90,'Харківська область','Харківська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (91,'Харківська область','Харкiвська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (92,'Харківська область','Харківська') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (93,'Харківська область','ХАРКІВСЬКА ОБЛ.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (94,'Херсонська область','Херсонська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (95,'Херсонська область','Херсонская область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (96,'Херсонська область','Херсонська обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (97,'Херсонська область','Нижньосірогозький р-н Херсонської області') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (98,'Хмельницька область','Хмельницька область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (99,'Хмельницька область','Хмельницька обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (100,'Хмельницька область','ХМЕЛЬНИЦКАЯ ОБЛ.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (101,'Хмельницька область','Хмельницька обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (102,'Черкаська область','Черкаська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (103,'Черкаська область','Черкаська обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (104,'Черкаська область','Черкасская область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (105,'Черкаська область','Черкаська') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (106,'Черкаська область','ЧЕРКАССКАЯ ОБЛ.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (107,'Чернівецька область','Чернівецька область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (108,'Чернівецька область','Чернівецька обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (109,'Чернівецька область','Черновицкая область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (110,'Чернігівська область','Чернiгiвська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (111,'Чернігівська область','Чернігівська область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (112,'Чернігівська область','Чернігівська обл.') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (113,'Чернігівська область','Чернігівська') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (114,'Чернігівська область','Черниговская область') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (115,'м. Київ','м.Київ') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (116,'м. Київ','м. Київ') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (117,'м. Київ','місто Київ') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (118,'м. Київ','Київ') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (119,'м. Київ','КИЇВ М') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (120,'м. Київ','Киев') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (121,'м. Київ','М. КИЇВ') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (122,'м. Київ','Україна') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (123,'м. Київ','Державна') ON CONFLICT DO NOTHING;
-INSERT INTO public.indicators_queue_region (id, correct_name, original_name) VALUES (124,'м. Київ','закупке') ON CONFLICT DO NOTHING;
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Вінницька область', 'Вiнницька область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Вінницька область', 'Вінницька область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Вінницька область', 'Вінницька обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Вінницька область', 'Винницкая область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Вінницька область', 'ВІННИЦЬКА ОБЛ');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Вінницька область', 'ВИННИЦКАЯ ОБЛ.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Волинська область', 'Волинська обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Волинська область', 'Волинська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Дніпропетровська область', 'Дніпропетровська обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Дніпропетровська область', 'ДНІПРОПЕТРОВСЬКА ОБЛ');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Дніпропетровська область', 'ДНЕПРОПЕТРОВСКАЯ ОБЛ');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Дніпропетровська область', 'Днепропетровская область Украина');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Дніпропетровська область', 'Днепропетровская обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Дніпропетровська область', 'Днепропетровская');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Дніпропетровська область', 'Днепр');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Дніпропетровська область', 'Дніпропетровська');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Дніпропетровська область', 'Днепропетровская область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Дніпропетровська область', 'Дніпропетровька обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Дніпропетровська область', 'Січеславська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Дніпропетровська область', 'Січеславська обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Дніпропетровська область', 'Січеславська');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Дніпропетровська область', 'СІЧЕСЛАВСЬКА ОБЛ.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Дніпропетровська область', 'СІЧЕСЛАВСЬКА');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Дніпропетровська область', 'СЕЧЕСЛАВСКАЯ');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Дніпропетровська область', 'Дніпровська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Донецька область', 'Донецька область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Донецька область', 'Донецька обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Донецька область', 'ДОНЕЦЬКА ОБЛ.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Донецька область', 'ДОНЕЦЬКА ОБЛ');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Донецька область', 'Донецкая область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Житомирська область', 'Житомирська обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Житомирська область', 'Житомирська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Житомирська область', 'Житомирская область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Житомирська область', 'Житомирська обл');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Житомирська область', 'Коростишівський');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Закарпатська область', 'Закарпатська обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Закарпатська область', 'Закарпатська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Закарпатська область', 'Закарпатская область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Закарпатська область', 'Закарпатская');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Запорізька область', 'Запорізька область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Запорізька область', 'Запорiзька область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Запорізька область', 'Запорізька обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Запорізька область', 'Запорізька');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Запорізька область', 'Запорізька область Токмацький район');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Запорізька область', 'Запорожская область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Запорізька область', 'Україна, Запорізька область,Чернігівський район');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Запорізька область', 'Запорізька область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Запорізька область', 'Запорізька область, Великобілозерський район');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Запорізька область', 'Запорізька область  Токмацький район');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Запорізька область', 'Україна, Запорізька область,Чернігівський район');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Запорізька область', 'Iвано-Франкiвська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Івано-Франківська область', 'Івано-Франківська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Івано-Франківська область', 'Івано-Франківська обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Івано-Франківська область', 'Ивано-Франковская область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Івано-Франківська область', 'Галицький район Івано-Франківська обл');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Івано-Франківська область', 'Галицький район Івано-Франківська обл');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Київська область', 'КИЕВСКАЯ ОБЛ.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Київська область', 'Київська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Київська область', 'Київська обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Київська область', 'Киевская область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Київська область', 'Київська');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Київська область', 'київська');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Кіровоградська область', 'Кiровоградська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Кіровоградська область', 'Кіровоградська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Кіровоградська область', 'КІРОВОГРАДСЬКА ОБЛ');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Кіровоградська область', 'Кіровоградська обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Кіровоградська область', 'Новомиргородський район');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Кіровоградська область', 'Кропивницька');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Луганська область', 'Луганська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Луганська область', 'ЛУГАНСКАЯ ОБЛ.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Луганська область', 'Луганська обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Луганська область', 'Луганская область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Луганська область', 'ЛУГАНСЬКА ОБЛ');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Львівська область', 'Львівська обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Львівська область', 'Львівська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Львівська область', 'Львовская область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Львівська область', 'Львiвська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Миколаївська область', 'Миколаївська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Миколаївська область', 'Миколаївська обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Миколаївська область', 'Николаевская область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Миколаївська область', 'смт.Воскресенське');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Миколаївська область', 'Врадіїївський район Миколаївська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Миколаївська область', 'Миколаївська');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Одеська область', 'Одеська обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Одеська область', 'Одеська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Одеська область', 'Одесская область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Одеська область', 'Одесская обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Одеська область', 'Одеська');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Полтавська область', 'Полтавська обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Полтавська область', 'Полтавська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Полтавська область', 'Полтавська');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Полтавська область', 'Полтавская');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Полтавська область', 'Полтавская область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Рівненська область', 'Рівненська обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Рівненська область', 'Рівненська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Рівненська область', 'Rivnens''ka oblast');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Рівненська область', 'Ровенская область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Рівненська область', 'Рiвненська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Сумська область', 'Сумська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Сумська область', 'Сумська обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Сумська область', 'Сумська обл., Великописарівський р-н');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Сумська область', 'Сумская область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Тернопільська область', 'Тернопільська обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Тернопільська область', 'Тернопільська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Тернопільська область', 'Тернопольская область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Тернопільська область', 'Тернопільська');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Тернопільська область', 'Тернопiльська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Харківська область', 'Харківська обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Харківська область', 'Харківська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Харківська область', 'Харкiвська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Харківська область', 'Харківська');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Харківська область', 'ХАРКІВСЬКА ОБЛ.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Херсонська область', 'Херсонська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Херсонська область', 'Херсонская область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Херсонська область', 'Херсонська обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Херсонська область', 'Нижньосірогозький р-н Херсонської області');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Хмельницька область', 'Хмельницька область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Хмельницька область', 'Хмельницька обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Хмельницька область', 'ХМЕЛЬНИЦКАЯ ОБЛ.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Хмельницька область', 'Хмельницька обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Черкаська область', 'Черкаська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Черкаська область', 'Черкаська обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Черкаська область', 'Черкасская область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Черкаська область', 'Черкаська');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Черкаська область', 'ЧЕРКАССКАЯ ОБЛ.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Чернівецька область', 'Чернівецька область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Чернівецька область', 'Чернівецька обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Чернівецька область', 'Черновицкая область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Чернівецька область', 'Чернiвецька область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Чернігівська область', 'Чернiгiвська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Чернігівська область', 'Чернігівська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Чернігівська область', 'Чернігівська обл.');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Чернігівська область', 'Чернігівська');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Чернігівська область', 'Черниговская область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('м. Київ', 'м.Київ');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('м. Київ', 'м. Київ');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('м. Київ', 'місто Київ');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('м. Київ', 'Київ');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('м. Київ', 'КИЇВ М');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('м. Київ', 'Киев');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('м. Київ', 'М. КИЇВ');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('м. Київ', 'Україна');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('м. Київ', 'м. Київ');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('м. Київ', 'Державна');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('м. Київ', 'закупке');

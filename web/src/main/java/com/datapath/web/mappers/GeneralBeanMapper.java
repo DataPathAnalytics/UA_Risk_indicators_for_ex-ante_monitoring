@@ -13,7 +13,7 @@ public class GeneralBeanMapper {
             return targetObj;
         } catch (InstantiationException | IllegalAccessException e) {
             log.error("Cant't create instance of class {}", targetClass.getSimpleName());
-            e.printStackTrace();
+            log.error(e.getMessage(), e);
         }
 
         return null;

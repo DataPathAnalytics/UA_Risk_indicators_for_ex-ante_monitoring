@@ -4,6 +4,7 @@ import com.datapath.druidintegration.model.DruidContractIndicator;
 import com.datapath.druidintegration.model.DruidTenderIndicator;
 import com.datapath.indicatorsresolver.model.ContractIndicator;
 import com.datapath.indicatorsresolver.model.TenderIndicator;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.ZoneOffset;
@@ -15,6 +16,7 @@ import java.util.stream.IntStream;
 
 import static java.util.Objects.isNull;
 
+@Slf4j
 @Service
 public class DruidIndicatorMapper {
 
@@ -37,8 +39,8 @@ public class DruidIndicatorMapper {
             druidIndicator.setDate(now);
             druidIndicator.setTime(now);
         } catch (Exception ex) {
-            System.out.println("exception");
-            System.out.println(indicator);
+            log.error(ex.getMessage(), ex);
+            log.info(indicator.toString());
         }
         return druidIndicator;
     }

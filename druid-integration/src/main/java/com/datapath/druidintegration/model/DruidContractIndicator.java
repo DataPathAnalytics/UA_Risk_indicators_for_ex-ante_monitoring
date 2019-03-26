@@ -1,11 +1,13 @@
 package com.datapath.druidintegration.model;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.util.List;
 
-@Data
-public class DruidContractIndicator {
+@Data()
+@EqualsAndHashCode(callSuper = false)
+public class DruidContractIndicator extends DruidIndicator {
     private String date;
     private String time;
     private String tenderOuterId;

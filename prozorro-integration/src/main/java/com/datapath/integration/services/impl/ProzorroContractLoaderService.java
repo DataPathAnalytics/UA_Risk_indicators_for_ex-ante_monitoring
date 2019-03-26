@@ -1,6 +1,7 @@
 package com.datapath.integration.services.impl;
 
 import com.datapath.integration.domain.*;
+import com.datapath.integration.email.EmailSender;
 import com.datapath.integration.parsers.exceptions.TenderValidationException;
 import com.datapath.integration.parsers.impl.TenderParser;
 import com.datapath.integration.resolvers.TransactionVariablesResolver;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import javax.transaction.Transactional;
+import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.util.Optional;
 
@@ -110,6 +112,7 @@ public class ProzorroContractLoaderService implements ContractLoaderService {
 
                 if (!tenderDataValidator.isValidTender(tender)) {
                     log.error("Tender validation failed while contract loading.");
+                    sendValidationFailedReport(tender);
                     return null;
                 }
 
@@ -121,6 +124,10 @@ public class ProzorroContractLoaderService implements ContractLoaderService {
                 String tenderCPV = tvResolver.getTenderCPV(tender);
                 tender.setTvTenderCPV(tenderCPV);
 
+//                if (tenderDataValidator.isTenderFromFinanceCategory(tender)) {
+//                    return null;
+//                }
+
                 Tender existingTender = tenderLoaderService.saveTender(tender);
 
                 Optional<TenderContract> optionalTenderContract = existingTender.getTenderContracts().stream()
@@ -128,12 +135,8 @@ public class ProzorroContractLoaderService implements ContractLoaderService {
 
                 optionalTenderContract.ifPresent(contract::setTenderContract);
 
-            } catch (TenderValidationException e) {
-                e.printStackTrace();
-                log.error("Contract not saved. Tender is invalid.");
-                return null;
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (TenderValidationException | IOException e) {
+                log.error("Contract not saved. Tender is invalid.", e);
                 return null;
             }
         }
@@ -143,5 +146,11 @@ public class ProzorroContractLoaderService implements ContractLoaderService {
         }
 
         return null;
+    }
+
+    private void sendValidationFailedReport(Tender tender) {
+        log.info("Tender {} validation failed while contract loading. Send email notification...", tender.getOuterId());
+        boolean isSent = EmailSender.sendTenderValidationFailedNotification(tender.getOuterId());
+        log.warn("Notification {} sent", isSent ? "" : "not");
     }
 }

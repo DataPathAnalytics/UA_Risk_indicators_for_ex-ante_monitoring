@@ -2,10 +2,12 @@ package com.datapath.persistence.utils;
 
 import java.sql.Timestamp;
 import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.util.Date;
 import java.util.TimeZone;
 
 public class DateUtils {
@@ -25,5 +27,10 @@ public class DateUtils {
 
     public static ZonedDateTime toZonedDateTime(Timestamp timestamp) {
         return timestamp.toInstant().atZone(DEFAULT_TIMEZONE);
+    }
+
+    public static String formatToString(Date date, String formatter) {
+        DateFormat dateFormat = new SimpleDateFormat(formatter);
+        return dateFormat.format(date);
     }
 }

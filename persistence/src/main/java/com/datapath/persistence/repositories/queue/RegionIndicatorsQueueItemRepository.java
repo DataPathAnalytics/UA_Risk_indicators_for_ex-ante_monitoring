@@ -71,4 +71,7 @@ public interface RegionIndicatorsQueueItemRepository extends JpaRepository<Regio
     @Query("SELECT DISTINCT i.region FROM IndicatorsQueueItem i WHERE i.tenderScore >= ?1 AND i.tenderScore < ?2")
     List<String> findDistinctRegionsByTenderScoreGreaterThanEqualAndTenderScoreLessThan(Double minImpact, Double maxImpact);
 
+
+    @Query(value = "select tender_outer_id, top_risk from region_indicators_queue_item", nativeQuery = true)
+    List<Object[]> getAllTendersIdsAndTops();
 }

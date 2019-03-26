@@ -6,13 +6,10 @@ import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.scheduling.annotation.EnableAsync;
-import org.springframework.scheduling.annotation.EnableScheduling;
-
 import java.time.ZoneId;
 import java.util.TimeZone;
 
 @SpringBootApplication
-@EnableScheduling
 @EnableAsync
 @ComponentScan(basePackages = {"com.datapath"})
 @EntityScan(basePackages = {"com.datapath"})

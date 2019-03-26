@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
@@ -54,6 +55,7 @@ public class TenderUpdatesValidator {
 
         while (true) {
             try {
+                log.info("Fetching tenders list for {}", url);
                 TendersPageResponseEntity tendersPageResponseEntity = tenderLoaderService.loadTendersPage(url);
                 List<TenderUpdateInfo> items = tendersPageResponseEntity.getItems()
                         .stream().filter(item -> item.getDateModified().isBefore(lastDateModified))
@@ -65,10 +67,10 @@ public class TenderUpdatesValidator {
                     break;
                 }
 
-                url = URLDecoder.decode(tendersPageResponseEntity.getNextPage().getUri(), "UTF-8");
+                url = URLDecoder.decode(tendersPageResponseEntity.getNextPage().getUri(), StandardCharsets.UTF_8.name());
 
             } catch (Exception e) {
-                e.printStackTrace();
+                log.error(e.getMessage(), e);
             }
         }
 

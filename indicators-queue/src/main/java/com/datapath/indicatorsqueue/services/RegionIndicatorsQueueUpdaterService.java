@@ -5,8 +5,10 @@ import com.datapath.indicatorsqueue.comparators.RegionIndicatorsMapByMateriality
 import com.datapath.indicatorsqueue.domain.audit.Monitoring;
 import com.datapath.indicatorsqueue.mappers.TenderScoreMapper;
 import com.datapath.indicatorsqueue.services.audit.ProzorroAuditService;
+import com.datapath.persistence.entities.Tender;
 import com.datapath.persistence.entities.queue.IndicatorsQueueHistory;
 import com.datapath.persistence.entities.queue.RegionIndicatorsQueueItem;
+import com.datapath.persistence.repositories.TenderRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +30,7 @@ public class RegionIndicatorsQueueUpdaterService {
     private IndicatorsQueueRegionProvider indicatorsQueueRegionProvider;
     private IndicatorsQueueConfigurationProvider configProvider;
     private ProzorroAuditService auditService;
+    private TenderRepository tenderRepository;
 
     private List<String> unresolvedRegions;
 
@@ -36,7 +39,7 @@ public class RegionIndicatorsQueueUpdaterService {
                                                RegionIndicatorsQueueItemService regionIndicatorsQueueItemService,
                                                IndicatorsQueueRegionProvider indicatorsQueueRegionProvider,
                                                IndicatorsQueueConfigurationProvider configProvider,
-                                               ProzorroAuditService auditService) {
+                                               ProzorroAuditService auditService, TenderRepository tenderRepository) {
 
         this.indicatorsQueueHistoryService = indicatorsQueueHistoryService;
         this.tenderRateService = tenderRateService;
@@ -44,6 +47,7 @@ public class RegionIndicatorsQueueUpdaterService {
         this.indicatorsQueueRegionProvider = indicatorsQueueRegionProvider;
         this.configProvider = configProvider;
         this.auditService = auditService;
+        this.tenderRepository = tenderRepository;
         this.unresolvedRegions = new ArrayList<>();
     }
 
@@ -63,6 +67,21 @@ public class RegionIndicatorsQueueUpdaterService {
 
         List<RegionIndicatorsQueueItem> indicatorsQueue = getIndicatorsQueue();
 
+        indicatorsQueue = indicatorsQueue.parallelStream().filter(item -> {
+            try {
+                Tender tender = tenderRepository.findFirstByOuterId(item.getTenderOuterId());
+                if (tender.getTvTenderCPV().startsWith("6611")) {
+                    log.info("Tender with outer Id {} skipped due to finance category", item.getTenderId());
+                    return false;
+                } else {
+                    return true;
+                }
+            } catch (Exception e) {
+                log.error(e.getMessage(), e);
+                return true;
+            }
+        }).collect(Collectors.toList());
+
         mapQueueItemsRegion(indicatorsQueue);
 
         Map<String, List<RegionIndicatorsQueueItem>> indicatorsByRegion = groupIndicatorsByRegion(indicatorsQueue);
@@ -74,9 +93,9 @@ public class RegionIndicatorsQueueUpdaterService {
         indicatorsByRegion.forEach((s, regionIndicatorsQueueItems) ->
                 allIndicatorsQueue.addAll(regionIndicatorsQueueItems));
 
-        disableTendersOnMonitoring(allIndicatorsQueue);
+        List<RegionIndicatorsQueueItem> queueWithoutMonitoringTenders = disableTendersOnMonitoring(allIndicatorsQueue);
 
-        List<RegionIndicatorsQueueItem> indicatorsQueueItems = saveQueue(allIndicatorsQueue);
+        List<RegionIndicatorsQueueItem> indicatorsQueueItems = saveQueue(queueWithoutMonitoringTenders);
 
         log.info("Updating region queue items finished. Saved {} items.", indicatorsQueueItems.size());
 
@@ -225,11 +244,13 @@ public class RegionIndicatorsQueueUpdaterService {
         }
     }
 
-    private void disableTendersOnMonitoring(List<RegionIndicatorsQueueItem> items) {
+    private List<RegionIndicatorsQueueItem> disableTendersOnMonitoring(List<RegionIndicatorsQueueItem> items) {
         try {
-            List<String> activeMonitorings = auditService.getMonitorings().stream()
+
+            List<String> activeMonitorings = auditService.getActiveMonitorings().stream()
                     .map(Monitoring::getId)
                     .collect(Collectors.toList());
+            List<RegionIndicatorsQueueItem> resultQueue = new ArrayList<>();
             items.forEach(item -> {
                 if (activeMonitorings.contains(item.getTenderOuterId())) {
                     item.setTopRisk(false);
@@ -238,15 +259,16 @@ public class RegionIndicatorsQueueUpdaterService {
                     log.info("Tender {} in monitoring now.", item.getTenderOuterId());
                 } else {
                     item.setMonitoring(false);
+                    resultQueue.add(item);
                 }
             });
+            return resultQueue;
         } catch (IOException e) {
-            e.printStackTrace();
-            log.error("Audit api response can not be parsed.");
+            log.error("Audit api response can not be parsed.", e);
         } catch (Exception e) {
-            e.printStackTrace();
-            log.error("Monitorings loading failed.");
+            log.error("Monitorings loading failed.", e);
         }
+        return Collections.emptyList();
     }
 
     private Map<String, List<RegionIndicatorsQueueItem>> groupIndicatorsByRegion(List<RegionIndicatorsQueueItem> items) {
