@@ -8,6 +8,7 @@ import com.datapath.integration.services.impl.ProzorroTenderUpdatesManager;
 import com.datapath.integration.services.impl.TenderService;
 import com.datapath.integration.utils.DateUtils;
 import com.datapath.integration.utils.ProzorroRequestUrlCreator;
+import com.datapath.persistence.entities.Tender;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -39,10 +40,8 @@ public class TenderUpdatesValidator {
 
     public void validate() {
         ZonedDateTime yearEarlier = DateUtils.yearEarlierFromNow();
-        ZonedDateTime lastDateModified = tenderService
-                .findLastModifiedEntry()
-                .getDateModified()
-                .minusDays(1);
+        Tender lastModifiedEntry = tenderService.findLastModifiedEntry();
+        ZonedDateTime lastDateModified = lastModifiedEntry != null ? lastModifiedEntry.getDateModified() : ZonedDateTime.now().minusDays(1);
 
         log.info("Start tender update validation. StartDate: {}, EndDate: {}", yearEarlier, lastDateModified);
 
@@ -106,7 +105,7 @@ public class TenderUpdatesValidator {
         Map<String, ZonedDateTime> existingTendersOuterIdsAndDateModified = new TreeMap<>();
         int pageSize = 1000;
         int currentIndex = 0;
-
+        log.info("Start fetching existing tenders");
         while (currentIndex <= tendersOuterIds.size() - 1) {
             int nextIndex = currentIndex + pageSize < tendersOuterIds.size() - 1 ?
                     currentIndex + pageSize : tendersOuterIds.size();
@@ -117,8 +116,9 @@ public class TenderUpdatesValidator {
             existingTendersOuterIdsAndDateModified.putAll(existingTenderIds);
 
             currentIndex += pageSize;
+            log.info("Checked {} from {} tenders", currentIndex, tendersOuterIds.size());
         }
-
+        log.info("Finished fetching existing tenders");
         return existingTendersOuterIdsAndDateModified;
     }
 }

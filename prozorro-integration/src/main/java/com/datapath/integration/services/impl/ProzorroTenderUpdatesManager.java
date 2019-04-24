@@ -112,7 +112,7 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
                                     tenderContract.setContract(contract);
                                 } catch (Exception ex) {
                                     tenderContract.setContract(null);
-                                    log.warn("Contract with outer id {} not found", tenderContract.getOuterId(), ex);
+                                    log.warn("Contract with outer id {} not found. {}", tenderContract.getOuterId(), ex.getMessage());
                                 }
                             }
 

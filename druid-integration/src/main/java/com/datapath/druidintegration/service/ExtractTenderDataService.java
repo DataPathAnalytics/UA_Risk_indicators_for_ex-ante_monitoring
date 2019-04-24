@@ -474,6 +474,7 @@ public class ExtractTenderDataService extends ExtractorService {
         GroupByRequest groupByRequest = new GroupByRequest(tenderIndex, "2015/2020");
         SimpleAggregationImpl aggregation = new SimpleAggregationImpl();
         aggregation.setType("longMax");
+        aggregation.setName("maxIteration");
         aggregation.setFieldName(ITERATION_ID);
         groupByRequest.setAggregations(Collections.singletonList(aggregation));
         groupByRequest.setDimensions(Collections.singletonList(TENDER_OUTER_ID));

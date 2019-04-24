@@ -32,15 +32,21 @@ public class DruidIndicatorMapper {
             }
             druidIndicator.setIndicatorValue(indicator.getValue());
             druidIndicator.setIndicatorImpact(indicator.getIndicator().getImpact());
-            druidIndicator.setIterationId(indicator.getTenderDimensions().getDruidCheckIteration() + 1);
-            druidIndicator.setStatus(indicator.getTenderDimensions().getStatus());
-            druidIndicator.setProcedureType(indicator.getTenderDimensions().getProcedureType());
+            if (indicator.getTenderDimensions()!=null){
+                druidIndicator.setIterationId(indicator.getTenderDimensions().getDruidCheckIteration()==null?null: indicator.getTenderDimensions().getDruidCheckIteration()+ 1);
+                druidIndicator.setStatus(indicator.getTenderDimensions().getStatus());
+                druidIndicator.setProcedureType(indicator.getTenderDimensions().getProcedureType());
+            }else {
+                druidIndicator.setIterationId(null);
+                druidIndicator.setStatus(null);
+                druidIndicator.setProcedureType(null);
+            }
             String now = ZonedDateTime.now(ZoneOffset.UTC).toString();
             druidIndicator.setDate(now);
             druidIndicator.setTime(now);
         } catch (Exception ex) {
             log.error(ex.getMessage(), ex);
-            log.info(indicator.toString());
+            log.info("Failed to fully setup indicator {}",indicator.toString());
         }
         return druidIndicator;
     }
@@ -81,9 +87,5 @@ public class DruidIndicatorMapper {
             druidIndicator.setLotIds(indicator.getLots());
         }
         return druidIndicator;
-    }
-
-    public List<DruidContractIndicator> transformToDruidContractIndicator(List<ContractIndicator> indicators) {
-        return indicators.isEmpty() ? new ArrayList<>() : indicators.stream().map(this::transformToDruidContractIndicator).collect(Collectors.toList());
     }
 }
