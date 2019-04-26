@@ -14,7 +14,7 @@ public class EmailSender {
 
     private static final String USER_NAME = "alekseytestingid@gmail.com";
     private static final String PASSWORD = "QW12er#$";
-    private static final String RECIPIENT = "aleksey.dubachinskiy@introlab-systems.com";
+    private static final String RECIPIENT = "adubachinskiy@datapathanalytics.com";
 
     public static boolean sendFailedTenderNotification(String tenderId) {
         String subject = "Tender loading failed";
