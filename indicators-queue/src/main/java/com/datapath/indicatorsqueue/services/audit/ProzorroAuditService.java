@@ -68,11 +68,20 @@ public class ProzorroAuditService {
                         ? parseZonedDateTime(endDate)
                         : parseZonedDateTime(startDate).plusDays(15)
                 );
-                String appealDocUrl = auditApiUrl + "/" + monitoringId + "/appeal";
+                String appealDocUrl = AUDIT_API_URL + "/" + monitoringId + "/appeal";
                 String appealDoc = restTemplate.getForObject(
                         appealDocUrl, String.class);
+
                 JsonNode monitoringAppealNode = mapper.readTree(appealDoc);
-                monitoring.setAppeal(monitoringAppealNode.has("/data/documents"));
+
+                try {
+                    if (monitoringAppealNode.at("/data/documents").size() > 0) {
+                        monitoring.setAppeal(true);
+                    }
+                } catch (Exception e) {
+                    log.warn("Appeal not found");
+                }
+
                 monitoring.setMonitoringId(monitoringId);
                 monitoring.setOffice(getOfficeFromMonitoringNode(monitoringNode));
 

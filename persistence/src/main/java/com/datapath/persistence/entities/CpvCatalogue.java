@@ -32,5 +32,7 @@ public class CpvCatalogue {
     private String cpv7;
     @Column(name = "cpv8")
     private String cpv8;
+    @Column(name = "parent_cpv")
+    private String parentCpv;
 
 }

@@ -181,49 +181,49 @@ public class AnalyticTableService implements InitializingBean {
 
         log.info("UnsuccessfulAbove recalculations start");
         List<UnsuccessfulAbove> unsuccessfulAboves = unsuccessfulAboveProvider.provide();
-        unsuccessfulAboveRepository.deleteAll();
+        unsuccessfulAboveRepository.deleteAllInBatch();
         unsuccessfulAboveRepository.saveAll(unsuccessfulAboves);
         log.info("UnsuccessfulAbove recalculations finish");
 
         log.info("ProcuredCPV recalculations start");
         List<ProcuredCPV> procuredCPVs = procuredCPVProvider.provide();
-        procuredCPVRepository.deleteAll();
+        procuredCPVRepository.deleteAllInBatch();
         procuredCPVRepository.saveAll(procuredCPVs);
         log.info("ProcuredCPV recalculations finish");
 
         log.info("GeneralSpecial recalculations start");
         List<GeneralSpecial> generalSpecials = generalSpecialProvider.provide();
-        generalSpecialRepository.deleteAll();
+        generalSpecialRepository.deleteAllInBatch();
         generalSpecialRepository.saveAll(generalSpecials);
         log.info("GeneralSpecial recalculations finish");
 
         log.info("BiddersForBuyers recalculations start");
         List<BiddersForBuyers> biddersForBuyers = biddersForBuyersProvider.provide();
-        biddersForBuyersRepository.deleteAll();
+        biddersForBuyersRepository.deleteAllInBatch();
         biddersForBuyersRepository.saveAll(biddersForBuyers);
         log.info("BiddersForBuyers recalculations finish");
 
         log.info("NearThreshold recalculations start");
         List<NearThreshold> nearThresholds = nearThresholdProvider.provide();
-        nearThresholdRepository.deleteAll();
+        nearThresholdRepository.deleteAllInBatch();
         nearThresholdRepository.saveAll(nearThresholds);
         log.info("NearThreshold recalculations finish");
 
         log.info("NearThresholdOneSupplier recalculations start");
         List<NearThresholdOneSupplier> nearThresholdOneSuppliers = nearThresholdOneSupplierProvider.provide();
-        nearThresholdOneSupplierRepository.deleteAll();
+        nearThresholdOneSupplierRepository.deleteAllInBatch();
         nearThresholdOneSupplierRepository.saveAll(nearThresholdOneSuppliers);
         log.info("NearThresholdOneSupplier recalculations finish");
 
         log.info("EDRPOU recalculations start");
         List<EDRPOU> edrpous = edrpouProvider.provide();
-        edrpouRepository.deleteAll();
+        edrpouRepository.deleteAllInBatch();
         edrpouRepository.saveAll(edrpous);
         log.info("EDRPOU recalculations finish");
 
         log.info("SupplierForPEWith3CPV recalculations start");
         List<SupplierForPEWith3CPV> supplierForPEWith3CPVS = supplierForPEWith3CPVProvider.provide();
-        supplierForPEWith3CPVRepository.deleteAll();
+        supplierForPEWith3CPVRepository.deleteAllInBatch();
         supplierForPEWith3CPVRepository.saveAll(supplierForPEWith3CPVS);
         log.info("SupplierForPEWith3CPV recalculations finish");
     }

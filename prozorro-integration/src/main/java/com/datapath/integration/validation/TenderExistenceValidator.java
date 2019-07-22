@@ -9,7 +9,6 @@ import com.datapath.integration.services.impl.TenderService;
 import com.datapath.integration.utils.DateUtils;
 import com.datapath.integration.utils.JsonUtils;
 import com.datapath.integration.utils.ProzorroRequestUrlCreator;
-import com.datapath.persistence.entities.Tender;
 import com.datapath.persistence.entities.validation.TenderValidationHistory;
 import com.datapath.persistence.repositories.validation.TenderValidationHistoryRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -46,8 +45,7 @@ public class TenderExistenceValidator {
     @Async
     public void validate() {
         ZonedDateTime yearEarlier = DateUtils.yearEarlierFromNow();
-        Tender lastModifiedEntry = tenderService.findLastModifiedEntry();
-        ZonedDateTime lastDateModified = lastModifiedEntry != null ? lastModifiedEntry.getDateModified() : ZonedDateTime.now().minusDays(1);
+        ZonedDateTime lastDateModified = tenderService.findLastModifiedEntry().getDateModified();
 
         log.info("Start tenders existence validation. StartDate: {}, EndDate: {}", yearEarlier, lastDateModified);
 

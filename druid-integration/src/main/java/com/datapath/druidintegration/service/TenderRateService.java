@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
@@ -36,6 +37,8 @@ public class TenderRateService {
     private static final String ITERATION_ID = "iterationId";
     private static final String STATUS = "status";
 
+    @Value("${tenders.completed.days:30}")
+    private Integer daysForQueue;
     private String druidUrl;
     private String tenderIndex;
     private RestTemplate restTemplate;
@@ -77,11 +80,7 @@ public class TenderRateService {
         if (isNull(tendersWithAtLeastOneRiskResponse) || tendersWithAtLeastOneRiskResponse.length == 0)
             return Collections.emptyList();
 
-        int chunkSize = 1000;
-
-        String tendersWithAtLeastOneRisk = Arrays.stream(tendersWithAtLeastOneRiskResponse)
-                .map(groupByResponse -> groupByResponse.getEvent().getTenderOuterId())
-                .collect(Collectors.joining(","));
+        String tendersWithAtLeastOneRisk = getCompletedTendersForDateRange(tendersWithAtLeastOneRiskResponse);
 
         List<Object> topTendersWithAmount = tenderRepository.findTendersWithAmountByTendersExcludingStatus(Arrays.asList("unsuccessful",
                 "cancelled"), tendersWithAtLeastOneRisk);
@@ -96,6 +95,7 @@ public class TenderRateService {
         List<String> topTenders = new ArrayList<>(tenderAmountMap.keySet());
         Map<String, Double> tenderIdScoreMap = new HashMap<>();
         Map<String, Double> tenderRiskScoreMap = new HashMap<>();
+        int chunkSize = 1000;
         if (!topTenders.isEmpty()) {
             for (int start = 0; start < topTenders.size(); start += chunkSize) {
                 int end = Math.min(topTenders.size(), start + chunkSize);
@@ -227,6 +227,29 @@ public class TenderRateService {
         }
 
         return Collections.emptyList();
+    }
+
+    private String getCompletedTendersForDateRange(GroupByResponse[] tendersWithAtLeastOneRiskResponse) {
+        List<String> tendersWithAtLeastOneRiskAsList = Arrays.stream(tendersWithAtLeastOneRiskResponse)
+                .map(groupByResponse -> groupByResponse.getEvent().getTenderOuterId()).collect(Collectors.toList());
+
+        List<String> completedTendersNotOlderSpecificDaysCount = new ArrayList<>();
+
+        boolean hasNext;
+        long pageCount = 0;
+        long pageSize = 20000;
+        do {
+            List<String> chunk = tendersWithAtLeastOneRiskAsList.stream()
+                    .skip(pageCount * pageSize)
+                    .limit(pageSize)
+                    .collect(Collectors.toList());
+            completedTendersNotOlderSpecificDaysCount.addAll(tenderRepository.findCompletedTenderNotOlderThanByOuterIdIn(ZonedDateTime.now().minusDays(daysForQueue), chunk));
+            completedTendersNotOlderSpecificDaysCount.addAll(tenderRepository.findNotCompletedTenders(chunk));
+            hasNext = chunk.size() == pageSize;
+            pageCount++;
+        } while (hasNext);
+
+        return String.join(",", completedTendersNotOlderSpecificDaysCount);
     }
 
     GroupByRequest buildRequestWithLeastOneRiskTender() {

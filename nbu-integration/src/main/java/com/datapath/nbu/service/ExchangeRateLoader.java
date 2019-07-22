@@ -54,8 +54,8 @@ public class ExchangeRateLoader {
 
     @Nullable
     private List<ExchangeRate> parseExchangeRateResponse(String response) {
+        List<ExchangeRate> exchangeRates = new ArrayList<>();
         try {
-            List<ExchangeRate> exchangeRates = new ArrayList<>();
             JsonNode rootNode = new ObjectMapper().readTree(response);
             for (JsonNode node : rootNode) {
                 String currency = node.at("/txt").asText();
@@ -85,10 +85,9 @@ public class ExchangeRateLoader {
                 exchangeRates.add(exchangeRate);
             }
             return exchangeRates;
-        } catch (Exception e) {
-            e.printStackTrace();
-            log.error("Cant't parse NBU api response: {}", response);
-            return null;
+        } catch (Exception ex) {
+            log.error(ex.getMessage(), ex);
         }
+        return exchangeRates;
     }
 }

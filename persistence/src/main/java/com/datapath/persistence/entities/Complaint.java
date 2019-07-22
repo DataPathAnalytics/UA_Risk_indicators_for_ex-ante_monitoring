@@ -27,9 +27,16 @@ public class Complaint {
     @Column
     private String status;
 
+    @Column
+    private String complaintType;
+
     @Column(name = "date")
     @Convert(converter = ZonedDateTimeConverter.class)
     private ZonedDateTime date;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tender_id")
+    private Tender tender;
 
     @ManyToOne(cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)
     @JoinColumn(name = "award_id")

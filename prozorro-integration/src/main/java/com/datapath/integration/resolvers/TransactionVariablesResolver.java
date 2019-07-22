@@ -31,11 +31,9 @@ public class TransactionVariablesResolver {
 
         TransactionVariablesResolver.CpvLevel parentCpvLevel = getParentCpvLevel(catalogues);
         CpvCatalogue catalogue = cpvCatalogueService.findByCpv(parentCpvLevel.getCpv());
+        //TODO need to discuss what to do when common parent doesn't exist in cpv canalogue
+        if (catalogue == null) return parentCpvLevel.getCpv();
         Gsw gsw = Gsw.find(parentCpvLevel.getCpv());
-
-        if (catalogue==null){
-            catalogue=findCatalogWithLessCatalogLevel(parentCpvLevel.getCpv());
-        }
 
         if (gsw.equals(Gsw.WORKS)) {
             return parentCpvLevel.getLevel() > 5 ? catalogue.getCpv5() : catalogue.getCpv();
@@ -84,21 +82,6 @@ public class TransactionVariablesResolver {
         if (cpvSet.size() == 1 && !cpvSet.contains("undefined")) return new TransactionVariablesResolver.CpvLevel(cpvSet.iterator().next(), 2);
 
         throw new RuntimeException("Can't find parent code for items in tender");
-    }
-
-    private CpvCatalogue findCatalogWithLessCatalogLevel(String cpv){
-        CpvCatalogue byCpv;
-        int cout=7;
-        do {
-            StringBuilder stringBuilder = new StringBuilder(cpv);
-            stringBuilder.setCharAt(cout, '0');
-            byCpv = cpvCatalogueService.findByCpv(stringBuilder.toString());
-            if (byCpv!=null){
-                return byCpv;
-            }
-            cout--;
-        }while (byCpv==null && cout>1);
-        return null;
     }
 
     @Data

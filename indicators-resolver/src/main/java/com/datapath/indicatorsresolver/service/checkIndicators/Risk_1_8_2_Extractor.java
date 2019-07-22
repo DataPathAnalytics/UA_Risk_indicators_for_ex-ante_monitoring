@@ -43,8 +43,7 @@ public class Risk_1_8_2_Extractor extends BaseExtractor {
                 checkRisk_1_8_2Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -65,8 +64,7 @@ public class Risk_1_8_2_Extractor extends BaseExtractor {
                 checkRisk_1_8_2Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -156,7 +154,7 @@ public class Risk_1_8_2_Extractor extends BaseExtractor {
                         String lotId = lotInfo[1].toString();
                         Integer complaintsCount = Integer.parseInt(lotInfo[2].toString());
                         Timestamp activeAwardTimestamp = lotInfo[3] == null ? null : (Timestamp) lotInfo[3];
-                        String contractStatus = lotInfo[4] == null ? null :lotInfo[4].toString();
+                        String contractStatus = lotInfo[4] == null ? null : lotInfo[4].toString();
                         Integer nonSignatureDocs = Integer.parseInt(lotInfo[5].toString());
                         Integer contractDocs = Integer.parseInt(lotInfo[6].toString());
                         String lotStatus = lotInfo[7].toString();
@@ -171,7 +169,7 @@ public class Risk_1_8_2_Extractor extends BaseExtractor {
                                 continue;
                             }
 
-                            if((!contractStatus.equals("active")|| (contractStatus.equals("active") && nonSignatureDocs == 0)) && contractDocs==0){
+                            if ((!contractStatus.equals("active") || (contractStatus.equals("active") && nonSignatureDocs == 0)) && contractDocs == 0) {
                                 ZonedDateTime date = toZonedDateTime(activeAwardTimestamp)
                                         .withZoneSameInstant(ZoneId.of("Europe/Kiev"))
                                         .withHour(0).withMinute(0).withSecond(0).withNano(0);
@@ -207,14 +205,14 @@ public class Risk_1_8_2_Extractor extends BaseExtractor {
 
                 } catch (Exception ex) {
                     log.info(TENDER_INDICATOR_ERROR_MESSAGE, INDICATOR_CODE, tenderId);
-                    ex.printStackTrace();
+                    log.error(ex.getMessage(), ex);
                 }
             }
             return indicatorsMap;
 
         } catch (Exception ex) {
             log.info("ERROR while processing indicator: {}", INDICATOR_CODE);
-            ex.printStackTrace();
+            log.error(ex.getMessage(), ex);
             return new HashMap<>();
         }
     }

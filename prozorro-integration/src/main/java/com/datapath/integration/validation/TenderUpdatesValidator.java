@@ -40,9 +40,11 @@ public class TenderUpdatesValidator {
 
     public void validate() {
         ZonedDateTime yearEarlier = DateUtils.yearEarlierFromNow();
-        Tender lastModifiedEntry = tenderService.findLastModifiedEntry();
-        ZonedDateTime lastDateModified = lastModifiedEntry != null ? lastModifiedEntry.getDateModified() : ZonedDateTime.now().minusDays(1);
+        Tender lastModifiedTender = tenderService.findLastModifiedEntry();
+        //Database is empty no need to validate smt
+        if (lastModifiedTender == null) return;
 
+        ZonedDateTime lastDateModified = lastModifiedTender.getDateModified().minusDays(1);
         log.info("Start tender update validation. StartDate: {}, EndDate: {}", yearEarlier, lastDateModified);
 
         ZonedDateTime dateOffset = yearEarlier.withZoneSameInstant(ZoneId.of("Europe/Kiev"));
@@ -61,8 +63,8 @@ public class TenderUpdatesValidator {
                         .collect(Collectors.toList());
 
                 tenderUpdateInfos.addAll(items);
-
-                if (items.size() < TENDERS_LIMIT) {
+                log.info("Fetching {} tenders", items.size());
+                if (items.size() == 0) {
                     break;
                 }
 
@@ -86,13 +88,11 @@ public class TenderUpdatesValidator {
         List<TenderUpdateInfo> infos = new ArrayList<>();
         tenderUpdateInfos.forEach(tenderUpdateInfo -> {
             ZonedDateTime dateModified = existingTendersOuterIds.get(tenderUpdateInfo.getId());
-            if (dateModified != null) {
-                if (!dateModified.isEqual(tenderUpdateInfo.getDateModified())) {
-                    log.info("Tender is not up to date: {} Expected date: {} Actual date: {}",
-                            tenderUpdateInfo.getId(), tenderUpdateInfo.getDateModified(), dateModified);
+            if (dateModified != null && !dateModified.isEqual(tenderUpdateInfo.getDateModified())) {
+                log.info("Tender is not up to date: {} Expected date: {} Actual date: {}",
+                        tenderUpdateInfo.getId(), tenderUpdateInfo.getDateModified(), dateModified);
 
-                    infos.add(tenderUpdateInfo);
-                }
+                infos.add(tenderUpdateInfo);
             }
         });
 

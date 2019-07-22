@@ -56,6 +56,7 @@ public class TenderParser implements EntityParser {
         tenderParser.parseProcuringEntity();
         tenderParser.parseTender(skipExpiredTenders);
         tenderParser.parseTenderData();
+        tenderParser.parseTenderComplaints();
         tenderParser.parseTenderDocuments();
         tenderParser.parseTenderEligibilityDocuments();
         tenderParser.parseTenderFinancialDocuments();
@@ -372,6 +373,12 @@ public class TenderParser implements EntityParser {
     private void parseTenderData() {
         tenderData = new TenderData();
         tenderData.setData(rawData);
+    }
+
+    private void parseTenderComplaints() {
+        List<Complaint> complaints = parseComplaints(dataNode);
+        complaints.forEach(complaint -> complaint.setTender(tender));
+        tender.setComplaints(complaints);
     }
 
     private void parseTenderDocuments() {
@@ -831,7 +838,6 @@ public class TenderParser implements EntityParser {
                     qualification.setLotId(AUTOCREATED_LOT);
                 }
             }
-
             tenderQualifications.add(qualification);
         }
     }
@@ -873,12 +879,14 @@ public class TenderParser implements EntityParser {
             String outerId = complaintNode.at("/id").asText();
             String complaintId = complaintNode.at("/complaintID").asText();
             String status = complaintNode.at("/status").asText();
+            String type = complaintNode.at("/type").asText();
             ZonedDateTime date = JsonUtils.getDate(complaintNode, "/date");
 
             Complaint complaint = new Complaint();
             complaint.setOuterId(outerId);
             complaint.setComplaintId(complaintId);
             complaint.setStatus(status);
+            complaint.setComplaintType(type);
             complaint.setDate(date);
             complaints.add(complaint);
         }

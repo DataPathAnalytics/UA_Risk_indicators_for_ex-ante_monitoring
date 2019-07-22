@@ -152,17 +152,7 @@ public class Tender {
     @OneToMany(mappedBy = "tender", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Qualification> qualifications;
 
-    public Tender() {
-    }
+    @OneToMany(mappedBy = "tender", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Complaint> complaints;
 
-    public Tender(String outerId, String tenderId, ZonedDateTime date, ZonedDateTime dateModified, String procurementMethodType, String status, ZonedDateTime dateCreated) {
-        this.outerId = outerId;
-        this.tenderId = tenderId;
-        this.date = date;
-        this.dateModified = dateModified;
-        this.procurementMethodType = procurementMethodType;
-        this.status = status;
-        this.dateCreated = dateCreated;
-
-    }
 }

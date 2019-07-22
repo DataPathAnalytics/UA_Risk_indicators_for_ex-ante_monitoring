@@ -122,9 +122,9 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
                                 continue;
                             }
 
-                            Tender savedTender = tenderLoaderService.saveTender(tender);
-                            setUpdatesAvailability(true);
-                            log.info("Tender saved, id = {}", savedTender.getId());
+                                Tender savedTender = tenderLoaderService.saveTender(tender);
+                                setUpdatesAvailability(true);
+                                log.info("Tender saved, id = {}", savedTender.getId());
                         } catch (TenderValidationException e) {
                             log.warn("Tender expired or it is test tender: outerId = {}", tenderUpdateInfo.getId(), e);
                         } catch (ConstraintViolationException e) {
@@ -187,10 +187,6 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
                 String tenderCPV = tvResolver.getTenderCPV(tender);
                 tender.setTvTenderCPV(tenderCPV);
 
-//                if (tenderDataValidator.isTenderFromFinanceCategory(tender)) {
-//                    return;
-//                }
-
                 // Contracts loading
                 for (TenderContract tenderContract : tender.getTenderContracts()) {
                     ContractUpdateInfo contractUpdateInfo = new ContractUpdateInfo();
@@ -222,7 +218,7 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
             } catch (Exception ex) {
                 log.info("Failed to load tender {}", tenderUpdateInfo.getId(), ex);
             }
-        }
+    }
     }
 
     private boolean newTendersVersionExists(TenderUpdateInfo tenderUpdateInfo, Tender tender) {

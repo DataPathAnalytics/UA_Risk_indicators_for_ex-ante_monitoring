@@ -1,0 +1,189 @@
+{
+  "dataSources": [
+    {
+      "spec": {
+        "dataSchema": {
+          "dataSource": "foo",
+          "metricsSpec": [
+            {
+              "type": "count",
+              "name": "count"
+            },
+            {
+              "type": "doubleSum",
+              "fieldName": "x",
+              "name": "x"
+            }
+          ],
+          "granularitySpec": {
+            "segmentGranularity": "hour",
+            "queryGranularity": "none",
+            "type": "uniform"
+          },
+          "parser": {
+            "type": "string",
+            "parseSpec": {
+              "format": "json",
+              "timestampSpec": {
+                "column": "timestamp",
+                "format": "auto"
+              },
+              "dimensionsSpec": {
+                "dimensions": [
+                  "dim1",
+                  "dim2",
+                  "dim3"
+                ]
+              }
+            }
+          }
+        },
+        "tuningConfig": {
+          "type": "realtime",
+          "windowPeriod": "PT10M",
+          "intermediatePersistPeriod": "PT10M",
+          "maxRowsInMemory": "100000"
+        }
+      },
+      "properties": {
+        "task.partitions": "1",
+        "task.replicants": "1"
+      }
+    },
+    {
+      "spec": {
+        "dataSchema": {
+          "dataSource": "tender_indicators_v1",
+          "parser": {
+            "type": "string",
+            "parseSpec": {
+              "timestampSpec": {
+                "column": "time",
+                "format": "auto"
+              },
+              "dimensionsSpec": {
+                "dimensions": [
+                  "time",
+                  "date",
+                  "tenderOuterId",
+                  "tenderId",
+                  "indicatorId",
+                  "indicatorType",
+                  "lotIds",
+                  "status",
+                  "procedureType"
+                ]
+              },
+              "format": "json"
+            }
+          },
+          "granularitySpec": {
+            "type": "uniform",
+            "segmentGranularity": "hour",
+            "queryGranularity": "none"
+          },
+          "metricsSpec": [
+            {
+              "name": "indicatorValue",
+              "type": "longSum",
+              "fieldName": "indicatorValue"
+            },
+            {
+              "name": "indicatorImpact",
+              "type": "doubleSum",
+              "fieldName": "indicatorImpact"
+            },
+            {
+              "type": "longSum",
+              "name": "iterationId",
+              "fieldName": "iterationId"
+            }
+          ]
+        },
+        "ioConfig": {
+          "type": "realtime"
+        },
+        "tuningConfig": {
+          "type": "realtime",
+          "maxRowsInMemory": "100000",
+          "intermediatePersistPeriod": "PT10M",
+          "windowPeriod": "PT10M"
+        }
+      },
+      "properties": {
+        "task.partitions": "1",
+        "task.replicants": "1"
+      }
+    },
+    {
+      "spec": {
+        "dataSchema": {
+          "dataSource": "contract_indicators_v1",
+          "parser": {
+            "type": "string",
+            "parseSpec": {
+              "timestampSpec": {
+                "column": "time",
+                "format": "auto"
+              },
+              "dimensionsSpec": {
+                "dimensions": [
+                  "time",
+                  "date",
+                  "tenderOuterId",
+                  "tenderId",
+                  "contractOuterId",
+                  "contractId",
+                  "indicatorId",
+                  "indicatorType",
+                  "lotIds",
+                  "status",
+                  "procedureType"
+                ]
+              },
+              "format": "json"
+            }
+          },
+          "granularitySpec": {
+            "type": "uniform",
+            "segmentGranularity": "hour",
+            "queryGranularity": "none"
+          },
+          "metricsSpec": [
+            {
+              "name": "indicatorValue",
+              "type": "longSum",
+              "fieldName": "indicatorValue"
+            },
+            {
+              "name": "indicatorImpact",
+              "type": "doubleSum",
+              "fieldName": "indicatorImpact"
+            },
+            {
+              "type": "longSum",
+              "name": "iterationId",
+              "fieldName": "iterationId"
+            }
+          ]
+        },
+        "ioConfig": {
+          "type": "realtime"
+        },
+        "tuningConfig": {
+          "type": "realtime",
+          "maxRowsInMemory": "100000",
+          "intermediatePersistPeriod": "PT10M",
+          "windowPeriod": "PT10M"
+        }
+      },
+      "properties": {
+        "task.partitions": "1",
+        "task.replicants": "1"
+      }
+    }
+  ],
+  "properties": {
+    "zookeeper.connect": "localhost"
+  }
+}

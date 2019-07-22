@@ -1,6 +1,7 @@
 package com.datapath.persistence.repositories;
 
 import com.datapath.persistence.entities.Tender;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -9,6 +10,7 @@ import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.validation.constraints.Size;
 import java.time.ZonedDateTime;
 import java.util.List;
 
@@ -46,6 +48,12 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
 
     @Query(value = "SELECT t.outerId from Tender t where t.outerId in ?1")
     List<String> findAllOuterIdsByOuterIdIn(List<String> outerIds);
+
+    @Query(value = "SELECT t.outerId from Tender t where t.outerId in ?2 and t.status = 'complete' and t.date > ?1")
+    List<String> findCompletedTenderNotOlderThanByOuterIdIn(ZonedDateTime zonedDateTime, List<String> outerIds);
+
+    @Query(value = "SELECT t.outerId from Tender t where t.outerId in ?1 and t.status <> 'complete'")
+    List<String> findNotCompletedTenders(List<String> outerIds);
 
     @Query(value = "SELECT t.outerId, t.dateModified from Tender t where t.outerId in ?1")
     List<Object[]> findAllOuterIdsAndDateModifiedByOuterIdIn(List<String> outerIds);
@@ -826,7 +834,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
                     "  procuring_entity.region " +
                     "FROM tender " +
                     "  JOIN procuring_entity ON tender.procuring_entity_id = procuring_entity.id " +
-                    "WHERE tender.outer_id = ANY (SELECT regexp_split_to_table(?1, ','))\n" , nativeQuery = true)
+                    "WHERE tender.outer_id = ANY (SELECT regexp_split_to_table(?1, ','))\n", nativeQuery = true)
     List<Object> findAllTendersWithPERegionByOuterIdIn(String outerIds);
 
     @Query(value = "" +
@@ -1123,12 +1131,23 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "       indicators_queue_region.correct_name,\n" +
             "       (select count(*) > 0\n" +
             "        from (select * from award\n" +
-            "                              join complaint c2 on award.id = c2.award_id where award.tender_id = tender.id)a) \n" +
+            "                              join complaint c2 on award.id = c2.award_id where award.tender_id = tender.id and c2.complaint_type = 'complaint') a), \n" +
+            "       tender.title,\n" +
+            "       (SELECT COUNT(*) > 0 FROM complaint WHERE tender_id = tender.id AND complaint_type = 'complaint')\n" +
             "from tender\n" +
             "       left join procuring_entity on tender.procuring_entity_id = procuring_entity.id\n" +
             "       left join cpv_catalogue cpv on tender.tv_tender_cpv = cpv.cpv\n" +
             "       left join cpv_catalogue cpv2 on cpv.cpv2 = cpv2.cpv\n" +
-            "       left join indicators_queue_region on procuring_entity.region = indicators_queue_region.original_name " +
-            "where tender.outer_id = ANY (SELECT regexp_split_to_table(?1, ','))", nativeQuery = true)
+            "       left join indicators_queue_region on procuring_entity.region = indicators_queue_region.original_name where tender.outer_id = ANY (SELECT regexp_split_to_table(?1, ','))", nativeQuery = true)
     List<Object[]> getTendersCommonInfo(String tenderIds);
+
+    @Query(value = "SELECT t.*\n" +
+            "FROM tender t\n" +
+            "JOIN procuring_entity pe on t.procuring_entity_id = pe.id\n" +
+            "WHERE t.status IN ('active.awarded', 'active.qualification', 'complete')\n" +
+            "AND t.procurement_method_type IN ('aboveThresholdEU','aboveThresholdUA')\n" +
+            "AND pe.kind IN ('general', 'special')\n" +
+            "AND t.date_created > ?1\n" +
+            "ORDER BY t.date_created ", nativeQuery = true)
+    Page<Tender> getRisk1_8_2Tenders(ZonedDateTime date, Pageable pageable);
 }

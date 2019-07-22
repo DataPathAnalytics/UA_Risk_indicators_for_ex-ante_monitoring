@@ -1,3 +1,5 @@
+delete
+from indicators_queue_region;
 INSERT INTO public.indicators_queue_region (correct_name, original_name)
 VALUES ('Вінницька область', 'Вiнницька область');
 INSERT INTO public.indicators_queue_region (correct_name, original_name)
@@ -14,6 +16,10 @@ INSERT INTO public.indicators_queue_region (correct_name, original_name)
 VALUES ('Волинська область', 'Волинська обл.');
 INSERT INTO public.indicators_queue_region (correct_name, original_name)
 VALUES ('Волинська область', 'Волинська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Дніпропетровська область', 'Дніпропетровська область');
+INSERT INTO public.indicators_queue_region (correct_name, original_name)
+VALUES ('Дніпропетровська область', 'Днiпропетровська область');
 INSERT INTO public.indicators_queue_region (correct_name, original_name)
 VALUES ('Дніпропетровська область', 'Дніпропетровська обл.');
 INSERT INTO public.indicators_queue_region (correct_name, original_name)

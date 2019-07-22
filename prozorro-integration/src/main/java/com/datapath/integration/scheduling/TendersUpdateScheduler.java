@@ -12,10 +12,10 @@ import org.springframework.stereotype.Component;
 public class TendersUpdateScheduler {
 
     private static final int TENDERS_UPDATES_RATE = 100_000;
-    private static final int TENDERS_UPDATES_DELAY = 100_000;
+    private static final int TENDERS_UPDATES_DELAY = 1_000;
 
     private static final int CONTRACTS_UPDATES_RATE = 100_000;
-    private static final int CONTRACTS_UPDATES_DELAY = 500_000;
+    private static final int CONTRACTS_UPDATES_DELAY = 5_000;
 
     private TenderUpdatesManager tenderUpdatesManager;
     private ContractUpdatesManager contractUpdatesManager;
@@ -29,6 +29,7 @@ public class TendersUpdateScheduler {
     @Scheduled(fixedRate = TENDERS_UPDATES_RATE, initialDelay = TENDERS_UPDATES_DELAY)
     public void checkTendersForUpdates() {
         try {
+            log.info("Check tenders updates scheduled started.");
             if (tenderUpdatesManager.getServiceStatus() == ServiceStatus.ENABLED) {
                 this.tenderUpdatesManager.loadLastModifiedTenders();
             } else {
@@ -42,6 +43,7 @@ public class TendersUpdateScheduler {
 
     @Scheduled(fixedRate = CONTRACTS_UPDATES_RATE, initialDelay = CONTRACTS_UPDATES_DELAY)
     public void checkContractsForUpdates() {
+        log.info("Check contract updates scheduled started.");
         try {
             if (contractUpdatesManager.getServiceStatus() == ServiceStatus.ENABLED) {
                 this.contractUpdatesManager.loadLastModifiedContracts();

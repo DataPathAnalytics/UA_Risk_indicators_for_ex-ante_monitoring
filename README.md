@@ -1,1 +1,0 @@
-# auditors_indicators

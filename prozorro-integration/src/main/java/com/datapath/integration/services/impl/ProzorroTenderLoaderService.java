@@ -61,11 +61,8 @@ public class ProzorroTenderLoaderService implements TenderLoaderService {
 
     @Override
     public ZonedDateTime resolveDateOffset() {
-        final ZonedDateTime lastModifiedDate = this.getLastModifiedDate();
-        if (lastModifiedDate != null)
-            return lastModifiedDate;
-        else
-            return getYearEarlierDate();
+        ZonedDateTime lastModifiedDate = getLastModifiedDate();
+        return lastModifiedDate != null ? lastModifiedDate : getYearEarlierDate();
     }
 
     @Override

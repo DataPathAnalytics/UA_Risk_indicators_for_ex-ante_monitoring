@@ -7,7 +7,6 @@ import com.datapath.druidintegration.service.UploadDataService;
 import com.datapath.indicatorsresolver.model.ContractDimensions;
 import com.datapath.indicatorsresolver.model.TenderDimensions;
 import com.datapath.indicatorsresolver.model.TenderIndicator;
-import com.datapath.indicatorsresolver.service.BaseService;
 import com.datapath.indicatorsresolver.service.DruidIndicatorMapper;
 import com.datapath.nbu.service.ExchangeRateService;
 import com.datapath.persistence.entities.Indicator;
@@ -36,7 +35,7 @@ import static java.util.Objects.isNull;
 
 @Service
 @Slf4j
-public class BaseExtractor extends BaseService {
+public class BaseExtractor {
 
     protected Integer AVAILABLE_HOURS_DIFF = 2;
 
@@ -259,11 +258,6 @@ public class BaseExtractor extends BaseService {
                 procuringEntityKind, PageRequest.of(page, size));
     }
 
-    Indicator getIndicator(String indicatorId) {
-        Optional<Indicator> indicatorOptional = indicatorRepository.findById(indicatorId);
-        return indicatorOptional.orElse(null);
-    }
-
     Indicator getActiveIndicator(String indicatorId) {
         Optional<Indicator> indicatorOptional = indicatorRepository.findFirstByIdAndAndIsActive(indicatorId, true);
         return indicatorOptional.orElse(null);
@@ -300,27 +294,6 @@ public class BaseExtractor extends BaseService {
         }
     }
 
-//    TenderDimensions getTenderDimensionsWithIndicatorLastIteration(String tenderId, String indicatorId) {
-//        TenderDimensions tenderDimensions = getTenderDimensionsMap(tenderId);
-//        Long maxIteration = extractDataService.getMaxTenderIndicatorIteration(tenderDimensions.getId(), indicatorId);
-//        tenderDimensions.setDruidCheckIteration(maxIteration);
-//        return tenderDimensions;
-//    }
-
-    private TenderDimensions getTenderDimensionsMap(String tenderId) {
-        Tender tender = tenderRepository.findFirstByOuterId(tenderId);
-        TenderDimensions tenderDimensions = new TenderDimensions();
-        tenderDimensions.setId(tender.getOuterId());
-        tenderDimensions.setTenderId(tender.getTenderId());
-        tenderDimensions.setDate(tender.getDate());
-        tenderDimensions.setModifiedDate(tender.getDateModified());
-        tenderDimensions.setProcedureType(tender.getProcurementMethodType());
-        tenderDimensions.setStatus(tender.getStatus());
-        tenderDimensions.setDateCreated(tender.getDateCreated());
-        return tenderDimensions;
-    }
-
-
     Map<String, TenderDimensions> getTenderDimensionsWithIndicatorLastIteration(Set<String> tenderIds, String indicatorId) {
         Map<String, TenderDimensions> tenderDimensions = getTenderDimensionsMap(tenderIds);
         Map<String, Long> maxTenderIndicatorIteration = extractDataService.getMaxTenderIndicatorIteration(tenderIds, indicatorId);
@@ -352,6 +325,35 @@ public class BaseExtractor extends BaseService {
             tenderDimensions.setStatus(status);
             tenderDimensions.setDateCreated(isNull(dateCreatedTimestamp) ? null : toZonedDateTime(dateCreatedTimestamp));
             result.put(outerId, tenderDimensions);
+        });
+
+        return result;
+    }
+
+    Map<String, TenderDimensions> getTenderDimensionsWithIndicatorLastIteration(List<Tender> tenders, String indicatorId) {
+        Map<String, TenderDimensions> tenderDimensions = getTenderDimensionsMap(tenders);
+
+        Set<String> tenderIds = tenders.stream().map(Tender::getOuterId).collect(Collectors.toSet());
+        Map<String, Long> maxTenderIndicatorIteration = extractDataService.getMaxTenderIndicatorIteration(tenderIds, indicatorId);
+        tenderDimensions.forEach((key, value) -> value.setDruidCheckIteration(maxTenderIndicatorIteration.get(key)));
+        return tenderDimensions;
+    }
+
+    private Map<String, TenderDimensions> getTenderDimensionsMap(List<Tender> tenders) {
+
+        Map<String, TenderDimensions> result = new HashMap<>();
+        tenders.forEach(tender -> {
+
+            TenderDimensions tenderDimensions = new TenderDimensions();
+
+            tenderDimensions.setId(tender.getOuterId());
+            tenderDimensions.setTenderId(tender.getTenderId());
+            tenderDimensions.setDate(tender.getDate());
+            tenderDimensions.setModifiedDate(tender.getDateModified());
+            tenderDimensions.setProcedureType(tender.getProcurementMethodType());
+            tenderDimensions.setStatus(tender.getStatus());
+            tenderDimensions.setDateCreated(tender.getDateCreated());
+            result.put(tender.getOuterId(), tenderDimensions);
         });
 
         return result;
