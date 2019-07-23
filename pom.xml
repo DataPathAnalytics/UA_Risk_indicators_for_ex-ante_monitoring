@@ -16,7 +16,6 @@
 		<module>coordinator</module>
         <module>nbu-integration</module>
         <module>indicators-queue</module>
-        <module>elasticsearch-integration</module>
     </modules>
     <packaging>pom</packaging>
 

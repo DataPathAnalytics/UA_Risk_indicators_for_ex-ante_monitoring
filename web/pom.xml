@@ -22,11 +22,7 @@
             <artifactId>persistence</artifactId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
-        <dependency>
-            <groupId>com.datapath</groupId>
-            <artifactId>elasticsearch-integration</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
-        </dependency>
+
         <dependency>
             <groupId>com.datapath</groupId>
             <artifactId>indicators-queue</artifactId>
