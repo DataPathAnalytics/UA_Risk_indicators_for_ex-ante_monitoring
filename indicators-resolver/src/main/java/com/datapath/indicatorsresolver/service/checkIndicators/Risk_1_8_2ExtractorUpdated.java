@@ -51,6 +51,8 @@ public class Risk_1_8_2ExtractorUpdated extends BaseExtractor {
     }
 
     private void processBatch(List<Tender> tenders, Indicator indicator) {
+        if (tenders.isEmpty()) return;
+
         Set<String> tenderIds = tenders.stream().map(Tender::getOuterId).collect(Collectors.toSet());
 
         Map<String, TenderDimensions> dimensionsMap = getTenderDimensionsWithIndicatorLastIteration(tenders, INDICATOR_CODE);
