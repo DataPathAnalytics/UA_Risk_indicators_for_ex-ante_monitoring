@@ -63,11 +63,12 @@ public class Risk_1_8_2ExtractorUpdated extends BaseExtractor {
         Map<String, Map<String, Integer>> maxTendersLotIterationData = extractDataService
                 .getMaxTendersLotIterationData(maxTendersIndicatorIteration, INDICATOR_CODE);
 
-        Map<String, Integer> lotIndicators = new HashMap<>();
 
         Map<String, List<TenderIndicator>> indicatorsMap = new HashMap<>();
 
         for (Tender tender : tenders) {
+
+            Map<String, Integer> lotIndicators = new HashMap<>();
 
             TenderDimensions tenderDimensions = new TenderDimensions(tender.getOuterId());
 

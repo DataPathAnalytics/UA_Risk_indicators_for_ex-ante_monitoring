@@ -294,15 +294,15 @@ public class IndicatorsResolver {
     @Async
     public void checkRisk_1_8_2() {
         LOG.info("Start RISK_1_8_2 recalculation");
-//        risk_1_8_2_extractor.checkIndicator();
-        risk_1_8_2_extractorUpdated.extract();
+        risk_1_8_2_extractor.checkIndicator();
+//        risk_1_8_2_extractorUpdated.extract();
         LOG.info("Finish RISK_1_8_2 recalculation");
     }
 
     @Async
     public void checkRisk_1_8_2(ZonedDateTime date) {
         LOG.info("Start daily RISK_1_8_2 recalculation");
-//        risk_1_8_2_extractor.checkIndicator(date);
+        risk_1_8_2_extractor.checkIndicator(date);
         LOG.info("Finish daily RISK_1_8_2 recalculation");
     }
 
