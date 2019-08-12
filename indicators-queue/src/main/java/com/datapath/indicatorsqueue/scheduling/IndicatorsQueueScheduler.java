@@ -33,7 +33,7 @@ public class IndicatorsQueueScheduler implements InitializingBean {
         }
     }
 
-    @Scheduled(cron = "0 0 0 * * *")
+    @Scheduled(cron = "0 0 * * * *")
     public void updateRegionIndicatorsQueue() {
         try {
             regionIndicatorsQueueUpdaterService.updateIndicatorsQueue();
