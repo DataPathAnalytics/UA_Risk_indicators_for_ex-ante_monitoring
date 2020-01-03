@@ -55,7 +55,8 @@ public class ExtractKeyDimensionsService {
     }
 
     public TopNResponse[] getTopNKeyDimensions(String startDate, String endDate, String dimension, String index) {
-        TopNRequest topProcedureTypes = new TopNRequest(index, startDate + "/" + endDate);
+        TopNRequest topProcedureTypes = new TopNRequest(index);
+        topProcedureTypes.setIntervals(startDate + "/" + endDate);
         topProcedureTypes.setDimension(dimension);
 
         SimpleMetricImpl metric = new SimpleMetricImpl();

@@ -81,7 +81,7 @@ abstract class ExtractorService {
     }
 
     public Long getMaxIndicatorIteration(StringFilter filterByTenderId, String indicatorId, String index) {
-        GroupByRequest groupByRequest = new GroupByRequest(index, "2015/2020");
+        GroupByRequest groupByRequest = new GroupByRequest(index);
         SimpleAggregationImpl aggregation = new SimpleAggregationImpl();
         aggregation.setType("longMax");
         aggregation.setName("maxIteration");

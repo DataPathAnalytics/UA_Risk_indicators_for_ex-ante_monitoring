@@ -1,5 +1,6 @@
 package com.datapath.druidintegration.model.druid.request;
 
+import com.datapath.druidintegration.DruidConstants;
 import com.datapath.druidintegration.model.druid.request.common.Aggregation;
 import com.datapath.druidintegration.model.druid.request.common.Filter;
 import com.datapath.druidintegration.model.druid.request.common.Metric;
@@ -9,6 +10,8 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.util.List;
+
+import static com.datapath.druidintegration.DruidConstants.DEFAULT_INTERVAL;
 
 @Data
 @Builder
@@ -28,10 +31,10 @@ public class TopNRequest {
     private Having having;
     private Metric metric;
 
-    public TopNRequest(String dataSource, String intervals) {
+    public TopNRequest(String dataSource) {
         this.queryType = TOP_N;
         this.granularity = GRANULARITY_ALL;
         this.dataSource = dataSource;
-        this.intervals = intervals;
+        this.intervals = DEFAULT_INTERVAL;
     }
 }

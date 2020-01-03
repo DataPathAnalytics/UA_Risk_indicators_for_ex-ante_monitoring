@@ -69,7 +69,7 @@ public class ExtractContractDataService extends ExtractorService {
         List<Filter> collect = druidIndicator.stream().map(this::getFilterByIndicator).collect(Collectors.toList());
         filter.setFields(collect);
 
-        GroupByRequest groupByRequest = new GroupByRequest(contractsIndex, "2015/2020");
+        GroupByRequest groupByRequest = new GroupByRequest(contractsIndex);
         SimpleAggregationImpl aggregation = new SimpleAggregationImpl();
         aggregation.setType("longMax");
         aggregation.setName("maxIteration");
@@ -165,7 +165,7 @@ public class ExtractContractDataService extends ExtractorService {
             }
 
             if (!topLastUpdatedContractsIds.isEmpty()) {
-                GroupByRequest contractsIndicatorsMaxIteration = new GroupByRequest(contractsIndex, "2017/2020");
+                GroupByRequest contractsIndicatorsMaxIteration = new GroupByRequest(contractsIndex);
                 contractsIndicatorsMaxIteration.setDimensions(Arrays.asList(CONTRACT_OUTER_ID, INDICATOR_ID));
                 contractsIndicatorsMaxIteration.setAggregations(Collections.singletonList(new SimpleAggregationImpl("doubleMax", "maxIteration", ITERATION_ID)));
                 contractsIndicatorsMaxIteration.setFilter(new ListStringFilter("in", CONTRACT_OUTER_ID, topLastUpdatedContractsIds));
@@ -185,7 +185,8 @@ public class ExtractContractDataService extends ExtractorService {
                         return filter;
                     }).collect(Collectors.toList());
 
-                    TopNRequest topNRequest = new TopNRequest(contractsIndex, startDate + "/" + endDate);
+                    TopNRequest topNRequest = new TopNRequest(contractsIndex);
+                    topNRequest.setIntervals(startDate + "/" + endDate);
                     topNRequest.setDimension(CONTRACT_OUTER_ID);
                     topNRequest.setThreshold(limit);
 
@@ -274,7 +275,7 @@ public class ExtractContractDataService extends ExtractorService {
             }
 
             if (!topLastUpdatedContractsIds.isEmpty()) {
-                GroupByRequest contractsIndicatorsMaxIteration = new GroupByRequest(contractsIndex, "2017/2020");
+                GroupByRequest contractsIndicatorsMaxIteration = new GroupByRequest(contractsIndex);
                 contractsIndicatorsMaxIteration.setDimensions(Collections.singletonList(CONTRACT_OUTER_ID));
                 contractsIndicatorsMaxIteration.setAggregations(Collections.singletonList(new SimpleAggregationImpl("timeMax", "tmax", DATE)));
                 contractsIndicatorsMaxIteration.setFilter(new ListStringFilter("in", CONTRACT_OUTER_ID, topLastUpdatedContractsIds));
@@ -292,7 +293,8 @@ public class ExtractContractDataService extends ExtractorService {
                         return filter;
                     }).collect(Collectors.toList());
 
-                    TopNRequest topNRequest = new TopNRequest(contractsIndex, startDate + "/" + endDate);
+                    TopNRequest topNRequest = new TopNRequest(contractsIndex);
+                    topNRequest.setIntervals(startDate + "/" + endDate);
                     topNRequest.setDimension(CONTRACT_OUTER_ID);
                     topNRequest.setThreshold(limit);
                     topNRequest.setAggregations(Collections.singletonList(new SimpleAggregationImpl("timeMax", "tmax", DATE)));
@@ -364,7 +366,7 @@ public class ExtractContractDataService extends ExtractorService {
     public List<Event> getContractsHistoryByIds(Set<String> contractIds) {
         List<Event> resultList = new ArrayList<>();
         if (!contractIds.isEmpty()) {
-            SelectRequest selectRequest = new SelectRequest(contractsIndex, "2017/2020");
+            SelectRequest selectRequest = new SelectRequest(contractsIndex);
             SelectRequest.PagingSpec pagingSpec = new SelectRequest.PagingSpec();
             pagingSpec.setThreshold(1000000L);
             selectRequest.setPagingSpec(pagingSpec);

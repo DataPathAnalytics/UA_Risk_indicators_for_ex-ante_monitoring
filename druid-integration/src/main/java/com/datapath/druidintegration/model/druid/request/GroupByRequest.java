@@ -8,6 +8,8 @@ import lombok.Data;
 
 import java.util.List;
 
+import static com.datapath.druidintegration.DruidConstants.DEFAULT_INTERVAL;
+
 @Data
 @Builder
 @AllArgsConstructor
@@ -25,11 +27,11 @@ public class GroupByRequest {
     private Having having;
     private LimitSpec limitSpec;
 
-    public GroupByRequest(String dataSource, String intervals) {
+    public GroupByRequest(String dataSource) {
         this.queryType = GROUP_BY;
         this.granularity = GRANULARITY_ALL;
         this.dataSource = new DataSource("table", dataSource);
-        this.intervals = intervals;
+        this.intervals = DEFAULT_INTERVAL;
     }
 
     @Data
@@ -40,8 +42,10 @@ public class GroupByRequest {
         String name;
         GroupByRequest query;
 
-        public DataSource(){}
-        public DataSource(String type, String name){
+        public DataSource() {
+        }
+
+        public DataSource(String type, String name) {
             this.type = type;
             this.name = name;
         }

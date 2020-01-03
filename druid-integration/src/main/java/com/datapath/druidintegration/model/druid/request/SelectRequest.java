@@ -1,10 +1,13 @@
 package com.datapath.druidintegration.model.druid.request;
 
+import com.datapath.druidintegration.DruidConstants;
 import com.datapath.druidintegration.model.druid.request.common.Filter;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.List;
+
+import static com.datapath.druidintegration.DruidConstants.DEFAULT_INTERVAL;
 
 @Data
 public class SelectRequest {
@@ -26,10 +29,10 @@ public class SelectRequest {
         public PagingSpec(){}
     }
 
-    public SelectRequest(String dataSource, String intervals) {
+    public SelectRequest(String dataSource) {
         this.queryType = SELECT;
         this.granularity = GRANULARITY_ALL;
         this.dataSource = dataSource;
-        this.intervals = intervals;
+        this.intervals = DEFAULT_INTERVAL;
     }
 }

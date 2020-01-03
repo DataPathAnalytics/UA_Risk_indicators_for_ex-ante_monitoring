@@ -1,5 +1,6 @@
 package com.datapath.druidintegration.service;
 
+import com.datapath.druidintegration.DruidConstants;
 import com.datapath.druidintegration.model.TenderScore;
 import com.datapath.druidintegration.model.druid.request.GroupByRequest;
 import com.datapath.druidintegration.model.druid.request.common.Filter;
@@ -21,6 +22,7 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static com.datapath.druidintegration.DruidConstants.DEFAULT_INTERVAL;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
@@ -101,7 +103,7 @@ public class TenderRateService {
                 int end = Math.min(topTenders.size(), start + chunkSize);
                 log.info(start + " - " + end + " of " + topTenders.size() + " are checking");
 
-                GroupByRequest tendersIndicatorsMaxIteration = new GroupByRequest(tenderIndex, "2017/2020");
+                GroupByRequest tendersIndicatorsMaxIteration = new GroupByRequest(tenderIndex);
                 tendersIndicatorsMaxIteration.setDimensions(Arrays.asList(TENDER_OUTER_ID, INDICATOR_ID));
                 tendersIndicatorsMaxIteration.setAggregations(Collections.singletonList(new SimpleAggregationImpl("doubleMax", "maxIteration", ITERATION_ID)));
                 tendersIndicatorsMaxIteration.setFilter(new ListStringFilter("in", TENDER_OUTER_ID, topTenders.subList(start, end)));
@@ -123,7 +125,7 @@ public class TenderRateService {
                         return filter;
                     }).collect(Collectors.toList());
 
-                    GroupByRequest filteredByTendersGroupBy = new GroupByRequest(tenderIndex, "2017/2020");
+                    GroupByRequest filteredByTendersGroupBy = new GroupByRequest(tenderIndex);
                     filteredByTendersGroupBy.setDimensions(Arrays.asList(TENDER_OUTER_ID, INDICATOR_ID, ITERATION_ID, INDICATOR_VALUE, INDICATOR_IMPACT, STATUS));
                     filteredByTendersGroupBy.setAggregations(Collections.singletonList(new SimpleAggregationImpl("doubleMax", "maxIteration", ITERATION_ID)));
                     filteredByTendersGroupBy.setFilter(new ListStringFilter("in", TENDER_OUTER_ID, topTenders));
@@ -132,7 +134,7 @@ public class TenderRateService {
                             .builder()
                             .queryType("groupBy")
                             .granularity("all")
-                            .intervals("2017/2020")
+                            .intervals(DEFAULT_INTERVAL)
                             .dataSource(GroupByRequest.DataSource.builder().type("query").query(filteredByTendersGroupBy).build())
                             .dimensions(Collections.singletonList(TENDER_OUTER_ID))
                             .aggregations(Collections.singletonList(SimpleAggregationImpl.builder().type("doubleSum").fieldName(INDICATOR_IMPACT).name("tenderScore").build()))
@@ -257,7 +259,7 @@ public class TenderRateService {
                 .builder()
                 .queryType("groupBy")
                 .granularity("all")
-                .intervals("2017/2020")
+                .intervals(DEFAULT_INTERVAL)
                 .dataSource(GroupByRequest.DataSource.builder().type("table").name(tenderIndex).build())
                 .dimensions(Collections.singletonList(TENDER_OUTER_ID))
                 .filter(new IntFilter("selector", INDICATOR_VALUE, 1))

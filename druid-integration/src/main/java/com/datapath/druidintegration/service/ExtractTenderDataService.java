@@ -23,6 +23,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.datapath.druidintegration.DruidConstants.DEFAULT_INTERVAL;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
@@ -31,6 +32,7 @@ import static java.util.Objects.nonNull;
 public class ExtractTenderDataService extends ExtractorService {
 
     private String tenderIndex;
+
     @Value("${druid.url}")
     public void setDruidUrl(String url) {
         this.druidUrl = url;
@@ -60,7 +62,7 @@ public class ExtractTenderDataService extends ExtractorService {
     }
 
     public List<Event> getLastIterationData(String tenderId, String indicatorId, Long iterationId) {
-        SelectRequest selectRequest = new SelectRequest(tenderIndex, "2015/2020");
+        SelectRequest selectRequest = new SelectRequest(tenderIndex);
         selectRequest.setPagingSpec(new SelectRequest.PagingSpec(3L));
         selectRequest.setDimensions(new ArrayList<>());
 
@@ -82,7 +84,7 @@ public class ExtractTenderDataService extends ExtractorService {
 
     private Long findLastIterationForTenderIndicatorsData(List<DruidTenderIndicator> druidIndicator) {
         List<Integer> maxIterations = druidIndicator.stream().map(indicator -> {
-            GroupByRequest groupByRequest = new GroupByRequest(tenderIndex, "2015/2020");
+            GroupByRequest groupByRequest = new GroupByRequest(tenderIndex);
             SimpleAggregationImpl aggregation = new SimpleAggregationImpl();
             aggregation.setType("longMax");
             aggregation.setName("maxIteration");
@@ -107,7 +109,7 @@ public class ExtractTenderDataService extends ExtractorService {
         if (isNull(tendersFilter.getTenderId())) {
             return new ArrayList<>();
         }
-        SelectRequest selectRequest = new SelectRequest(tenderIndex, "2015/2020");
+        SelectRequest selectRequest = new SelectRequest(tenderIndex);
         SelectRequest.PagingSpec pagingSpec = new SelectRequest.PagingSpec();
         pagingSpec.setThreshold(10000L);
         selectRequest.setPagingSpec(pagingSpec);
@@ -153,7 +155,7 @@ public class ExtractTenderDataService extends ExtractorService {
                 topLastUpdatedTendersTmax = Arrays.stream(topLastUpdatedTenders).map(item -> item.getEvent().getTmax()).collect(Collectors.toList());
             }
             if (!topLastUpdatedTendersIds.isEmpty()) {
-                GroupByRequest tendersIndicatorsMaxIteration = new GroupByRequest(tenderIndex, "2017/2020");
+                GroupByRequest tendersIndicatorsMaxIteration = new GroupByRequest(tenderIndex);
                 tendersIndicatorsMaxIteration.setDimensions(Arrays.asList(TENDER_OUTER_ID, INDICATOR_ID));
                 tendersIndicatorsMaxIteration.setAggregations(Collections.singletonList(new SimpleAggregationImpl("doubleMax", "maxIteration", ITERATION_ID)));
                 tendersIndicatorsMaxIteration.setFilter(new ListStringFilter("in", TENDER_OUTER_ID, topLastUpdatedTendersIds));
@@ -172,7 +174,8 @@ public class ExtractTenderDataService extends ExtractorService {
                         return filter;
                     }).collect(Collectors.toList());
 
-                    TopNRequest topNRequest = new TopNRequest(tenderIndex, startDate + "/" + endDate);
+                    TopNRequest topNRequest = new TopNRequest(tenderIndex);
+                    topNRequest.setIntervals(startDate + "/" + endDate);
                     topNRequest.setDimension(TENDER_OUTER_ID);
                     topNRequest.setThreshold(limit);
 
@@ -361,7 +364,7 @@ public class ExtractTenderDataService extends ExtractorService {
             }
 
             if (!topLastUpdatedTendersIds.isEmpty()) {
-                GroupByRequest tendersIndicatorsMaxIteration = new GroupByRequest(tenderIndex, "2017/2020");
+                GroupByRequest tendersIndicatorsMaxIteration = new GroupByRequest(tenderIndex);
                 tendersIndicatorsMaxIteration.setDimensions(Collections.singletonList(TENDER_OUTER_ID));
                 tendersIndicatorsMaxIteration.setAggregations(Collections.singletonList(new SimpleAggregationImpl("timeMax", "tmax", DATE)));
                 tendersIndicatorsMaxIteration.setFilter(new ListStringFilter("in", TENDER_OUTER_ID, topLastUpdatedTendersIds));
@@ -444,7 +447,7 @@ public class ExtractTenderDataService extends ExtractorService {
     private List<Event> getTendersHistoryByIds(Set<String> tenderIds) {
         List<Event> resultList = new ArrayList<>();
         if (!tenderIds.isEmpty()) {
-            SelectRequest selectRequest = new SelectRequest(tenderIndex, "2017/2020");
+            SelectRequest selectRequest = new SelectRequest(tenderIndex);
             SelectRequest.PagingSpec pagingSpec = new SelectRequest.PagingSpec();
             pagingSpec.setThreshold(1000000L);
             selectRequest.setPagingSpec(pagingSpec);
@@ -471,7 +474,7 @@ public class ExtractTenderDataService extends ExtractorService {
     public Map<String, Long> getMaxTenderIndicatorIteration(Set<String> tenderIds, String indicatorId) {
 
         Map<String, Long> result = new HashMap<>();
-        GroupByRequest groupByRequest = new GroupByRequest(tenderIndex, "2015/2020");
+        GroupByRequest groupByRequest = new GroupByRequest(tenderIndex);
         SimpleAggregationImpl aggregation = new SimpleAggregationImpl();
         aggregation.setType("longMax");
         aggregation.setName("maxIteration");
@@ -514,7 +517,7 @@ public class ExtractTenderDataService extends ExtractorService {
 
         Map<String, Integer> result = new HashMap<>();
 
-        GroupByRequest groupByRequest = new GroupByRequest(tenderIndex, "2015/2020");
+        GroupByRequest groupByRequest = new GroupByRequest(tenderIndex);
         groupByRequest.setDimensions(Arrays.asList(TENDER_OUTER_ID, INDICATOR_VALUE));
         FilterImpl filter = new FilterImpl();
         filter.setType("or");
@@ -551,7 +554,7 @@ public class ExtractTenderDataService extends ExtractorService {
         tenderIterations.keySet().forEach(tenderId -> {
             result.put(tenderId, new HashMap<>());
         });
-        GroupByRequest groupByRequest = new GroupByRequest(tenderIndex, "2015/2020");
+        GroupByRequest groupByRequest = new GroupByRequest(tenderIndex);
         groupByRequest.setDimensions(Arrays.asList(TENDER_OUTER_ID, INDICATOR_VALUE, LOT_IDS));
         FilterImpl filter = new FilterImpl();
         filter.setType("or");
@@ -589,12 +592,12 @@ public class ExtractTenderDataService extends ExtractorService {
     }
 
     public List<String> getListTenders(String previousStop) {
-        return getListTenders(previousStop, "2017/2020");
+        return getListTenders(previousStop, DEFAULT_INTERVAL);
     }
 
     public List<Event> getLastTendersData(List<String> tenderIds) {
 
-        GroupByRequest tendersIndicatorsMaxIteration = new GroupByRequest(tenderIndex, "2017/2020");
+        GroupByRequest tendersIndicatorsMaxIteration = new GroupByRequest(tenderIndex);
         tendersIndicatorsMaxIteration.setDimensions(Arrays.asList(TENDER_OUTER_ID, INDICATOR_ID));
         tendersIndicatorsMaxIteration.setAggregations(Collections.singletonList(new SimpleAggregationImpl("doubleMax", "maxIteration", ITERATION_ID)));
         tendersIndicatorsMaxIteration.setFilter(new ListStringFilter("in", TENDER_OUTER_ID, tenderIds));
@@ -614,7 +617,7 @@ public class ExtractTenderDataService extends ExtractorService {
                 return filter;
             }).collect(Collectors.toList());
 
-            GroupByRequest filteredByTendersGroupBy = new GroupByRequest(tenderIndex, "2017/2020");
+            GroupByRequest filteredByTendersGroupBy = new GroupByRequest(tenderIndex);
             filteredByTendersGroupBy.setDimensions(Arrays.asList(TENDER_OUTER_ID, INDICATOR_ID, ITERATION_ID, INDICATOR_VALUE, INDICATOR_IMPACT));
             filteredByTendersGroupBy.setFilter(new ListStringFilter("in", TENDER_OUTER_ID, tenderIds));
 
@@ -622,7 +625,7 @@ public class ExtractTenderDataService extends ExtractorService {
                     .builder()
                     .queryType("groupBy")
                     .granularity("all")
-                    .intervals("2017/2020")
+                    .intervals(DEFAULT_INTERVAL)
                     .dataSource(GroupByRequest.DataSource.builder().type("query").query(filteredByTendersGroupBy).build())
                     .dimensions(Arrays.asList(TENDER_OUTER_ID, INDICATOR_ID, INDICATOR_VALUE, INDICATOR_IMPACT))
                     .aggregations(new ArrayList<>())
