@@ -39,8 +39,8 @@ public class BaseExtractor {
 
     protected Integer AVAILABLE_HOURS_DIFF = 2;
 
-    private final static String WORKING_WEEK_ENDS_API_URL = "https://raw.githubusercontent.com/openprocurement/standards/master/calendar/weekends-on.json";
-    private final static String WEEK_ENDS_API_URL = "https://raw.githubusercontent.com/openprocurement/standards/master/calendar/workdays-off.json";
+    private final static String WORKING_WEEK_ENDS_API_URL = "https://prozorroukr.github.io/standards/calendar/weekends_on.json";
+    private final static String WEEK_ENDS_API_URL = "https://prozorroukr.github.io/standards/calendar/workdays_off.json";
 
     protected final String INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT = "%s Extractor is not available";
     protected final String UPDATE_MESSAGE_FORMAT = "Update indicator: %s";
