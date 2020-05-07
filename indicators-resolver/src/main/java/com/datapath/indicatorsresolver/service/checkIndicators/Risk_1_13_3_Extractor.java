@@ -44,8 +44,7 @@ public class Risk_1_13_3_Extractor extends BaseExtractor {
                 checkDasu13_3Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -66,8 +65,7 @@ public class Risk_1_13_3_Extractor extends BaseExtractor {
                 checkDasu13_3Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -87,7 +85,8 @@ public class Risk_1_13_3_Extractor extends BaseExtractor {
                     Arrays.asList(indicator.getProcuringEntityKind()),
                     page, size);
 
-            if (tenders.isEmpty()) {break;
+            if (tenders.isEmpty()) {
+                break;
             }
 
             Set<String> tenderIds = new HashSet<>(tenders);
@@ -107,43 +106,39 @@ public class Risk_1_13_3_Extractor extends BaseExtractor {
             List<TenderIndicator> tenderIndicators = tenderRepository.getTenderWithStartAwardDateAndMinDocDatePublished(
                     tenders.stream().collect(Collectors.joining(","))).stream().map(tenderInfo -> {
                 String tenderId = tenderInfo[0].toString();
-                try {
-                    ZonedDateTime awardStartDate = isNull(tenderInfo[1])
-                            ? null
-                            : toZonedDateTime((Timestamp) tenderInfo[1]).withZoneSameInstant(ZoneId.of("Europe/Kiev"))
-                            .withHour(0)
-                            .withMinute(0)
-                            .withSecond(0)
-                            .withNano(0);
-                    ZonedDateTime minDocDatePublishDate = isNull(tenderInfo[2])
-                            ? null
-                            : toZonedDateTime((Timestamp) tenderInfo[2]).withZoneSameInstant(ZoneId.of("Europe/Kiev"))
-                            .withHour(0)
-                            .withMinute(0)
-                            .withSecond(0)
-                            .withNano(0);
 
-                    Integer indicatorValue;
+                ZonedDateTime awardStartDate = isNull(tenderInfo[1])
+                        ? null
+                        : toZonedDateTime((Timestamp) tenderInfo[1]).withZoneSameInstant(ZoneId.of("Europe/Kiev"))
+                        .withHour(0)
+                        .withMinute(0)
+                        .withSecond(0)
+                        .withNano(0);
+                ZonedDateTime minDocDatePublishDate = isNull(tenderInfo[2])
+                        ? null
+                        : toZonedDateTime((Timestamp) tenderInfo[2]).withZoneSameInstant(ZoneId.of("Europe/Kiev"))
+                        .withHour(0)
+                        .withMinute(0)
+                        .withSecond(0)
+                        .withNano(0);
 
-                    if (isNull(awardStartDate)) {
-                        indicatorValue = -2;
-                    } else {
-                        indicatorValue = (isNull(minDocDatePublishDate)) ||
-                                Duration.between(minDocDatePublishDate, awardStartDate).toDays() < DAYS_LIMIT
-                                ? RISK : NOT_RISK;
-                    }
-                    TenderDimensions tenderDimensions = dimensionsMap.get(tenderId);
-                    return new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>());
-                }catch (Exception ex) {
-                    log.info(String.format(TENDER_INDICATOR_ERROR_MESSAGE, INDICATOR_CODE, tenderId));
-                    return null;
+                int indicatorValue;
+
+                if (isNull(awardStartDate)) {
+                    indicatorValue = -2;
+                } else {
+                    indicatorValue = (isNull(minDocDatePublishDate)) ||
+                            Duration.between(minDocDatePublishDate, awardStartDate).toDays() < DAYS_LIMIT
+                            ? RISK : NOT_RISK;
                 }
-            }).filter(Objects::nonNull).collect(Collectors.toList());
+                TenderDimensions tenderDimensions = dimensionsMap.get(tenderId);
+                return new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>());
 
+            }).collect(Collectors.toList());
 
             tenderIndicators.forEach(tenderIndicator -> {
                 tenderIndicator.setTenderDimensions(dimensionsMap.get(tenderIndicator.getTenderDimensions().getId()));
-                uploadIndicatorIfNotExists(tenderIndicator.getTenderDimensions().getId(), INDICATOR_CODE, tenderIndicator);
+                uploadIndicator(tenderIndicator);
             });
 
             ZonedDateTime maxTenderDateCreated = getMaxTenderDateCreated(dimensionsMap, dateTime);

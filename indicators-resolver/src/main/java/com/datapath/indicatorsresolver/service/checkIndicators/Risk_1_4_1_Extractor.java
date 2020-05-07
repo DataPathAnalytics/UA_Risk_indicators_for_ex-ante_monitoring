@@ -44,8 +44,7 @@ public class Risk_1_4_1_Extractor extends BaseExtractor {
                 checkRisk_1_4_1_Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -66,8 +65,7 @@ public class Risk_1_4_1_Extractor extends BaseExtractor {
                 checkRisk_1_4_1_Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -78,13 +76,15 @@ public class Risk_1_4_1_Extractor extends BaseExtractor {
         int size = 100;
         int page = 0;
         while (true) {
-
+            log.info("Start finding tenders after [{}]", dateTime.toString());
             List<String> tenders = findTenders(
                     dateTime,
                     Arrays.asList(indicator.getProcedureStatuses()),
                     Arrays.asList(indicator.getProcedureTypes()),
                     Arrays.asList(indicator.getProcuringEntityKind()),
                     page, size);
+
+            log.info("Finish finding tenders. Found [{}] tenders", tenders.size());
             if (tenders.isEmpty()) {
                 break;
             }
@@ -94,8 +94,7 @@ public class Risk_1_4_1_Extractor extends BaseExtractor {
             Map<String, List<TenderIndicator>> tenderIndicatorsMap = checkIndicator(tenders, indicator);
             tenderIndicatorsMap.forEach((tenderId, tenderIndicators) -> {
                 tenderIndicators.forEach(tenderIndicator -> tenderIndicator.setTenderDimensions(dimensionsMap.get(tenderId)));
-                uploadIndicatorIfNotExists(tenderId, INDICATOR_CODE, tenderIndicators);
-
+                uploadIndicators(tenderIndicators, dimensionsMap.get(tenderId).getDruidCheckIteration());
             });
 
             ZonedDateTime maxTenderDateCreated = getMaxTenderDateCreated(dimensionsMap, dateTime);
@@ -130,43 +129,41 @@ public class Risk_1_4_1_Extractor extends BaseExtractor {
 
         tenderLotdateDocComplaintCount.forEach(tenderLotData -> {
             String tenderId = tenderLotData[0].toString();
-            try {
-                String lotId = tenderLotData[1].toString();
-                Object awardIdObj = tenderLotData[2];
-                Timestamp awardDateTimestamp = (Timestamp) tenderLotData[3];
-                Integer docCount = Integer.parseInt(tenderLotData[4].toString());
-                Integer complaintsCount = Integer.parseInt(tenderLotData[5].toString());
 
-                Integer indicatorValue;
+            String lotId = tenderLotData[1].toString();
+            Object awardIdObj = tenderLotData[2];
+            Timestamp awardDateTimestamp = (Timestamp) tenderLotData[3];
+            int docCount = Integer.parseInt(tenderLotData[4].toString());
+            int complaintsCount = Integer.parseInt(tenderLotData[5].toString());
 
-                if (maxTendersLotIterationData.get(tenderId).containsKey(lotId) && maxTendersLotIterationData.get(tenderId).get(lotId).equals(1)) {
-                    indicatorValue = 1;
+            int indicatorValue;
+
+            if (maxTendersLotIterationData.get(tenderId).containsKey(lotId) && maxTendersLotIterationData.get(tenderId).get(lotId).equals(1)) {
+                indicatorValue = 1;
+            } else {
+                if (isNull(awardIdObj)) {
+                    indicatorValue = 0;
                 } else {
-                    if (isNull(awardIdObj)) {
-                        indicatorValue = 0;
-                    } else {
-                        ZonedDateTime awardDate = toZonedDateTime(awardDateTimestamp).withZoneSameInstant(ZoneId.of("Europe/Kiev"))
-                                .withHour(0)
-                                .withMinute(0)
-                                .withSecond(0)
-                                .withNano(0);
-                        indicatorValue = (!awardDate.isBefore(dateOfCurrentDateMinusNWorkingDays)
-                                || docCount > 0 || complaintsCount > 0)
-                                ? -2
-                                : 1;
-                    }
+                    ZonedDateTime awardDate = toZonedDateTime(awardDateTimestamp).withZoneSameInstant(ZoneId.of("Europe/Kiev"))
+                            .withHour(0)
+                            .withMinute(0)
+                            .withSecond(0)
+                            .withNano(0);
+                    indicatorValue = (!awardDate.isBefore(dateOfCurrentDateMinusNWorkingDays)
+                            || docCount > 0 || complaintsCount > 0)
+                            ? -2
+                            : 1;
                 }
-
-                if (!resultMap.containsKey(tenderId)) {
-                    resultMap.put(tenderId, new HashMap<>());
-                }
-                if (!resultMap.get(tenderId).containsKey(indicatorValue)) {
-                    resultMap.get(tenderId).put(indicatorValue, new ArrayList<>());
-                }
-                resultMap.get(tenderId).get(indicatorValue).add(lotId);
-            } catch (Exception ex) {
-                log.info(String.format(TENDER_INDICATOR_ERROR_MESSAGE, INDICATOR_CODE, tenderId));
             }
+
+            if (!resultMap.containsKey(tenderId)) {
+                resultMap.put(tenderId, new HashMap<>());
+            }
+            if (!resultMap.get(tenderId).containsKey(indicatorValue)) {
+                resultMap.get(tenderId).put(indicatorValue, new ArrayList<>());
+            }
+            resultMap.get(tenderId).get(indicatorValue).add(lotId);
+
         });
 
         resultMap.forEach((tenderOuterId, value) -> {

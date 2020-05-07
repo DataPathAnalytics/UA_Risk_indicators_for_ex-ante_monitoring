@@ -41,8 +41,7 @@ public class Risk_2_13_1_Extractor extends BaseExtractor {
                 checkRiskDasu2_13_1Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -63,8 +62,7 @@ public class Risk_2_13_1_Extractor extends BaseExtractor {
                 checkRiskDasu2_13_1Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -95,30 +93,27 @@ public class Risk_2_13_1_Extractor extends BaseExtractor {
 
             lotWinnerDisqualsParticipationsByTenderId.forEach(lotInfo -> {
                 String tenderId = lotInfo[0].toString();
-                try {
 
-                    String lotId = lotInfo[1].toString();
-                    Integer winner = Integer.parseInt(lotInfo[2].toString());
-                    Integer disquals = Integer.parseInt(lotInfo[3].toString());
-                    Integer participation = Integer.parseInt(lotInfo[4].toString());
+                String lotId = lotInfo[1].toString();
+                int winner = Integer.parseInt(lotInfo[2].toString());
+                int disquals = Integer.parseInt(lotInfo[3].toString());
+                int participation = Integer.parseInt(lotInfo[4].toString());
 
-                    Integer indicatorValue;
+                Integer indicatorValue;
 
-                    if (disquals == 0 || winner == 0) {
-                        indicatorValue = -2;
-                    } else {
-                        indicatorValue = (disquals > 2) && ((winner + disquals) == participation) ? RISK : NOT_RISK;
-                    }
-                    if (!resultMap.containsKey(tenderId)) {
-                        resultMap.put(tenderId, new HashMap<>());
-                    }
-                    if (!resultMap.get(tenderId).containsKey(indicatorValue)) {
-                        resultMap.get(tenderId).put(indicatorValue, new ArrayList<>());
-                    }
-                    resultMap.get(tenderId).get(indicatorValue).add(lotId);
-                } catch (Exception ex) {
-                    log.info(String.format(TENDER_INDICATOR_ERROR_MESSAGE, INDICATOR_CODE, tenderId));
+                if (disquals == 0 || winner == 0) {
+                    indicatorValue = -2;
+                } else {
+                    indicatorValue = (disquals > 2) && ((winner + disquals) == participation) ? RISK : NOT_RISK;
                 }
+                if (!resultMap.containsKey(tenderId)) {
+                    resultMap.put(tenderId, new HashMap<>());
+                }
+                if (!resultMap.get(tenderId).containsKey(indicatorValue)) {
+                    resultMap.get(tenderId).put(indicatorValue, new ArrayList<>());
+                }
+                resultMap.get(tenderId).get(indicatorValue).add(lotId);
+
             });
 
             resultMap.forEach((tenderOuterId, value) -> {
@@ -129,8 +124,7 @@ public class Risk_2_13_1_Extractor extends BaseExtractor {
                 });
             });
 
-            result.forEach((tenderId, tenderIndicators) -> uploadIndicatorIfNotExists(tenderId, INDICATOR_CODE, tenderIndicators));
-
+            result.forEach((tenderId, tenderIndicators) -> uploadIndicators(tenderIndicators, dimensionsMap.get(tenderId).getDruidCheckIteration()));
 
             ZonedDateTime maxTenderDateCreated = getMaxTenderDateCreated(dimensionsMap, dateTime);
             indicator.setLastCheckedDateCreated(maxTenderDateCreated);

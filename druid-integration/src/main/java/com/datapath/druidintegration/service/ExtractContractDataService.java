@@ -294,8 +294,8 @@ public class ExtractContractDataService extends ExtractorService {
                     }).collect(Collectors.toList());
 
                     TopNRequest topNRequest = new TopNRequest(contractsIndex);
-                    topNRequest.setIntervals(startDate + "/" + endDate);
                     topNRequest.setDimension(CONTRACT_OUTER_ID);
+                    topNRequest.setIntervals(startDate + "/" + endDate);
                     topNRequest.setThreshold(limit);
                     topNRequest.setAggregations(Collections.singletonList(new SimpleAggregationImpl("timeMax", "tmax", DATE)));
                     topNRequest.setMetric(getTopNMetricByDate(order));

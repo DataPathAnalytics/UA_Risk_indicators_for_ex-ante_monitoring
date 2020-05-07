@@ -46,8 +46,7 @@ public class Risk_2_6_2Extractor extends BaseExtractor {
                 checkRisk2_6_2Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -70,8 +69,7 @@ public class Risk_2_6_2Extractor extends BaseExtractor {
                 checkRisk2_6_2Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -97,52 +95,49 @@ public class Risk_2_6_2Extractor extends BaseExtractor {
             List<TenderIndicator> tenderIndicators = tenders.stream().map(tenderInfo -> {
                 String tenderId = tenderInfo[0].toString();
                 tenderIds.add(tenderId);
-                try {
-                    String procuringEntity = tenderInfo[1].toString();
-                    String procuringEntityKind = tenderInfo[2].toString();
-                    Double amount = isNull(tenderInfo[3]) ? null : Double.parseDouble(tenderInfo[3].toString());
-                    String cpv = tenderInfo[4].toString();
 
-                    TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
-                    Integer indicatorValue = NOT_RISK;
-                    if (isNull(amount)){
-                        indicatorValue = -1;
+                String procuringEntity = tenderInfo[1].toString();
+                String procuringEntityKind = tenderInfo[2].toString();
+                Double amount = isNull(tenderInfo[3]) ? null : Double.parseDouble(tenderInfo[3].toString());
+                String cpv = tenderInfo[4].toString();
+
+                TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
+                Integer indicatorValue = NOT_RISK;
+                if (isNull(amount)) {
+                    indicatorValue = -1;
+                } else {
+                    Optional<NearThreshold> nearThreshold = nearThresholdRepository
+                            .findFirstByProcuringEntityAndCpv(procuringEntity, cpv);
+                    if (!nearThreshold.isPresent()) {
+                        //TODO remove and change if condition
+                        indicatorValue = NOT_RISK;
                     } else {
-                        Optional<NearThreshold> nearThreshold = nearThresholdRepository
-                                .findFirstByProcuringEntityAndCpv(procuringEntity, cpv);
-                        if (!nearThreshold.isPresent()){
-                            indicatorValue = NOT_RISK;
-                        } else {
-                            amount += nearThreshold.get().getAmount();
-                            switch (procuringEntityKind) {
+                        amount += nearThreshold.get().getAmount();
+                        switch (procuringEntityKind) {
 
-                                case "general":
-                                    if (amount >= 1500000) {
-                                        indicatorValue = RISK;
-                                    }
-                                    break;
-                                case "special":
-                                    if (amount >= 5000000) {
-                                        indicatorValue = RISK;
-                                    }
-                                    break;
-                            }
-
+                            case "general":
+                                if (amount >= 1500000) {
+                                    indicatorValue = RISK;
+                                }
+                                break;
+                            case "special":
+                                if (amount >= 5000000) {
+                                    indicatorValue = RISK;
+                                }
+                                break;
                         }
-                    }
 
-                    return new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>());
-                } catch (Exception ex) {
-                    log.info(String.format(TENDER_INDICATOR_ERROR_MESSAGE, INDICATOR_CODE, tenderId));
-                    return null;
+                    }
                 }
-            }).filter(Objects::nonNull).collect(Collectors.toList());
+                return new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>());
+
+            }).collect(Collectors.toList());
 
             Map<String, TenderDimensions> dimensionsMap = getTenderDimensionsWithIndicatorLastIteration(tenderIds, INDICATOR_CODE);
 
             tenderIndicators.forEach(tenderIndicator -> {
                 tenderIndicator.setTenderDimensions(dimensionsMap.get(tenderIndicator.getTenderDimensions().getId()));
-                uploadIndicatorIfNotExists(tenderIndicator.getTenderDimensions().getId(), INDICATOR_CODE, tenderIndicator);
+                uploadIndicator(tenderIndicator);
             });
 
             ZonedDateTime maxTenderDateCreated = getMaxTenderDateCreated(dimensionsMap, dateTime);

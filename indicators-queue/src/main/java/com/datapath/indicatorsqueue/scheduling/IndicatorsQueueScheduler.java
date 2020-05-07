@@ -44,7 +44,6 @@ public class IndicatorsQueueScheduler implements InitializingBean {
 
     @Override
     public void afterPropertiesSet() {
-//        updateIndicatorsQueue();
         if (schedulingEnabled) {
             updateRegionIndicatorsQueue();
         }

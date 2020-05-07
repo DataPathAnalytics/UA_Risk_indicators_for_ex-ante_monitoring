@@ -79,7 +79,7 @@
           },
           "granularitySpec": {
             "type": "uniform",
-            "segmentGranularity": "hour",
+            "segmentGranularity": "day",
             "queryGranularity": "none"
           },
           "metricsSpec": [
@@ -146,7 +146,7 @@
           },
           "granularitySpec": {
             "type": "uniform",
-            "segmentGranularity": "hour",
+            "segmentGranularity": "day",
             "queryGranularity": "none"
           },
           "metricsSpec": [

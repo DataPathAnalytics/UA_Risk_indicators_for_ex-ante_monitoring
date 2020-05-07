@@ -95,7 +95,7 @@ public class Risk_1_8_2_Extractor extends BaseExtractor {
             indicatorsMap.forEach((tenderId, tenderIndicators) -> {
                 tenderIndicators.forEach(tenderIndicator -> tenderIndicator
                         .setTenderDimensions(dimensionsMap.get(tenderId)));
-                uploadIndicatorIfNotExists(tenderId, INDICATOR_CODE, tenderIndicators);
+                uploadIndicators(tenderIndicators, dimensionsMap.get(tenderId).getDruidCheckIteration());
             });
 
             ZonedDateTime maxTenderDateCreated = getMaxTenderDateCreated(dimensionsMap, dateTime);
@@ -115,106 +115,94 @@ public class Risk_1_8_2_Extractor extends BaseExtractor {
     }
 
     private Map<String, List<TenderIndicator>> checkIndicator(List<String> tenderIds, Indicator indicator) {
-        try {
-            String tenderIdsStr = String.join(",", tenderIds);
 
-            Map<String, Long> maxTendersIndicatorIteration = extractDataService
-                    .getMaxTenderIndicatorIteration(new HashSet<>(tenderIds), INDICATOR_CODE);
+        String tenderIdsStr = String.join(",", tenderIds);
 
-            Map<String, Map<String, Integer>> maxTendersLotIterationData = extractDataService
-                    .getMaxTendersLotIterationData(maxTendersIndicatorIteration, INDICATOR_CODE);
+        Map<String, Long> maxTendersIndicatorIteration = extractDataService
+                .getMaxTenderIndicatorIteration(new HashSet<>(tenderIds), INDICATOR_CODE);
 
-            List<Object[]> tenderLots = tenderRepository
-                    .getTenderLotsAndComplaintsCountAndActiveAwardDateAndContractStatus(tenderIdsStr);
+        Map<String, Map<String, Integer>> maxTendersLotIterationData = extractDataService
+                .getMaxTendersLotIterationData(maxTendersIndicatorIteration, INDICATOR_CODE);
 
-            Map<String, List<Object>> tendersMap = new HashMap<>();
-            for (Object obj : tenderLots) {
-                Object[] objs = (Object[]) obj;
-                String tenderId = objs[0].toString();
-                List<Object> lotsInfo = tendersMap.get(tenderId);
-                if (null != lotsInfo) {
-                    lotsInfo.add(obj);
-                } else {
-                    lotsInfo = new ArrayList<>();
-                    lotsInfo.add(obj);
-                    tendersMap.put(tenderId, lotsInfo);
-                }
+        List<Object[]> tenderLots = tenderRepository
+                .getTenderLotsAndComplaintsCountAndActiveAwardDateAndContractStatus(tenderIdsStr);
+
+        Map<String, List<Object>> tendersMap = new HashMap<>();
+        for (Object obj : tenderLots) {
+            Object[] objs = (Object[]) obj;
+            String tenderId = objs[0].toString();
+            List<Object> lotsInfo = tendersMap.get(tenderId);
+            if (null != lotsInfo) {
+                lotsInfo.add(obj);
+            } else {
+                lotsInfo = new ArrayList<>();
+                lotsInfo.add(obj);
+                tendersMap.put(tenderId, lotsInfo);
             }
-
-
-            Map<String, List<TenderIndicator>> indicatorsMap = new HashMap<>();
-            for (String tenderId : tendersMap.keySet()) {
-                try {
-                    TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
-
-                    List<Object> lotsInfo = tendersMap.get(tenderId);
-                    Map<String, Integer> lotIndicators = new HashMap<>();
-                    for (Object lotInfoObj : lotsInfo) {
-                        Object[] lotInfo = (Object[]) lotInfoObj;
-                        String lotId = lotInfo[1].toString();
-                        Integer complaintsCount = Integer.parseInt(lotInfo[2].toString());
-                        Timestamp activeAwardTimestamp = lotInfo[3] == null ? null : (Timestamp) lotInfo[3];
-                        String contractStatus = lotInfo[4] == null ? null : lotInfo[4].toString();
-                        Integer nonSignatureDocs = Integer.parseInt(lotInfo[5].toString());
-                        Integer contractDocs = Integer.parseInt(lotInfo[6].toString());
-                        String lotStatus = lotInfo[7].toString();
-
-                        if (maxTendersLotIterationData.get(tenderId).containsKey(lotId) && maxTendersLotIterationData.get(tenderId).get(lotId).equals(1)) {
-                            lotIndicators.put(lotId, 1);
-                        } else {
-                            if (complaintsCount > 0 || activeAwardTimestamp == null || lotStatus.equals("cancelled") || lotStatus.equals("unsuccessful")) {
-                                if (!lotIndicators.containsKey(lotId)) {
-                                    lotIndicators.put(lotId, -2);
-                                }
-                                continue;
-                            }
-
-                            if ((!contractStatus.equals("active") || (contractStatus.equals("active") && nonSignatureDocs == 0)) && contractDocs == 0) {
-                                ZonedDateTime date = toZonedDateTime(activeAwardTimestamp)
-                                        .withZoneSameInstant(ZoneId.of("Europe/Kiev"))
-                                        .withHour(0).withMinute(0).withSecond(0).withNano(0);
-                                ZonedDateTime now = ZonedDateTime.now().withZoneSameInstant(ZoneId.of("Europe/Kiev"))
-                                        .withHour(0).withMinute(0).withSecond(0).withNano(0);
-                                Duration between = Duration.between(date, now);
-                                long days = between.toDays();
-                                Integer indicatorValue = days > DAYS_LIMIT ? 1 : 0;
-                                if (indicatorValue == 1) {
-                                    lotIndicators.put(lotId, indicatorValue);
-                                } else {
-                                    if (!lotIndicators.containsKey(lotId) || lotIndicators.get(lotId) != 1) {
-                                        lotIndicators.put(lotId, indicatorValue);
-                                    }
-                                }
-                                continue;
-                            }
-                            lotIndicators.put(lotId, 0);
-                        }
-                    }
-
-                    List<TenderIndicator> tenderIndicators = new ArrayList<>();
-                    for (Integer value : new HashSet<>(lotIndicators.values())) {
-                        List<String> lotIds = new ArrayList<>();
-                        lotIndicators.forEach((lotId, val) -> {
-                            if (value.equals(val)) {
-                                lotIds.add(lotId);
-                            }
-                        });
-                        tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, value, lotIds));
-                    }
-                    indicatorsMap.put(tenderId, tenderIndicators);
-
-                } catch (Exception ex) {
-                    log.info(TENDER_INDICATOR_ERROR_MESSAGE, INDICATOR_CODE, tenderId);
-                    log.error(ex.getMessage(), ex);
-                }
-            }
-            return indicatorsMap;
-
-        } catch (Exception ex) {
-            log.info("ERROR while processing indicator: {}", INDICATOR_CODE);
-            log.error(ex.getMessage(), ex);
-            return new HashMap<>();
         }
-    }
 
+
+        Map<String, List<TenderIndicator>> indicatorsMap = new HashMap<>();
+        for (String tenderId : tendersMap.keySet()) {
+
+            TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
+
+            List<Object> lotsInfo = tendersMap.get(tenderId);
+            Map<String, Integer> lotIndicators = new HashMap<>();
+            for (Object lotInfoObj : lotsInfo) {
+                Object[] lotInfo = (Object[]) lotInfoObj;
+                String lotId = lotInfo[1].toString();
+                int complaintsCount = Integer.parseInt(lotInfo[2].toString());
+                Timestamp activeAwardTimestamp = lotInfo[3] == null ? null : (Timestamp) lotInfo[3];
+                String contractStatus = lotInfo[4] == null ? null : lotInfo[4].toString();
+                int nonSignatureDocs = Integer.parseInt(lotInfo[5].toString());
+                int contractDocs = Integer.parseInt(lotInfo[6].toString());
+                String lotStatus = lotInfo[7].toString();
+
+                if (maxTendersLotIterationData.get(tenderId).containsKey(lotId) && maxTendersLotIterationData.get(tenderId).get(lotId).equals(1)) {
+                    lotIndicators.put(lotId, 1);
+                } else {
+                    if (complaintsCount > 0 || activeAwardTimestamp == null || lotStatus.equals("cancelled") || lotStatus.equals("unsuccessful")) {
+                        if (!lotIndicators.containsKey(lotId)) {
+                            lotIndicators.put(lotId, -2);
+                        }
+                        continue;
+                    }
+
+                    if ((!contractStatus.equals("active") || (contractStatus.equals("active") && nonSignatureDocs == 0)) && contractDocs == 0) {
+                        ZonedDateTime date = toZonedDateTime(activeAwardTimestamp)
+                                .withZoneSameInstant(ZoneId.of("Europe/Kiev"))
+                                .withHour(0).withMinute(0).withSecond(0).withNano(0);
+                        ZonedDateTime now = ZonedDateTime.now().withZoneSameInstant(ZoneId.of("Europe/Kiev"))
+                                .withHour(0).withMinute(0).withSecond(0).withNano(0);
+                        Duration between = Duration.between(date, now);
+                        long days = between.toDays();
+                        Integer indicatorValue = days > DAYS_LIMIT ? 1 : 0;
+                        if (indicatorValue == 1) {
+                            lotIndicators.put(lotId, indicatorValue);
+                        } else {
+                            if (!lotIndicators.containsKey(lotId) || lotIndicators.get(lotId) != 1) {
+                                lotIndicators.put(lotId, indicatorValue);
+                            }
+                        }
+                        continue;
+                    }
+                    lotIndicators.put(lotId, 0);
+                }
+            }
+
+            List<TenderIndicator> tenderIndicators = new ArrayList<>();
+            for (Integer value : new HashSet<>(lotIndicators.values())) {
+                List<String> lotIds = new ArrayList<>();
+                lotIndicators.forEach((lotId, val) -> {
+                    if (value.equals(val)) {
+                        lotIds.add(lotId);
+                    }
+                });
+                tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, value, lotIds));
+            }
+            indicatorsMap.put(tenderId, tenderIndicators);
+        }
+        return indicatorsMap;
+    }
 }

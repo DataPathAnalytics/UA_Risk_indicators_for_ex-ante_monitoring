@@ -1,6 +1,5 @@
 package com.datapath.druidintegration.service;
 
-import com.datapath.druidintegration.DruidConstants;
 import com.datapath.druidintegration.model.TenderScore;
 import com.datapath.druidintegration.model.druid.request.GroupByRequest;
 import com.datapath.druidintegration.model.druid.request.common.Filter;

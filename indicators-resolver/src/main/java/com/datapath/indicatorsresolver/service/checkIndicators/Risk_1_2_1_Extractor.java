@@ -43,8 +43,7 @@ public class Risk_1_2_1_Extractor extends BaseExtractor {
                 checkRisk_1_2_1Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -65,8 +64,7 @@ public class Risk_1_2_1_Extractor extends BaseExtractor {
                 checkRisk_1_2_1Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -94,60 +92,56 @@ public class Risk_1_2_1_Extractor extends BaseExtractor {
 
             for (Object[] tenderData : tendersInfo) {
                 String tenderId = tenderData[0].toString();
-                try {
-                    String currency = tenderData[1].toString();
-                    Double amount = Double.parseDouble(tenderData[2].toString());
-                    Timestamp timestampStartDate = (Timestamp) tenderData[3];
-                    maxTenderDateCreated = toZonedDateTime((Timestamp) tenderData[4]);
 
-                    tenders.add(tenderId);
+                String currency = tenderData[1].toString();
+                Double amount = Double.parseDouble(tenderData[2].toString());
+                Timestamp timestampStartDate = (Timestamp) tenderData[3];
+                maxTenderDateCreated = toZonedDateTime((Timestamp) tenderData[4]);
 
-                    Integer indicatorValue;
-                    if (currency.equals(EUR_CURRENCY)) {
-                        indicatorValue = amount > EUR_LIMIT ? RISK : NOT_RISK;
+                tenders.add(tenderId);
+
+                Integer indicatorValue;
+                if (currency.equals(EUR_CURRENCY)) {
+                    indicatorValue = amount > EUR_LIMIT ? RISK : NOT_RISK;
+                } else {
+                    if (isNull(timestampStartDate)) {
+                        indicatorValue = -1;
                     } else {
-                        if (isNull(timestampStartDate)) {
-                            indicatorValue = -1;
-                        } else {
-                            ZonedDateTime zonedDateTime = toZonedDateTime(timestampStartDate)
-                                    .withZoneSameInstant(ZoneId.of("Europe/Kiev"))
-                                    .withHour(0)
-                                    .withMinute(0)
-                                    .withSecond(0)
-                                    .withNano(0);
-                            if (currency.equals(UAH_CURRENCY)) {
-                                ExchangeRate euroRate = exchangeRateService.getOneByCodeAndDate(EUR_CURRENCY, zonedDateTime);
-                                if (nonNull(euroRate)) {
-                                    indicatorValue = amount / euroRate.getRate() > EUR_LIMIT ? RISK : NOT_RISK;
-                                } else {
-                                    indicatorValue = IMPOSSIBLE_TO_DETECT;
-                                }
+                        ZonedDateTime zonedDateTime = toZonedDateTime(timestampStartDate)
+                                .withZoneSameInstant(ZoneId.of("Europe/Kiev"))
+                                .withHour(0)
+                                .withMinute(0)
+                                .withSecond(0)
+                                .withNano(0);
+                        if (currency.equals(UAH_CURRENCY)) {
+                            ExchangeRate euroRate = exchangeRateService.getOneByCodeAndDate(EUR_CURRENCY, zonedDateTime);
+                            if (nonNull(euroRate)) {
+                                indicatorValue = amount / euroRate.getRate() > EUR_LIMIT ? RISK : NOT_RISK;
                             } else {
-                                ExchangeRate currencyRate = exchangeRateService.getOneByCodeAndDate(currency, zonedDateTime);
-                                ExchangeRate euroRate = exchangeRateService.getOneByCodeAndDate(EUR_CURRENCY, zonedDateTime);
-                                if (nonNull(currencyRate) && nonNull(euroRate)) {
-                                    amount = amount * currencyRate.getRate() / euroRate.getRate();
-                                    indicatorValue = amount > EUR_LIMIT ? RISK : NOT_RISK;
-                                } else {
-                                    indicatorValue = IMPOSSIBLE_TO_DETECT;
-                                }
+                                indicatorValue = IMPOSSIBLE_TO_DETECT;
+                            }
+                        } else {
+                            ExchangeRate currencyRate = exchangeRateService.getOneByCodeAndDate(currency, zonedDateTime);
+                            ExchangeRate euroRate = exchangeRateService.getOneByCodeAndDate(EUR_CURRENCY, zonedDateTime);
+                            if (nonNull(currencyRate) && nonNull(euroRate)) {
+                                amount = amount * currencyRate.getRate() / euroRate.getRate();
+                                indicatorValue = amount > EUR_LIMIT ? RISK : NOT_RISK;
+                            } else {
+                                indicatorValue = IMPOSSIBLE_TO_DETECT;
                             }
                         }
                     }
-
-                    TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
-                    tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>()));
-
-                } catch (Exception ex) {
-                    log.info(String.format(TENDER_INDICATOR_ERROR_MESSAGE, INDICATOR_CODE, tenderId));
                 }
+
+                TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
+                tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>()));
             }
 
             Map<String, TenderDimensions> dimensionsMap = getTenderDimensionsWithIndicatorLastIteration(tenders, INDICATOR_CODE);
 
             tenderIndicators.forEach(tenderIndicator -> {
                 tenderIndicator.setTenderDimensions(dimensionsMap.get(tenderIndicator.getTenderDimensions().getId()));
-                uploadIndicatorIfNotExists(tenderIndicator.getTenderDimensions().getId(), INDICATOR_CODE, tenderIndicator);
+                uploadIndicator(tenderIndicator);
             });
 
             indicator.setLastCheckedDateCreated(maxTenderDateCreated);

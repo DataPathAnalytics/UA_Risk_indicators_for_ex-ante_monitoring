@@ -28,6 +28,7 @@ import static org.springframework.util.CollectionUtils.isEmpty;
 public class Risk_1_8_2ExtractorUpdated extends BaseExtractor {
 
     private static final String INDICATOR_CODE = "RISK1-8_2";
+    private static final String ACTIVE_STATUS = "ACTIVE";
 
     @Transactional
     public void extract() {
@@ -69,7 +70,6 @@ public class Risk_1_8_2ExtractorUpdated extends BaseExtractor {
         for (Tender tender : tenders) {
 
             Map<String, Integer> lotIndicators = new HashMap<>();
-
             TenderDimensions tenderDimensions = new TenderDimensions(tender.getOuterId());
 
             for (Lot lot : tender.getLots()) {
@@ -83,7 +83,7 @@ public class Risk_1_8_2ExtractorUpdated extends BaseExtractor {
                     boolean hasActiveContractsWithoutFormat = lot.getAwards()
                             .stream()
                             .filter(award -> award.getTenderContract() != null
-                                    && "ACTIVE".equalsIgnoreCase(award.getTenderContract().getStatus())
+                                    && ACTIVE_STATUS.equalsIgnoreCase(award.getTenderContract().getStatus())
                             )
                             .flatMap(award -> award.getTenderContract().getDocuments().stream())
                             .anyMatch(document -> !"application/pkcs7-signature".equalsIgnoreCase(document.getFormat()));
@@ -97,6 +97,7 @@ public class Risk_1_8_2ExtractorUpdated extends BaseExtractor {
                     boolean hasAnotherFormat = contractDocuments.stream().anyMatch(doc -> !"application/pkcs7-signature".equalsIgnoreCase(doc.getFormat()));
 
                     boolean expiredAwardDate = lot.getAwards().stream()
+                            .filter(award -> ACTIVE_STATUS.equalsIgnoreCase(award.getStatus()))
                             .anyMatch(award ->
                                     (isEmpty(award.getComplaints()) && Duration.between(award.getDate(), ZonedDateTime.now()).toDays() > 22)
                                             || (!isEmpty(award.getComplaints()) && Duration.between(award.getDate(), ZonedDateTime.now()).toDays() > 37)

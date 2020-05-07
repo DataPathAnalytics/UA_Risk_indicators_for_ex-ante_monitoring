@@ -2,13 +2,12 @@ package com.datapath.integration.scheduling;
 
 import com.datapath.integration.validation.TenderExistenceValidator;
 import com.datapath.integration.validation.TenderUpdatesValidator;
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
-public class TendersValidationScheduler implements InitializingBean {
+public class TendersValidationScheduler {
 
     @Value("${com.datapath.scheduling.enabled}")
     private boolean schedulingEnabled;
@@ -33,12 +32,5 @@ public class TendersValidationScheduler implements InitializingBean {
     @Scheduled(cron = "0 0 */6 * * *")
     public void validateTenderUpdates() {
         tenderUpdatesValidator.validate();
-    }
-
-    @Override
-    public void afterPropertiesSet() {
-        if (schedulingEnabled) {
-            validateTenderUpdates();
-        }
     }
 }

@@ -42,8 +42,7 @@ public class Risk_2_11_Extractor extends BaseExtractor {
                 checkRisk2_11Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -64,8 +63,7 @@ public class Risk_2_11_Extractor extends BaseExtractor {
                 checkRisk2_11Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -117,6 +115,7 @@ public class Risk_2_11_Extractor extends BaseExtractor {
                     }
 
                 } catch (Exception ex) {
+                    log.error(ex.getMessage(), ex);
                     log.info(String.format(TENDER_INDICATOR_ERROR_MESSAGE, INDICATOR_CODE, contractId));
                 }
             });

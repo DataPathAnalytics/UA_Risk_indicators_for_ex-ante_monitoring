@@ -43,8 +43,7 @@ public class Risk_1_4_2_Extractor extends BaseExtractor {
                 checkRisk_1_4_2Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -65,8 +64,7 @@ public class Risk_1_4_2_Extractor extends BaseExtractor {
                 checkRisk_1_4_2Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -92,7 +90,7 @@ public class Risk_1_4_2_Extractor extends BaseExtractor {
             Map<String, List<TenderIndicator>> tenderIndicatorsMap = checkIndicator(tenders, indicator);
             tenderIndicatorsMap.forEach((tenderId, tenderIndicators) -> {
                 tenderIndicators.forEach(tenderIndicator -> tenderIndicator.setTenderDimensions(dimensionsMap.get(tenderId)));
-                uploadIndicatorIfNotExists(tenderId, INDICATOR_CODE, tenderIndicators);
+                uploadIndicators(tenderIndicators, dimensionsMap.get(tenderId).getDruidCheckIteration());
 
             });
 
@@ -126,43 +124,40 @@ public class Risk_1_4_2_Extractor extends BaseExtractor {
 
         tenderLotdateDocComplaintCount.forEach(tenderLotData -> {
             String tenderId = tenderLotData[0].toString();
-            try {
-                String lotId = tenderLotData[1].toString();
-                Object awardIdObj = tenderLotData[2];
-                Timestamp awardDateTimestamp = (Timestamp) tenderLotData[3];
-                Integer docCount = Integer.parseInt(tenderLotData[4].toString());
-                Integer indicatorValue;
+            String lotId = tenderLotData[1].toString();
+            Object awardIdObj = tenderLotData[2];
+            Timestamp awardDateTimestamp = (Timestamp) tenderLotData[3];
+            int docCount = Integer.parseInt(tenderLotData[4].toString());
+            int indicatorValue;
 
-                if (maxTendersLotIterationData.get(tenderId).containsKey(lotId) && maxTendersLotIterationData.get(tenderId).get(lotId).equals(1)) {
-                    indicatorValue = 1;
+            if (maxTendersLotIterationData.get(tenderId).containsKey(lotId) && maxTendersLotIterationData.get(tenderId).get(lotId).equals(1)) {
+                indicatorValue = 1;
+            } else {
+                if (isNull(awardIdObj)) {
+                    indicatorValue = 0;
                 } else {
-                    if (isNull(awardIdObj)) {
-                        indicatorValue = 0;
-                    } else {
-                        ZonedDateTime awardDate = toZonedDateTime(awardDateTimestamp).withZoneSameInstant(ZoneId.of("Europe/Kiev"))
-                                .withHour(0)
-                                .withMinute(0)
-                                .withSecond(0)
-                                .withNano(0);
+                    ZonedDateTime awardDate = toZonedDateTime(awardDateTimestamp).withZoneSameInstant(ZoneId.of("Europe/Kiev"))
+                            .withHour(0)
+                            .withMinute(0)
+                            .withSecond(0)
+                            .withNano(0);
 
-                        if (docCount == 0) {
-                            indicatorValue = -2;
-                        } else {
-                            indicatorValue = awardDate.isBefore(dateOfCurrentDateMinusNWorkingDays) ? 1 : -2;
-                        }
+                    if (docCount == 0) {
+                        indicatorValue = -2;
+                    } else {
+                        indicatorValue = awardDate.isBefore(dateOfCurrentDateMinusNWorkingDays) ? 1 : -2;
                     }
                 }
-
-                if (!resultMap.containsKey(tenderId)) {
-                    resultMap.put(tenderId, new HashMap<>());
-                }
-                if (!resultMap.get(tenderId).containsKey(indicatorValue)) {
-                    resultMap.get(tenderId).put(indicatorValue, new ArrayList<>());
-                }
-                resultMap.get(tenderId).get(indicatorValue).add(lotId);
-            } catch (Exception ex) {
-                log.info(String.format(TENDER_INDICATOR_ERROR_MESSAGE, INDICATOR_CODE, tenderId));
             }
+
+            if (!resultMap.containsKey(tenderId)) {
+                resultMap.put(tenderId, new HashMap<>());
+            }
+            if (!resultMap.get(tenderId).containsKey(indicatorValue)) {
+                resultMap.get(tenderId).put(indicatorValue, new ArrayList<>());
+            }
+            resultMap.get(tenderId).get(indicatorValue).add(lotId);
+
         });
 
         resultMap.forEach((tenderOuterId, value) -> {

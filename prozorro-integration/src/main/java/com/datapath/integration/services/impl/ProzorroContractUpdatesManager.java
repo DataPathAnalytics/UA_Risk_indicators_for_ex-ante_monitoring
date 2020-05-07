@@ -113,6 +113,10 @@ public class ProzorroContractUpdatesManager implements ContractUpdatesManager {
                     break;
                 }
 
+                if (url.equalsIgnoreCase(nextPageUrl)) {
+                    break;
+                }
+
                 url = nextPageUrl;
                 nextDateOffset = DateUtils.parseZonedDateTime(contractsPageResponseEntity.getNextPage().getOffset());
             } catch (ResourceAccessException e) {

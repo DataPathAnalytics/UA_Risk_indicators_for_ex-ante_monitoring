@@ -82,7 +82,7 @@ public class ExtractTenderDataService extends ExtractorService {
 
     }
 
-    private Long findLastIterationForTenderIndicatorsData(List<DruidTenderIndicator> druidIndicator) {
+    public Long findLastIterationForTenderIndicatorsData(List<DruidTenderIndicator> druidIndicator) {
         List<Integer> maxIterations = druidIndicator.stream().map(indicator -> {
             GroupByRequest groupByRequest = new GroupByRequest(tenderIndex);
             SimpleAggregationImpl aggregation = new SimpleAggregationImpl();
@@ -175,8 +175,8 @@ public class ExtractTenderDataService extends ExtractorService {
                     }).collect(Collectors.toList());
 
                     TopNRequest topNRequest = new TopNRequest(tenderIndex);
-                    topNRequest.setIntervals(startDate + "/" + endDate);
                     topNRequest.setDimension(TENDER_OUTER_ID);
+                    topNRequest.setIntervals(startDate + "/" + endDate);
                     topNRequest.setThreshold(limit);
 
                     topNRequest.setAggregations(Collections.singletonList(new SimpleAggregationImpl("timeMax", "tmax", DATE)));
@@ -364,50 +364,51 @@ public class ExtractTenderDataService extends ExtractorService {
             }
 
             if (!topLastUpdatedTendersIds.isEmpty()) {
-                GroupByRequest tendersIndicatorsMaxIteration = new GroupByRequest(tenderIndex);
-                tendersIndicatorsMaxIteration.setDimensions(Collections.singletonList(TENDER_OUTER_ID));
-                tendersIndicatorsMaxIteration.setAggregations(Collections.singletonList(new SimpleAggregationImpl("timeMax", "tmax", DATE)));
-                tendersIndicatorsMaxIteration.setFilter(new ListStringFilter("in", TENDER_OUTER_ID, topLastUpdatedTendersIds));
-
-                GroupByResponse[] tendersIndicatorsMaxIterationResponse = restTemplate.postForObject(druidUrl, tendersIndicatorsMaxIteration, GroupByResponse[].class);
-
-                if (nonNull(tendersIndicatorsMaxIterationResponse) && tendersIndicatorsMaxIterationResponse.length > 0) {
-                    List<Filter> filterList = Arrays.stream(tendersIndicatorsMaxIterationResponse).map((GroupByResponse item) -> {
-                        Event event = item.getEvent();
-                        FilterImpl filter = new FilterImpl();
-                        List<Filter> fields = new ArrayList<>();
-                        fields.add(new StringFilter("selector", TENDER_OUTER_ID, event.getTenderOuterId()));
-                        fields.add(new StringFilter("selector", DATE, event.getTmax()));
-                        filter.setType("and");
-                        filter.setFields(fields);
-                        return filter;
-                    }).collect(Collectors.toList());
-
-                    FilterImpl filter = new FilterImpl();
-                    filter.setType("or");
-                    filter.setFields(filterList);
-
-                    TopNRequest topNRequest = TopNRequest.builder()
-                            .dataSource(tenderIndex)
-                            .queryType("topN")
-                            .granularity("all")
-                            .intervals(startDate + "/" + endDate)
-                            .dimension(TENDER_OUTER_ID)
-                            .threshold(limit)
-                            .aggregations(Collections.singletonList(new SimpleAggregationImpl("timeMax", "tmax", DATE)))
-                            .metric(getTopNMetricByDate(order))
-                            .filter(filter)
-                            .build();
-
-                    TopNResponse[] postForObject = restTemplate.postForObject(druidUrl, topNRequest, TopNResponse[].class);
-                    if (postForObject != null && postForObject.length > 0 && !postForObject[0].getResult().isEmpty()) {
-                        postForObject[0].getResult().forEach(item -> {
-                            if (tenderIds.size() < limit) {
-                                tenderIds.add(item.getTenderOuterId());
-                            }
-                        });
-                    }
-                }
+//                GroupByRequest tendersIndicatorsMaxIteration = new GroupByRequest(tenderIndex);
+//                tendersIndicatorsMaxIteration.setDimensions(Collections.singletonList(TENDER_OUTER_ID));
+//                tendersIndicatorsMaxIteration.setAggregations(Collections.singletonList(new SimpleAggregationImpl("timeMax", "tmax", DATE)));
+//                tendersIndicatorsMaxIteration.setFilter(new ListStringFilter("in", TENDER_OUTER_ID, topLastUpdatedTendersIds));
+//
+//                GroupByResponse[] tendersIndicatorsMaxIterationResponse = restTemplate.postForObject(druidUrl, tendersIndicatorsMaxIteration, GroupByResponse[].class);
+//
+//                if (nonNull(tendersIndicatorsMaxIterationResponse) && tendersIndicatorsMaxIterationResponse.length > 0) {
+//                    List<Filter> filterList = Arrays.stream(tendersIndicatorsMaxIterationResponse).map((GroupByResponse item) -> {
+//                        Event event = item.getEvent();
+//                        FilterImpl filter = new FilterImpl();
+//                        List<Filter> fields = new ArrayList<>();
+//                        fields.add(new StringFilter("selector", TENDER_OUTER_ID, event.getTenderOuterId()));
+//                        fields.add(new StringFilter("selector", DATE, event.getTmax()));
+//                        filter.setType("and");
+//                        filter.setFields(fields);
+//                        return filter;
+//                    }).collect(Collectors.toList());
+//
+//                    FilterImpl filter = new FilterImpl();
+//                    filter.setType("or");
+//                    filter.setFields(filterList);
+//
+//                    TopNRequest topNRequest = TopNRequest.builder()
+//                            .dataSource(tenderIndex)
+//                            .queryType("topN")
+//                            .granularity("all")
+//                            .intervals(startDate + "/" + endDate)
+//                            .dimension(TENDER_OUTER_ID)
+//                            .threshold(limit)
+//                            .aggregations(Collections.singletonList(new SimpleAggregationImpl("timeMax", "tmax", DATE)))
+//                            .metric(getTopNMetricByDate(order))
+//                            .filter(filter)
+//                            .build();
+//
+//                    TopNResponse[] postForObject = restTemplate.postForObject(druidUrl, topNRequest, TopNResponse[].class);
+//                    if (postForObject != null && postForObject.length > 0 && !postForObject[0].getResult().isEmpty()) {
+//                        postForObject[0].getResult().forEach(item -> {
+//                            if (tenderIds.size() < limit) {
+//                                tenderIds.add(item.getTenderOuterId());
+//                            }
+//                        });
+//                    }
+//                }
+                tenderIds.addAll(topLastUpdatedTendersIds);
             }
 
             if (tenderIds.size() < limit && !topLastUpdatedTendersIds.isEmpty()) {

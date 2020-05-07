@@ -302,7 +302,7 @@ public class IndicatorsResolver {
     @Async
     public void checkRisk_1_8_2(ZonedDateTime date) {
         LOG.info("Start daily RISK_1_8_2 recalculation");
-        risk_1_8_2_extractor.checkIndicator(date);
+//        risk_1_8_2_extractor.checkIndicator(date);
         LOG.info("Finish daily RISK_1_8_2 recalculation");
     }
 

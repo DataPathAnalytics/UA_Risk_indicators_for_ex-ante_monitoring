@@ -29,6 +29,7 @@ public class InDatabaseIndicatorInfoProvider implements IndicatorInfoProvider {
 
     @Override
     public IndicatorInfo getIndicatorById(String indicatorId) {
+        if (indicatorsInfoList.isEmpty()) loadIndicatorsInfo();
         IndicatorInfo indicatorInfo = indicatorsInfoList.get(indicatorId);
         if (indicatorInfo == null) {
             indicatorInfo = new IndicatorInfo();

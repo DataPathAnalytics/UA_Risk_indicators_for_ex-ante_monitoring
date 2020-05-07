@@ -42,8 +42,7 @@ public class Risk_2_3_Extractor extends BaseExtractor {
                 checkRisk2_3Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -64,8 +63,7 @@ public class Risk_2_3_Extractor extends BaseExtractor {
                 checkRisk2_3Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }

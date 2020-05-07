@@ -40,8 +40,7 @@ public class Risk_1_6_1_Extractor extends BaseExtractor {
                 checkRisk_1_6Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -62,8 +61,7 @@ public class Risk_1_6_1_Extractor extends BaseExtractor {
                 checkRisk_1_6Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -95,7 +93,7 @@ public class Risk_1_6_1_Extractor extends BaseExtractor {
 
             tenderIndicatorsMap.forEach((tenderId, tenderIndicators) -> {
                 tenderIndicators.forEach(tenderIndicator -> tenderIndicator.setTenderDimensions(dimensionsMap.get(tenderId)));
-                uploadIndicatorIfNotExists(tenderId, INDICATOR_CODE, tenderIndicators);
+                uploadIndicators(tenderIndicators, dimensionsMap.get(tenderId).getDruidCheckIteration());
             });
 
             ZonedDateTime maxTenderDateCreated = getMaxTenderDateCreated(dimensionsMap, dateTime);
@@ -111,80 +109,74 @@ public class Risk_1_6_1_Extractor extends BaseExtractor {
     }
 
     private Map<String, List<TenderIndicator>> checkIndicator(List<String> tenderIds, Indicator indicator) {
-        try {
-            Map<String, Map<Integer, List<String>>> resultMap = new HashMap<>();
-            Map<String, List<TenderIndicator>> result = new HashMap<>();
 
-            List<Object[]> tendersContractsWithDocuments = tenderContractRepository
-                    .getTenderLotContractDocsByTenderId(String.join(",", tenderIds));
+        Map<String, Map<Integer, List<String>>> resultMap = new HashMap<>();
+        Map<String, List<TenderIndicator>> result = new HashMap<>();
 
-            for (Object[] tendersContractsWithDocument : tendersContractsWithDocuments) {
-                String tenderId = tendersContractsWithDocument[0].toString();
-                String lotId = tendersContractsWithDocument[1].toString();
-                String contractId = isNull(tendersContractsWithDocument[2])
-                        ? null
-                        : tendersContractsWithDocument[2].toString();
-                List<String> tenderDocsFormats = isNull(tendersContractsWithDocument[3])
-                        ? null
-                        : Arrays.asList(tendersContractsWithDocument[3].toString().split(COMMA_SEPARATOR));
-                List<String> contractDocsFormats = isNull(tendersContractsWithDocument[4])
-                        ? null
-                        : Arrays.asList(tendersContractsWithDocument[4].toString().split(COMMA_SEPARATOR));
-                int indicatorValue;
-                if (isNull(contractId)) {
-                    indicatorValue = -2;
-                } else {
-                    if (nonNull(tenderDocsFormats)) {
-                        if (!tenderDocsFormats.stream()
+        List<Object[]> tendersContractsWithDocuments = tenderContractRepository
+                .getTenderLotContractDocsByTenderId(String.join(",", tenderIds));
+
+        for (Object[] tendersContractsWithDocument : tendersContractsWithDocuments) {
+            String tenderId = tendersContractsWithDocument[0].toString();
+            String lotId = tendersContractsWithDocument[1].toString();
+            String contractId = isNull(tendersContractsWithDocument[2])
+                    ? null
+                    : tendersContractsWithDocument[2].toString();
+            List<String> tenderDocsFormats = isNull(tendersContractsWithDocument[3])
+                    ? null
+                    : Arrays.asList(tendersContractsWithDocument[3].toString().split(COMMA_SEPARATOR));
+            List<String> contractDocsFormats = isNull(tendersContractsWithDocument[4])
+                    ? null
+                    : Arrays.asList(tendersContractsWithDocument[4].toString().split(COMMA_SEPARATOR));
+            int indicatorValue;
+            if (isNull(contractId)) {
+                indicatorValue = -2;
+            } else {
+                if (nonNull(tenderDocsFormats)) {
+                    if (!tenderDocsFormats.stream()
+                            .filter(docFormat -> !docFormat.equals("application/pkcs7-signature"))
+                            .collect(Collectors.toList()).isEmpty()) {
+                        indicatorValue = 0;
+                    } else {
+                        if (isNull(contractDocsFormats) || contractDocsFormats.stream()
                                 .filter(docFormat -> !docFormat.equals("application/pkcs7-signature"))
                                 .collect(Collectors.toList()).isEmpty()) {
+                            indicatorValue = 1;
+                        } else {
                             indicatorValue = 0;
-                        } else {
-                            if (isNull(contractDocsFormats) || contractDocsFormats.stream()
-                                    .filter(docFormat -> !docFormat.equals("application/pkcs7-signature"))
-                                    .collect(Collectors.toList()).isEmpty()) {
-                                indicatorValue = 1;
-                            } else {
-                                indicatorValue = 0;
-                            }
-                        }
-                    } else {
-                        if (isNull(contractDocsFormats)) {
-                            indicatorValue = -2;
-                        } else {
-                            if (contractDocsFormats.stream()
-                                    .filter(docFormat -> !docFormat.equals("application/pkcs7-signature"))
-                                    .collect(Collectors.toList()).isEmpty()) {
-                                indicatorValue = 1;
-                            } else {
-                                indicatorValue = 0;
-                            }
                         }
                     }
+                } else {
+                    if (isNull(contractDocsFormats)) {
+                        indicatorValue = -2;
+                    } else {
+                        if (contractDocsFormats.stream()
+                                .filter(docFormat -> !docFormat.equals("application/pkcs7-signature"))
+                                .collect(Collectors.toList()).isEmpty()) {
+                            indicatorValue = 1;
+                        } else {
+                            indicatorValue = 0;
+                        }
+                    }
+                }
 
-                }
-                if (!resultMap.containsKey(tenderId)) {
-                    resultMap.put(tenderId, new HashMap<>());
-                }
-                if (!resultMap.get(tenderId).containsKey(indicatorValue)) {
-                    resultMap.get(tenderId).put(indicatorValue, new ArrayList<>());
-                }
-                resultMap.get(tenderId).get(indicatorValue).add(lotId);
             }
-            resultMap.forEach((tenderOuterId, value) -> {
-                TenderDimensions tenderDimensions = new TenderDimensions(tenderOuterId);
-                value.forEach((indicatorValue, lots) -> {
-                    if (!result.containsKey(tenderOuterId)) result.put(tenderOuterId, new ArrayList<>());
-                    result.get(tenderOuterId).add(new TenderIndicator(tenderDimensions, indicator, indicatorValue, lots));
-                });
-            });
-
-            return result;
-        } catch (Exception ex) {
-            log.info(String.format("ERROR while processing indicator: %s ", INDICATOR_CODE));
-            ex.printStackTrace();
-            return new HashMap<>();
+            if (!resultMap.containsKey(tenderId)) {
+                resultMap.put(tenderId, new HashMap<>());
+            }
+            if (!resultMap.get(tenderId).containsKey(indicatorValue)) {
+                resultMap.get(tenderId).put(indicatorValue, new ArrayList<>());
+            }
+            resultMap.get(tenderId).get(indicatorValue).add(lotId);
         }
-    }
+        resultMap.forEach((tenderOuterId, value) -> {
+            TenderDimensions tenderDimensions = new TenderDimensions(tenderOuterId);
+            value.forEach((indicatorValue, lots) -> {
+                if (!result.containsKey(tenderOuterId)) result.put(tenderOuterId, new ArrayList<>());
+                result.get(tenderOuterId).add(new TenderIndicator(tenderDimensions, indicator, indicatorValue, lots));
+            });
+        });
 
+        return result;
+    }
 }

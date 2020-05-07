@@ -42,8 +42,7 @@ public class Risk_1_13_1_Extractor extends BaseExtractor {
                 checkRisk_1_13_1Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -64,8 +63,7 @@ public class Risk_1_13_1_Extractor extends BaseExtractor {
                 checkRisk_1_13_1Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -86,7 +84,8 @@ public class Risk_1_13_1_Extractor extends BaseExtractor {
                     page,
                     size);
 
-            if (tenders.isEmpty()) {break;
+            if (tenders.isEmpty()) {
+                break;
             }
 
             Map<String, TenderDimensions> dimensionsMap = getTenderDimensionsWithIndicatorLastIteration(new HashSet<>(tenders), INDICATOR_CODE);
@@ -104,47 +103,39 @@ public class Risk_1_13_1_Extractor extends BaseExtractor {
             indicatorRepository.save(indicator);
 
             dateTime = maxTenderDateCreated;
-
         }
         ZonedDateTime now = ZonedDateTime.now();
         indicator.setDateChecked(now);
         indicatorRepository.save(indicator);
-
     }
 
     private Map<String, TenderIndicator> checkIndicator(List<String> tenderIds, Indicator indicator) {
-        try {
-            Map<String, TenderIndicator> result = new HashMap<>();
-            tenderRepository.getTenderIdMinAwardDateMinDocumentDatePublished(
-                    tenderIds.stream().collect(Collectors.joining(",")))
-                    .forEach(
-                            tenderItem -> {
-                                String tenderId = tenderItem[0].toString();
-                                ZonedDateTime minAwardDate = isNull(tenderItem[1])
-                                        ? null
-                                        : toZonedDateTime((Timestamp) tenderItem[1]);
-                                ZonedDateTime minDatePublished = isNull(tenderItem[2])
-                                        ? null
-                                        : toZonedDateTime((Timestamp) tenderItem[2]);
-                                TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
-                                Integer indicatorValue;
-                                if (isNull(minAwardDate)) {
-                                    indicatorValue = -2;
-                                } else {
-                                    indicatorValue = isNull(minDatePublished) || minDatePublished.isAfter(minAwardDate)
-                                            ? 1
-                                            : 0;
-                                }
-                                result.put(tenderId, new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>()));
 
+        Map<String, TenderIndicator> result = new HashMap<>();
+        tenderRepository.getTenderIdMinAwardDateMinDocumentDatePublished(
+                tenderIds.stream().collect(Collectors.joining(",")))
+                .forEach(
+                        tenderItem -> {
+                            String tenderId = tenderItem[0].toString();
+                            ZonedDateTime minAwardDate = isNull(tenderItem[1])
+                                    ? null
+                                    : toZonedDateTime((Timestamp) tenderItem[1]);
+                            ZonedDateTime minDatePublished = isNull(tenderItem[2])
+                                    ? null
+                                    : toZonedDateTime((Timestamp) tenderItem[2]);
+                            TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
+                            Integer indicatorValue;
+                            if (isNull(minAwardDate)) {
+                                indicatorValue = -2;
+                            } else {
+                                indicatorValue = isNull(minDatePublished) || minDatePublished.isAfter(minAwardDate)
+                                        ? 1
+                                        : 0;
                             }
-                    );
+                            result.put(tenderId, new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>()));
 
-            return result;
-        } catch (Exception ex) {
-            log.info(String.format("ERROR while processing indicator: %s ", INDICATOR_CODE));
-            ex.printStackTrace();
-            return new HashMap<>();
-        }
+                        }
+                );
+        return result;
     }
 }

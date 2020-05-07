@@ -39,7 +39,7 @@ public class Risk_1_3_3_Extractor extends BaseExtractor {
                 checkRisk_1_3_3_Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -60,7 +60,7 @@ public class Risk_1_3_3_Extractor extends BaseExtractor {
                 checkRisk_1_3_3_Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -87,7 +87,7 @@ public class Risk_1_3_3_Extractor extends BaseExtractor {
             Map<String, List<TenderIndicator>> tenderIndicatorsMap = checkIndicator(tenders, indicator);
             tenderIndicatorsMap.forEach((tenderId, tenderIndicators) -> {
                 tenderIndicators.forEach(tenderIndicator -> tenderIndicator.setTenderDimensions(dimensionsMap.get(tenderId)));
-                uploadIndicatorIfNotExists(tenderId, INDICATOR_CODE, tenderIndicators);
+                uploadIndicators(tenderIndicators, dimensionsMap.get(tenderId).getDruidCheckIteration());
             });
 
             ZonedDateTime maxTenderDateCreated = getMaxTenderDateCreated(dimensionsMap, dateTime);
@@ -114,32 +114,30 @@ public class Risk_1_3_3_Extractor extends BaseExtractor {
         for (Object tendersContractsWithDocument : tendersContractsWithDocuments) {
             Object[] o = (Object[]) tendersContractsWithDocument;
             String tenderId = o[0].toString();
-            try {
-                String lotId = o[1].toString();
-                String contractId = isNull(o[2]) ? null : o[2].toString();
-                List<String> documentFormats = isNull(o[3]) ? null : Arrays.asList(o[3].toString().split(COMMA_SEPARATOR));
-                Integer indicatorValue;
-                if (isNull(contractId) || isNull(documentFormats)) {
-                    indicatorValue = -2;
-                } else {
-                    indicatorValue = documentFormats.contains(PKCS7_SIGNATURE_FORMAT) ? NOT_RISK : RISK;
-                    if (indicatorValue == 1) {
-                        List<String> contractDocumentFormat = contractDocumentRepository.getFormatByContractOuterId(contractId);
-                        if (contractDocumentFormat.contains(PKCS7_SIGNATURE_FORMAT)) {
-                            indicatorValue = 0;
-                        }
+
+            String lotId = o[1].toString();
+            String contractId = isNull(o[2]) ? null : o[2].toString();
+            List<String> documentFormats = isNull(o[3]) ? null : Arrays.asList(o[3].toString().split(COMMA_SEPARATOR));
+            int indicatorValue;
+            if (isNull(contractId) || isNull(documentFormats)) {
+                indicatorValue = -2;
+            } else {
+                indicatorValue = documentFormats.contains(PKCS7_SIGNATURE_FORMAT) ? NOT_RISK : RISK;
+                if (indicatorValue == 1) {
+                    List<String> contractDocumentFormat = contractDocumentRepository.getFormatByContractOuterId(contractId);
+                    if (contractDocumentFormat.contains(PKCS7_SIGNATURE_FORMAT)) {
+                        indicatorValue = 0;
                     }
                 }
-                if (!resultMap.containsKey(tenderId)) {
-                    resultMap.put(tenderId, new HashMap<>());
-                }
-                if (!resultMap.get(tenderId).containsKey(indicatorValue)) {
-                    resultMap.get(tenderId).put(indicatorValue, new ArrayList<>());
-                }
-                resultMap.get(tenderId).get(indicatorValue).add(lotId);
-            } catch (Exception ex) {
-                log.info(String.format(TENDER_INDICATOR_ERROR_MESSAGE, INDICATOR_CODE, tenderId));
             }
+            if (!resultMap.containsKey(tenderId)) {
+                resultMap.put(tenderId, new HashMap<>());
+            }
+            if (!resultMap.get(tenderId).containsKey(indicatorValue)) {
+                resultMap.get(tenderId).put(indicatorValue, new ArrayList<>());
+            }
+            resultMap.get(tenderId).get(indicatorValue).add(lotId);
+
         }
 
         resultMap.forEach((tenderOuterId, value) -> {
@@ -151,7 +149,5 @@ public class Risk_1_3_3_Extractor extends BaseExtractor {
         });
 
         return result;
-
     }
-
 }

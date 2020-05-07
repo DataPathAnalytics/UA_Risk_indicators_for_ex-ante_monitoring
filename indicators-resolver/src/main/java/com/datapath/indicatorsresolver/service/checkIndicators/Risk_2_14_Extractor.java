@@ -42,8 +42,7 @@ public class Risk_2_14_Extractor extends BaseExtractor {
                 checkRisk2_14Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -64,8 +63,7 @@ public class Risk_2_14_Extractor extends BaseExtractor {
                 checkRisk2_14Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -93,7 +91,7 @@ public class Risk_2_14_Extractor extends BaseExtractor {
             indicatorsMap.forEach((tenderId, tenderIndicators) -> {
                 tenderIndicators.forEach(tenderIndicator -> tenderIndicator
                         .setTenderDimensions(dimensionsMap.get(tenderId)));
-                uploadIndicatorIfNotExists(tenderId, INDICATOR_CODE, tenderIndicators);
+                uploadIndicators(tenderIndicators, dimensionsMap.get(tenderId).getDruidCheckIteration());
             });
 
 
@@ -129,47 +127,42 @@ public class Risk_2_14_Extractor extends BaseExtractor {
             }
         }
 
-        for (String tenderId: tendersMap.keySet()) {
+        for (String tenderId : tendersMap.keySet()) {
             List<Object> lotWithUnsuccessfulQualificationsCountByTenderId = tendersMap.get(tenderId);
-            try {
-                Map<Integer, Set<String>> existedResultMap = new HashMap<>();
-                TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
 
-                Long maxTenderIndicatorIteration = extractDataService.getMaxIndicatorIteration(tenderId, indicator.getId());
-                List<Event> lastIterationData = extractDataService
-                        .getLastIterationData(tenderId, indicator.getId(), maxTenderIndicatorIteration);
+            Map<Integer, Set<String>> existedResultMap = new HashMap<>();
+            TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
 
-                lastIterationData.forEach(event -> existedResultMap.put(event.getIndicatorValue(), new HashSet<>(event.getLotIds())));
+            Long maxTenderIndicatorIteration = extractDataService.getMaxIndicatorIteration(tenderId, indicator.getId());
+            List<Event> lastIterationData = extractDataService
+                    .getLastIterationData(tenderId, indicator.getId(), maxTenderIndicatorIteration);
 
-                List<String> checkedLots = existedResultMap.values().stream()
-                        .flatMap(Set::stream)
-                        .collect(Collectors.toList());
+            lastIterationData.forEach(event -> existedResultMap.put(event.getIndicatorValue(), new HashSet<>(event.getLotIds())));
 
-                lotWithUnsuccessfulQualificationsCountByTenderId.forEach(lot -> {
-                    Object[] lotInfo = (Object[]) lot;
-                    String lotId = lotInfo[1].toString();
-                    if (!checkedLots.contains(lotId)) {
+            List<String> checkedLots = existedResultMap.values().stream()
+                    .flatMap(Set::stream)
+                    .collect(Collectors.toList());
 
-                        Integer unsuccessfulQualifications = Integer.parseInt(lotInfo[2].toString());
+            lotWithUnsuccessfulQualificationsCountByTenderId.forEach(lot -> {
+                Object[] lotInfo = (Object[]) lot;
+                String lotId = lotInfo[1].toString();
+                if (!checkedLots.contains(lotId)) {
 
-                        Integer indicatorValue = unsuccessfulQualifications >= 3 ? 1 : 0;
+                    Integer unsuccessfulQualifications = Integer.parseInt(lotInfo[2].toString());
 
-                        if (!existedResultMap.containsKey(indicatorValue)) {
-                            existedResultMap.put(indicatorValue, new HashSet<>());
-                        }
-                        existedResultMap.get(indicatorValue).add(lotId);
+                    Integer indicatorValue = unsuccessfulQualifications >= 3 ? 1 : 0;
+
+                    if (!existedResultMap.containsKey(indicatorValue)) {
+                        existedResultMap.put(indicatorValue, new HashSet<>());
                     }
-                });
+                    existedResultMap.get(indicatorValue).add(lotId);
+                }
+            });
 
-                indicatorsMap.put(tenderId, existedResultMap.entrySet().stream()
-                        .map(item -> new TenderIndicator(tenderDimensions, indicator,
-                                item.getKey(), new ArrayList<String>(item.getValue())))
-                        .collect(Collectors.toList()));
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                log.info(String.format(TENDER_INDICATOR_ERROR_MESSAGE, INDICATOR_CODE, tenderId));
-                return new HashMap<>();
-            }
+            indicatorsMap.put(tenderId, existedResultMap.entrySet().stream()
+                    .map(item -> new TenderIndicator(tenderDimensions, indicator,
+                            item.getKey(), new ArrayList<String>(item.getValue())))
+                    .collect(Collectors.toList()));
         }
 
         return indicatorsMap;

@@ -40,8 +40,7 @@ public class Risk_1_3_2_Extractor extends BaseExtractor {
                 checkRisk_1_3_2_Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -62,8 +61,7 @@ public class Risk_1_3_2_Extractor extends BaseExtractor {
                 checkRisk_1_3_2_Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -94,28 +92,25 @@ public class Risk_1_3_2_Extractor extends BaseExtractor {
 
             awardWithDocumentTypesByTenderId.forEach(award -> {
                 String tenderId = award[0].toString();
-                try {
-                    String lotId = award[1].toString();
-                    List<String> documentFormats = isNull(award[2])
-                            ? null
-                            : Arrays.asList(award[2].toString().split(COMMA_SEPARATOR));
-                    Integer indicatorValue;
-                    if (nonNull(documentFormats)) {
-                        indicatorValue = documentFormats.contains(PKCS7_SIGNATURE_FORMAT) ? NOT_RISK : RISK;
-                    } else {
-                        indicatorValue = -2;
-                    }
-                    if (!resultMap.containsKey(tenderId)) {
-                        resultMap.put(tenderId, new HashMap<>());
-                    }
-                    if (!resultMap.get(tenderId).containsKey(indicatorValue)) {
-                        resultMap.get(tenderId).put(indicatorValue, new ArrayList<>());
-                    }
-
-                    resultMap.get(tenderId).get(indicatorValue).add(lotId);
-                } catch (Exception ex) {
-                    log.info(String.format(TENDER_INDICATOR_ERROR_MESSAGE, INDICATOR_CODE, tenderId));
+                String lotId = award[1].toString();
+                List<String> documentFormats = isNull(award[2])
+                        ? null
+                        : Arrays.asList(award[2].toString().split(COMMA_SEPARATOR));
+                Integer indicatorValue;
+                if (nonNull(documentFormats)) {
+                    indicatorValue = documentFormats.contains(PKCS7_SIGNATURE_FORMAT) ? NOT_RISK : RISK;
+                } else {
+                    indicatorValue = -2;
                 }
+                if (!resultMap.containsKey(tenderId)) {
+                    resultMap.put(tenderId, new HashMap<>());
+                }
+                if (!resultMap.get(tenderId).containsKey(indicatorValue)) {
+                    resultMap.get(tenderId).put(indicatorValue, new ArrayList<>());
+                }
+
+                resultMap.get(tenderId).get(indicatorValue).add(lotId);
+
             });
 
             resultMap.forEach((tenderOuterId, value) -> {
@@ -129,7 +124,7 @@ public class Risk_1_3_2_Extractor extends BaseExtractor {
 
             result.forEach((tenderId, tenderIndicators) -> {
                 tenderIndicators.forEach(tenderIndicator -> tenderIndicator.setTenderDimensions(dimensionsMap.get(tenderId)));
-                uploadIndicatorIfNotExists(tenderId, INDICATOR_CODE, tenderIndicators);
+                uploadIndicators(tenderIndicators, dimensionsMap.get(tenderId).getDruidCheckIteration());
             });
 
             ZonedDateTime maxTenderDateCreated = getMaxTenderDateCreated(dimensionsMap, dateTime);

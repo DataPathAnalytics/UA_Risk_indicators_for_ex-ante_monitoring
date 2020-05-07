@@ -45,7 +45,7 @@ public class TenderUpdatesValidator {
         if (lastModifiedTender == null) return;
 
         ZonedDateTime lastDateModified = lastModifiedTender.getDateModified().minusDays(1);
-        log.info("Start tender update validation. StartDate: {}, EndDate: {}", yearEarlier, lastDateModified);
+        log.trace("Start tender update validation. StartDate: {}, EndDate: {}", yearEarlier, lastDateModified);
 
         ZonedDateTime dateOffset = yearEarlier.withZoneSameInstant(ZoneId.of("Europe/Kiev"));
 
@@ -56,14 +56,14 @@ public class TenderUpdatesValidator {
 
         while (true) {
             try {
-                log.info("Fetching tenders list for {}", url);
+                log.trace("Fetching tenders list for {}", url);
                 TendersPageResponseEntity tendersPageResponseEntity = tenderLoaderService.loadTendersPage(url);
                 List<TenderUpdateInfo> items = tendersPageResponseEntity.getItems()
                         .stream().filter(item -> item.getDateModified().isBefore(lastDateModified))
                         .collect(Collectors.toList());
 
                 tenderUpdateInfos.addAll(items);
-                log.info("Fetching {} tenders", items.size());
+                log.trace("Fetching {} tenders", items.size());
                 if (items.size() == 0) {
                     break;
                 }
@@ -75,7 +75,7 @@ public class TenderUpdatesValidator {
             }
         }
 
-        log.info("Tenders loading finished. Fetched {} items", tenderUpdateInfos.size());
+        log.trace("Tenders loading finished. Fetched {} items", tenderUpdateInfos.size());
 
         Set<String> tendersOuterIds = tenderUpdateInfos.stream()
                 .map(TenderUpdateInfo::getId)
@@ -83,29 +83,29 @@ public class TenderUpdatesValidator {
 
         Map<String, ZonedDateTime> existingTendersOuterIds = fetchExistingTendersOuterIdsAndDateModified(tendersOuterIds);
 
-        log.info("Existed tenders count: {}", existingTendersOuterIds.size());
+        log.trace("Existed tenders count: {}", existingTendersOuterIds.size());
 
         List<TenderUpdateInfo> infos = new ArrayList<>();
         tenderUpdateInfos.forEach(tenderUpdateInfo -> {
             ZonedDateTime dateModified = existingTendersOuterIds.get(tenderUpdateInfo.getId());
             if (dateModified != null && !dateModified.isEqual(tenderUpdateInfo.getDateModified())) {
-                log.info("Tender is not up to date: {} Expected date: {} Actual date: {}",
+                log.warn("Tender is not up to date: {} Expected date: {} Actual date: {}",
                         tenderUpdateInfo.getId(), tenderUpdateInfo.getDateModified(), dateModified);
 
                 infos.add(tenderUpdateInfo);
             }
         });
 
-        log.info("There are {} not up to date tenders. Start updating...", infos.size());
+        log.warn("There are {} not up to date tenders. Start updating...", infos.size());
         tenderUpdatesManager.saveTendersFromUpdateInfo(infos);
-        log.info("Tenders updating finished.");
+        log.trace("Tenders updating finished.");
     }
 
     private Map<String, ZonedDateTime> fetchExistingTendersOuterIdsAndDateModified(Set<String> tendersOuterIds) {
         Map<String, ZonedDateTime> existingTendersOuterIdsAndDateModified = new TreeMap<>();
         int pageSize = 1000;
         int currentIndex = 0;
-        log.info("Start fetching existing tenders");
+        log.trace("Start fetching existing tenders");
         while (currentIndex <= tendersOuterIds.size() - 1) {
             int nextIndex = currentIndex + pageSize < tendersOuterIds.size() - 1 ?
                     currentIndex + pageSize : tendersOuterIds.size();
@@ -116,9 +116,9 @@ public class TenderUpdatesValidator {
             existingTendersOuterIdsAndDateModified.putAll(existingTenderIds);
 
             currentIndex += pageSize;
-            log.info("Checked {} from {} tenders", currentIndex, tendersOuterIds.size());
+            log.trace("Checked {} from {} tenders", currentIndex, tendersOuterIds.size());
         }
-        log.info("Finished fetching existing tenders");
+        log.trace("Finished fetching existing tenders");
         return existingTendersOuterIdsAndDateModified;
     }
 }

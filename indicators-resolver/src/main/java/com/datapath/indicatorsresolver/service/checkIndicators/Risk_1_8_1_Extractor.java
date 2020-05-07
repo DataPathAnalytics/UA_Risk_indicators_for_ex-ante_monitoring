@@ -40,8 +40,7 @@ public class Risk_1_8_1_Extractor extends BaseExtractor {
                 checkRisk_1_8_1Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -62,8 +61,7 @@ public class Risk_1_8_1_Extractor extends BaseExtractor {
                 checkRisk_1_8_1Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -108,7 +106,7 @@ public class Risk_1_8_1_Extractor extends BaseExtractor {
             Map<String, List<TenderIndicator>> indicatorsMap = checkIndicator(tenders, indicator);
             indicatorsMap.forEach((tenderId, tenderIndicators) -> {
                 tenderIndicators.forEach(tenderIndicator -> tenderIndicator.setTenderDimensions(dimensionsMap.get(tenderId)));
-                uploadIndicatorIfNotExists(tenderId, INDICATOR_CODE, tenderIndicators);
+                uploadIndicators(tenderIndicators, dimensionsMap.get(tenderId).getDruidCheckIteration());
             });
 
             ZonedDateTime maxTenderDateCreated = getMaxTenderDateCreated(dimensionsMap, dateTime);
@@ -128,72 +126,59 @@ public class Risk_1_8_1_Extractor extends BaseExtractor {
     }
 
     private Map<String, List<TenderIndicator>> checkIndicator(List<String> tenderIds, Indicator indicator) {
-        try {
-            String tenderIdsStr = tenderIds.stream().collect(Collectors.joining(","));
 
-            List<Object[]> tenderLots = tenderRepository
-                    .getTenderWithLotAndDaysBetweenAwardDateAndDocumentDateModified(tenderIdsStr);
+        String tenderIdsStr = tenderIds.stream().collect(Collectors.joining(","));
 
-            Map<String, List<Object>> tendersMap = new HashMap<>();
-            for (Object obj : tenderLots) {
-                Object[] objs = (Object[]) obj;
-                String tenderId = objs[0].toString();
-                List<Object> lotsInfo = tendersMap.get(tenderId);
-                if (null != lotsInfo) {
-                    lotsInfo.add(obj);
-                } else {
-                    lotsInfo = new ArrayList<>();
-                    lotsInfo.add(obj);
-                    tendersMap.put(tenderId, lotsInfo);
-                }
+        List<Object[]> tenderLots = tenderRepository
+                .getTenderWithLotAndDaysBetweenAwardDateAndDocumentDateModified(tenderIdsStr);
+
+        Map<String, List<Object>> tendersMap = new HashMap<>();
+        for (Object obj : tenderLots) {
+            Object[] objs = (Object[]) obj;
+            String tenderId = objs[0].toString();
+            List<Object> lotsInfo = tendersMap.get(tenderId);
+            if (null != lotsInfo) {
+                lotsInfo.add(obj);
+            } else {
+                lotsInfo = new ArrayList<>();
+                lotsInfo.add(obj);
+                tendersMap.put(tenderId, lotsInfo);
             }
-
-
-            Map<String, List<TenderIndicator>> indicatorsMap = new HashMap<>();
-            for (String tenderId : tendersMap.keySet()) {
-                try {
-                    TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
-
-                    List<Object> lotsInfo = tendersMap.get(tenderId);
-                    Map<String, Integer> lotIndicators = new HashMap<>();
-                    for (Object lotInfoObj : lotsInfo) {
-                        Object[] lotInfo = (Object[]) lotInfoObj;
-                        String lotId = lotInfo[1].toString();
-                        if (null == lotInfo[2]) {
-                            lotIndicators.put(lotId, -2);
-                            continue;
-                        }
-
-                        Integer days = Integer.parseInt(lotInfo[2].toString());
-                        lotIndicators.put(lotId, days < DAYS_LIMIT ? 1 : 0);
-                    }
-
-                    List<TenderIndicator> tenderIndicators = new ArrayList<>();
-                    for (Integer value : new HashSet<>(lotIndicators.values())) {
-                        List<String> lotIds = new ArrayList<>();
-                        lotIndicators.forEach((lotId, val) -> {
-                            if (value.equals(val)) {
-                                lotIds.add(lotId);
-                            }
-                        });
-                        tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, value, lotIds));
-                    }
-
-                    indicatorsMap.put(tenderId, tenderIndicators);
-
-                } catch (Exception ex) {
-                    log.info(TENDER_INDICATOR_ERROR_MESSAGE, INDICATOR_CODE, tenderId);
-                    ex.printStackTrace();
-                }
-
-            }
-
-            return indicatorsMap;
-
-        } catch (Exception ex) {
-            log.info("ERROR while processing indicator: {}", INDICATOR_CODE);
-            ex.printStackTrace();
-            return new HashMap<>();
         }
+
+
+        Map<String, List<TenderIndicator>> indicatorsMap = new HashMap<>();
+        for (String tenderId : tendersMap.keySet()) {
+
+            TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
+
+            List<Object> lotsInfo = tendersMap.get(tenderId);
+            Map<String, Integer> lotIndicators = new HashMap<>();
+            for (Object lotInfoObj : lotsInfo) {
+                Object[] lotInfo = (Object[]) lotInfoObj;
+                String lotId = lotInfo[1].toString();
+                if (null == lotInfo[2]) {
+                    lotIndicators.put(lotId, -2);
+                    continue;
+                }
+
+                int days = Integer.parseInt(lotInfo[2].toString());
+                lotIndicators.put(lotId, days < DAYS_LIMIT ? 1 : 0);
+            }
+
+            List<TenderIndicator> tenderIndicators = new ArrayList<>();
+            for (Integer value : new HashSet<>(lotIndicators.values())) {
+                List<String> lotIds = new ArrayList<>();
+                lotIndicators.forEach((lotId, val) -> {
+                    if (value.equals(val)) {
+                        lotIds.add(lotId);
+                    }
+                });
+                tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, value, lotIds));
+            }
+
+            indicatorsMap.put(tenderId, tenderIndicators);
+        }
+        return indicatorsMap;
     }
 }

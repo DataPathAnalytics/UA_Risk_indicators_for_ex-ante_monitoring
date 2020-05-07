@@ -43,8 +43,7 @@ public class Risk_1_13_2_Extractor extends BaseExtractor {
                 checkRisk_1_13_2Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -65,8 +64,7 @@ public class Risk_1_13_2_Extractor extends BaseExtractor {
                 checkRisk_1_13_2Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -86,7 +84,8 @@ public class Risk_1_13_2_Extractor extends BaseExtractor {
                     Arrays.asList(indicator.getProcuringEntityKind()),
                     page, size);
 
-            if (tenders.isEmpty()) {break;
+            if (tenders.isEmpty()) {
+                break;
             }
 
             Set<String> tenderIds = new HashSet<>(tenders);
@@ -135,7 +134,7 @@ public class Risk_1_13_2_Extractor extends BaseExtractor {
 
             tenderIndicators.forEach(tenderIndicator -> {
                 tenderIndicator.setTenderDimensions(dimensionsMap.get(tenderIndicator.getTenderDimensions().getId()));
-                uploadIndicatorIfNotExists(tenderIndicator.getTenderDimensions().getId(), INDICATOR_CODE, tenderIndicator);
+                uploadIndicator(tenderIndicator);
             });
 
             ZonedDateTime maxTenderDateCreated = getMaxTenderDateCreated(dimensionsMap, dateTime);

@@ -1,6 +1,5 @@
 package com.datapath.druidintegration.model.druid.request;
 
-import com.datapath.druidintegration.DruidConstants;
 import com.datapath.druidintegration.model.druid.request.common.Aggregation;
 import com.datapath.druidintegration.model.druid.request.common.Filter;
 import com.datapath.druidintegration.model.druid.request.common.Metric;

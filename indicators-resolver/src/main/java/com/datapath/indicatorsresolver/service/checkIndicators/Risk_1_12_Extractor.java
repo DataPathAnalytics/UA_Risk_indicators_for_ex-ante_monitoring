@@ -43,8 +43,7 @@ public class Risk_1_12_Extractor extends BaseExtractor {
                 checkRisk1_12Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -65,8 +64,7 @@ public class Risk_1_12_Extractor extends BaseExtractor {
                 checkRisk1_12Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -78,7 +76,6 @@ public class Risk_1_12_Extractor extends BaseExtractor {
         int page = 0;
         while (true) {
 
-
             List<String> tenders = findTenders(
                     dateTime,
                     Arrays.asList(indicator.getProcedureStatuses()),
@@ -87,7 +84,8 @@ public class Risk_1_12_Extractor extends BaseExtractor {
                     page, size
             );
 
-            if (tenders.isEmpty()) {break;
+            if (tenders.isEmpty()) {
+                break;
             }
 
             Map<String, TenderDimensions> dimensionsMap = getTenderDimensionsWithIndicatorLastIteration(new HashSet<>(tenders), INDICATOR_CODE);
@@ -140,71 +138,67 @@ public class Risk_1_12_Extractor extends BaseExtractor {
         Map<String, TenderIndicator> indicatorsMap = new HashMap<>();
         for (String tenderId : tendersMap.keySet()) {
             TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
-            try {
-                Integer indicatorValue = null;
 
-                if (maxTendersIterationData.containsKey(tenderId) && maxTendersIterationData.get(tenderId) == 1) {
-                    indicatorValue = 1;
-                } else {
+            Integer indicatorValue = null;
 
-                    List<Object> questionDateDateAnswerAndAnswerOrderByTenderID = tendersMap.get(tenderId);
+            if (maxTendersIterationData.containsKey(tenderId) && maxTendersIterationData.get(tenderId) == 1) {
+                indicatorValue = 1;
+            } else {
 
-                    for (Object answer : questionDateDateAnswerAndAnswerOrderByTenderID) {
-                        Integer questionIndicator;
+                List<Object> questionDateDateAnswerAndAnswerOrderByTenderID = tendersMap.get(tenderId);
 
-                        Object[] answerInfo = (Object[]) answer;
+                for (Object answer : questionDateDateAnswerAndAnswerOrderByTenderID) {
+                    Integer questionIndicator;
 
-                        Long questionId = answerInfo[1] == null ? null : Long.parseLong(answerInfo[1].toString());
-                        Integer days = answerInfo[5] == null ? null : ((Double) Double.parseDouble(answerInfo[5].toString())).intValue();
+                    Object[] answerInfo = (Object[]) answer;
 
-                        if (null == questionId || null == days || days < 10) {
+                    Long questionId = answerInfo[1] == null ? null : Long.parseLong(answerInfo[1].toString());
+                    Integer days = answerInfo[5] == null ? null : ((Double) Double.parseDouble(answerInfo[5].toString())).intValue();
+
+                    if (null == questionId || null == days || days < 10) {
+                        questionIndicator = -2;
+                    } else {
+
+                        Timestamp timestampDateAnswered = (Timestamp) answerInfo[2];
+                        Timestamp timestampQuestionDate = (Timestamp) answerInfo[4];
+                        Object answerText = answerInfo[1];
+
+                        if (isNull(timestampDateAnswered) && isNull(answerText)) {
+                            ZonedDateTime dateOfCurrentDateMinusNWorkingDays = getDateOfCurrentDateMinusNWorkingDays(4);
+                            questionIndicator = toZonedDateTime(timestampQuestionDate).withZoneSameInstant(ZoneId.of("Europe/Kiev"))
+                                    .withHour(0)
+                                    .withMinute(0)
+                                    .withSecond(0)
+                                    .withNano(0)
+                                    .isBefore(dateOfCurrentDateMinusNWorkingDays)
+                                    ? RISK
+                                    : NOT_RISK;
+                        } else if (nonNull(timestampDateAnswered) && nonNull(answerText)) {
+                            ZonedDateTime dateOfCurrentDateMinusNWorkingDays = getDateOfDateMinusNWorkingDays(toZonedDateTime(timestampDateAnswered), 4);
+                            questionIndicator = toZonedDateTime(timestampQuestionDate).withZoneSameInstant(ZoneId.of("Europe/Kiev"))
+                                    .withHour(0)
+                                    .withMinute(0)
+                                    .withSecond(0)
+                                    .withNano(0)
+                                    .isBefore(dateOfCurrentDateMinusNWorkingDays)
+                                    ? RISK
+                                    : NOT_RISK;
+                        } else {
                             questionIndicator = -2;
-                        } else {
-
-                            Timestamp timestampDateAnswered = (Timestamp) answerInfo[2];
-                            Timestamp timestampQuestionDate = (Timestamp) answerInfo[4];
-                            Object answerText = answerInfo[1];
-
-                            if (isNull(timestampDateAnswered) && isNull(answerText)) {
-                                ZonedDateTime dateOfCurrentDateMinusNWorkingDays = getDateOfCurrentDateMinusNWorkingDays(4);
-                                questionIndicator = toZonedDateTime(timestampQuestionDate).withZoneSameInstant(ZoneId.of("Europe/Kiev"))
-                                        .withHour(0)
-                                        .withMinute(0)
-                                        .withSecond(0)
-                                        .withNano(0)
-                                        .isBefore(dateOfCurrentDateMinusNWorkingDays)
-                                        ? RISK
-                                        : NOT_RISK;
-                            } else if (nonNull(timestampDateAnswered) && nonNull(answerText)) {
-                                ZonedDateTime dateOfCurrentDateMinusNWorkingDays = getDateOfDateMinusNWorkingDays(toZonedDateTime(timestampDateAnswered), 4);
-                                questionIndicator = toZonedDateTime(timestampQuestionDate).withZoneSameInstant(ZoneId.of("Europe/Kiev"))
-                                        .withHour(0)
-                                        .withMinute(0)
-                                        .withSecond(0)
-                                        .withNano(0)
-                                        .isBefore(dateOfCurrentDateMinusNWorkingDays)
-                                        ? RISK
-                                        : NOT_RISK;
-                            } else {
-                                questionIndicator = -2;
-                            }
                         }
-                        if (questionIndicator.equals(RISK)) {
-                            indicatorValue = RISK;
-                            break;
-                        } else {
-                            if (isNull(indicatorValue) || indicatorValue.equals(-2)) {
-                                indicatorValue = questionIndicator;
-                            }
+                    }
+                    if (questionIndicator.equals(RISK)) {
+                        indicatorValue = RISK;
+                        break;
+                    } else {
+                        if (isNull(indicatorValue) || indicatorValue.equals(-2)) {
+                            indicatorValue = questionIndicator;
                         }
                     }
                 }
-                indicatorsMap.put(tenderId, new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>()));
-            } catch (Exception ex) {
-                log.info(String.format(TENDER_INDICATOR_ERROR_MESSAGE, INDICATOR_CODE, tenderId));
-                ex.printStackTrace();
-                indicatorsMap.put(tenderId, new TenderIndicator(tenderDimensions, indicator, IMPOSSIBLE_TO_DETECT, new ArrayList<>()));
             }
+            indicatorsMap.put(tenderId, new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>()));
+
         }
 
         return indicatorsMap;

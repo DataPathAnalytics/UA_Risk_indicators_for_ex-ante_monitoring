@@ -47,7 +47,7 @@ public class TenderExistenceValidator {
         ZonedDateTime yearEarlier = DateUtils.yearEarlierFromNow();
         ZonedDateTime lastDateModified = tenderService.findLastModifiedEntry().getDateModified();
 
-        log.info("Start tenders existence validation. StartDate: {}, EndDate: {}", yearEarlier, lastDateModified);
+        log.trace("Start tenders existence validation. StartDate: {}, EndDate: {}", yearEarlier, lastDateModified);
 
         ZonedDateTime dateOffset = yearEarlier.withZoneSameInstant(ZoneId.of("Europe/Kiev"));
 
@@ -63,7 +63,7 @@ public class TenderExistenceValidator {
                         .stream().filter(item -> item.getDateModified().isBefore(lastDateModified))
                         .collect(Collectors.toList());
 
-                log.info("Fetched {} items by url {}", items.size(), url);
+                log.trace("Fetched {} items by url {}", items.size(), url);
 
                 tenderUpdateInfos.addAll(items);
 
@@ -78,7 +78,7 @@ public class TenderExistenceValidator {
             }
         }
 
-        log.info("Tenders loading finished. Fetched {} items", tenderUpdateInfos.size());
+        log.trace("Tenders loading finished. Fetched {} items", tenderUpdateInfos.size());
 
         Set<String> tendersOuterIds = tenderUpdateInfos.stream()
                 .map(TenderUpdateInfo::getId)
@@ -88,7 +88,7 @@ public class TenderExistenceValidator {
         Set<String> notExistingTenderOuterIds = findNotExistingTendersOuterIds(
                 tendersOuterIds, existingTendersOuterIds);
 
-        log.info("Existing tenders count: {}. Not existing tenders count: {}",
+        log.trace("Existing tenders count: {}. Not existing tenders count: {}",
                 existingTendersOuterIds.size(), notExistingTenderOuterIds.size());
 
         Set<String> testAndExpiredTendersOuterIds = findTestAndExpiredTendersOuterIds(notExistingTenderOuterIds);
@@ -99,17 +99,15 @@ public class TenderExistenceValidator {
 
         int tendersCount = tendersOuterIds.size();
 
-        log.info("Found {} test or expired tenders.", testAndExpiredTendersOuterIds.size());
-        log.info("");
-        log.info("Totals | Tenders count: {}", tendersCount);
-        log.info("Totals | Existing tenders count: {}", existingTendersOuterIds.size());
-        log.info("Totals | Test or expired tenders count: {}", testAndExpiredTendersOuterIds.size());
-        log.info("Totals | Number of missing tenders: {}", missingTenderCount);
-        log.info("Totals | Missing tenders:");
+        log.trace("Found {} test or expired tenders.", testAndExpiredTendersOuterIds.size());
+        log.trace("Totals | Tenders count: {}", tendersCount);
+        log.trace("Totals | Existing tenders count: {}", existingTendersOuterIds.size());
+        log.trace("Totals | Test or expired tenders count: {}", testAndExpiredTendersOuterIds.size());
+        log.warn("Totals | Number of missing tenders: {}", missingTenderCount);
 
         tendersOuterIds.removeAll(existingTendersOuterIds);
         tendersOuterIds.removeAll(testAndExpiredTendersOuterIds);
-        tendersOuterIds.forEach(outerId -> log.info("{}", outerId));
+        tendersOuterIds.forEach(outerId -> log.trace("{}", outerId));
 
         String[] missingTenders = tendersOuterIds.toArray(new String[tendersOuterIds.size()]);
 
@@ -123,7 +121,7 @@ public class TenderExistenceValidator {
 
         tenderValidationHistoryRepository.save(history);
 
-        log.info("Tenders validation result saved.");
+        log.trace("Tenders validation result saved.");
     }
 
     private Set<String> fetchExistingTendersOuterIds(Set<String> tendersOuterIds) {

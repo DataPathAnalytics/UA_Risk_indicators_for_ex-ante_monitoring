@@ -63,8 +63,6 @@ public class RegionIndicatorsQueueUpdaterService {
         configProvider.init();
         log.info("Updating region queue items starts");
 
-        clearQueue();
-
         List<RegionIndicatorsQueueItem> indicatorsQueue = getIndicatorsQueue();
 
         indicatorsQueue = indicatorsQueue.parallelStream().filter(item -> {
@@ -95,6 +93,7 @@ public class RegionIndicatorsQueueUpdaterService {
 
         List<RegionIndicatorsQueueItem> queueWithoutMonitoringTenders = disableTendersOnMonitoring(allIndicatorsQueue);
 
+        clearQueue();
         List<RegionIndicatorsQueueItem> indicatorsQueueItems = saveQueue(queueWithoutMonitoringTenders);
 
         log.info("Updating region queue items finished. Saved {} items.", indicatorsQueueItems.size());

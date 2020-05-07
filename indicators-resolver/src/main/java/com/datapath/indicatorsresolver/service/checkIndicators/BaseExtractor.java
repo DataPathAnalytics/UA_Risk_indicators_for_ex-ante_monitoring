@@ -15,6 +15,7 @@ import com.datapath.persistence.repositories.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -39,8 +40,10 @@ public class BaseExtractor {
 
     protected Integer AVAILABLE_HOURS_DIFF = 2;
 
-    private final static String WORKING_WEEK_ENDS_API_URL = "https://prozorroukr.github.io/standards/calendars/weekends_on.json";
-    private final static String WEEK_ENDS_API_URL = "https://prozorroukr.github.io/standards/calendars/workdays_off.json";
+    @Value("${workdays-off.url}")
+    private String workdaysOffUrl;
+    @Value("${weekends-on.url}")
+    private String weekendsOnUrl;
 
     protected final String INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT = "%s Extractor is not available";
     protected final String UPDATE_MESSAGE_FORMAT = "Update indicator: %s";
@@ -174,12 +177,12 @@ public class BaseExtractor {
     }
 
     private List<ZonedDateTime> getListOfWorkingWeekEnds() {
-        String getForObject = restTemplate.getForObject(WORKING_WEEK_ENDS_API_URL, String.class);
+        String getForObject = restTemplate.getForObject(weekendsOnUrl, String.class);
         return parseListOfDates(getForObject);
     }
 
     private List<ZonedDateTime> getListOfWeekEnds() {
-        String getForObject = restTemplate.getForObject(WEEK_ENDS_API_URL, String.class);
+        String getForObject = restTemplate.getForObject(workdaysOffUrl, String.class);
         return parseListOfDates(getForObject);
     }
 
@@ -263,6 +266,18 @@ public class BaseExtractor {
         return indicatorOptional.orElse(null);
     }
 
+    void uploadIndicator(TenderIndicator tenderIndicator) {
+        DruidTenderIndicator druidIndicator = druidIndicatorMapper.transformToDruidTenderIndicator(tenderIndicator);
+        Long lastIterationForIndicatorValue = extractDataService.findLastIterationForTenderIndicatorsData(Collections.singletonList(druidIndicator));
+
+        if (!Objects.equals(lastIterationForIndicatorValue, tenderIndicator.getTenderDimensions().getDruidCheckIteration())) {
+            log.info(String.format(UPDATE_MESSAGE_FORMAT, druidIndicator));
+            uploadDataService.uploadTenderIndicator(druidIndicator);
+        } else {
+            log.debug(String.format(PREVIOUS_EQUALS_CURRENT_MESSAGE_FORMAT, druidIndicator.getTenderId()));
+        }
+    }
+
     void uploadIndicatorIfNotExists(String tenderId, String indicatorId, TenderIndicator tenderIndicator) {
         DruidTenderIndicator druidIndicator = druidIndicatorMapper.transformToDruidTenderIndicator(tenderIndicator);
         Boolean theLastTenderEqualsCurrent = extractDataService.theLastTenderEquals(tenderId,
@@ -273,7 +288,22 @@ public class BaseExtractor {
             log.info(String.format(UPDATE_MESSAGE_FORMAT, druidIndicator));
             uploadDataService.uploadTenderIndicator(druidIndicator);
         } else {
-            log.info(String.format(PREVIOUS_EQUALS_CURRENT_MESSAGE_FORMAT, druidIndicator));
+            log.debug(String.format(PREVIOUS_EQUALS_CURRENT_MESSAGE_FORMAT, druidIndicator));
+        }
+    }
+
+    void uploadIndicators(List<TenderIndicator> tenderIndicators, Long maxTenderIteration) {
+        if (tenderIndicators.isEmpty()) return;
+
+        List<DruidTenderIndicator> druidIndicators = druidIndicatorMapper.transformToDruidTenderIndicator(tenderIndicators);
+
+        Long lastIterationByIndicators = extractDataService.findLastIterationForTenderIndicatorsData(druidIndicators);
+
+        if (!Objects.equals(lastIterationByIndicators, maxTenderIteration)) {
+            log.info(String.format(UPDATE_MESSAGE_FORMAT, druidIndicators));
+            uploadDataService.uploadTenderIndicator(druidIndicators);
+        } else {
+            log.debug(String.format(PREVIOUS_EQUALS_CURRENT_MESSAGE_FORMAT, druidIndicators));
         }
     }
 
@@ -290,14 +320,16 @@ public class BaseExtractor {
             log.info(String.format(UPDATE_MESSAGE_FORMAT, druidIndicators));
             uploadDataService.uploadTenderIndicator(druidIndicators);
         } else {
-            log.info(String.format(PREVIOUS_EQUALS_CURRENT_MESSAGE_FORMAT, druidIndicators));
+            log.debug(String.format(PREVIOUS_EQUALS_CURRENT_MESSAGE_FORMAT, druidIndicators));
         }
     }
 
     Map<String, TenderDimensions> getTenderDimensionsWithIndicatorLastIteration(Set<String> tenderIds, String indicatorId) {
+        log.debug("Start receiving tender dimensions");
         Map<String, TenderDimensions> tenderDimensions = getTenderDimensionsMap(tenderIds);
         Map<String, Long> maxTenderIndicatorIteration = extractDataService.getMaxTenderIndicatorIteration(tenderIds, indicatorId);
         tenderDimensions.forEach((key, value) -> value.setDruidCheckIteration(maxTenderIndicatorIteration.get(key)));
+        log.debug("Finish receiving tender dimensions");
         return tenderDimensions;
     }
 

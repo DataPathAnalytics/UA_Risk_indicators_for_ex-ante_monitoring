@@ -10,7 +10,6 @@ import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.validation.constraints.Size;
 import java.time.ZonedDateTime;
 import java.util.List;
 
@@ -411,9 +410,13 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "FROM tender t\n" +
             "WHERE tv_tender_cpv NOT LIKE '45%'\n" +
             "      AND tv_tender_cpv NOT LIKE  '6611%'\n" +
+            "-- " +
             "      AND title NOT LIKE  '%кредит%'\n" +
+            "-- " +
             "      AND title NOT LIKE '%гарант%'\n" +
+            "-- " +
             "      AND title NOT LIKE '%лізинг%'\n" +
+            "      AND title NOT LIKE ANY ('{\"%кредит%\", \"%гарант%\", \"%лізинг%\"}')\n" +
             "      AND t.date_created > ?1\n" +
             "      AND t.date > now() - INTERVAL '1 year'\n" +
             "      AND procurement_method_type IN ?3\n" +
@@ -1133,7 +1136,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "        from (select * from award\n" +
             "                              join complaint c2 on award.id = c2.award_id where award.tender_id = tender.id and c2.complaint_type = 'complaint') a), \n" +
             "       tender.title,\n" +
-            "       (SELECT COUNT(*) > 0 FROM complaint WHERE tender_id = tender.id AND complaint_type = 'complaint')\n" +
+            "       (SELECT COUNT(*) > 0 FROM complaint WHERE tender_id = tender.id AND complaint_type = 'complaint') has_tender_complaints\n" +
             "from tender\n" +
             "       left join procuring_entity on tender.procuring_entity_id = procuring_entity.id\n" +
             "       left join cpv_catalogue cpv on tender.tv_tender_cpv = cpv.cpv\n" +

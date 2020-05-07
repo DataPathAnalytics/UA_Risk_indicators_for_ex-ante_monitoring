@@ -13,11 +13,11 @@ import java.time.Period;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static com.datapath.persistence.utils.DateUtils.toZonedDateTime;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static java.util.stream.Collectors.toList;
 
 
 @Service
@@ -49,8 +49,7 @@ public class Risk_1_10_1_Extractor extends BaseExtractor {
                 checkRisk_1_10_1Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -71,8 +70,7 @@ public class Risk_1_10_1_Extractor extends BaseExtractor {
                 checkRisk_1_10_1Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -91,58 +89,58 @@ public class Risk_1_10_1_Extractor extends BaseExtractor {
                     Arrays.asList(indicator.getProcuringEntityKind()),
                     PageRequest.of(page, size));
 
-            if (tenders.isEmpty()) {break;
+            if (tenders.isEmpty()) {
+                break;
             }
             Set<String> tenderIds = new HashSet<>();
 
             List<TenderIndicator> tenderIndicators = tenders.stream().map(tenderInfo -> {
+
                 Integer indicatorValue = null;
                 String tenderId = tenderInfo[0].toString();
+                log.info("Extract data from tender [{}[", tenderId);
                 tenderIds.add(tenderId);
-                try {
-                    Timestamp timestampStartDate = (Timestamp) tenderInfo[1];
-                    String kind = tenderInfo[2].toString();
-                    String currency = tenderInfo[3].toString();
-                    Double amount = Double.parseDouble(tenderInfo[4].toString());
 
-                    TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
+                Timestamp timestampStartDate = (Timestamp) tenderInfo[1];
+                String kind = tenderInfo[2].toString();
+                String currency = tenderInfo[3].toString();
+                Double amount = Double.parseDouble(tenderInfo[4].toString());
 
-                    if (!currency.equals(UAH_CURRENCY)) {
-                        if (!isNull(timestampStartDate)) {
-                            ZonedDateTime date = toZonedDateTime(timestampStartDate)
-                                    .withZoneSameInstant(ZoneId.of("Europe/Kiev"))
-                                    .withHour(0)
-                                    .withMinute(0)
-                                    .withSecond(0)
-                                    .withNano(0);
-                            ExchangeRate firstByCodeAndDate = exchangeRateService.getOneByCodeAndDate(currency, date);
-                            if (!isNull(firstByCodeAndDate)) {
-                                amount *= firstByCodeAndDate.getRate();
-                            } else {
-                                indicatorValue = IMPOSSIBLE_TO_DETECT;
-                            }
+                TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
+
+                if (!currency.equals(UAH_CURRENCY)) {
+                    if (!isNull(timestampStartDate)) {
+                        ZonedDateTime date = toZonedDateTime(timestampStartDate)
+                                .withZoneSameInstant(ZoneId.of("Europe/Kiev"))
+                                .withHour(0)
+                                .withMinute(0)
+                                .withSecond(0)
+                                .withNano(0);
+                        ExchangeRate firstByCodeAndDate = exchangeRateService.getOneByCodeAndDate(currency, date);
+                        if (!isNull(firstByCodeAndDate)) {
+                            amount *= firstByCodeAndDate.getRate();
                         } else {
                             indicatorValue = IMPOSSIBLE_TO_DETECT;
                         }
+                    } else {
+                        indicatorValue = IMPOSSIBLE_TO_DETECT;
                     }
-                    if (nonNull(amount) && (isNull(indicatorValue) || indicatorValue != -IMPOSSIBLE_TO_DETECT)) {
-                        indicatorValue = amount > paKindAmountLimitMap.get(kind) ? RISK : NOT_RISK;
-                    }
-                    return new TenderIndicator(tenderDimensions, indicator,
-                            indicatorValue, new ArrayList<>());
-                } catch (Exception ex) {
-                    log.info(String.format(TENDER_INDICATOR_ERROR_MESSAGE, INDICATOR_CODE, tenderId));
-                    return null;
                 }
+                if (nonNull(amount) && (isNull(indicatorValue) || indicatorValue != -IMPOSSIBLE_TO_DETECT)) {
+                    indicatorValue = amount > paKindAmountLimitMap.get(kind) ? RISK : NOT_RISK;
+                }
+                return new TenderIndicator(tenderDimensions, indicator,
+                        indicatorValue, new ArrayList<>());
 
-            }).filter(Objects::nonNull).collect(Collectors.toList());
+
+            }).collect(toList());
 
 
             Map<String, TenderDimensions> dimensionsMap = getTenderDimensionsWithIndicatorLastIteration(tenderIds, INDICATOR_CODE);
 
             tenderIndicators.forEach(tenderIndicator -> {
                 tenderIndicator.setTenderDimensions(dimensionsMap.get(tenderIndicator.getTenderDimensions().getId()));
-                uploadIndicatorIfNotExists(tenderIndicator.getTenderDimensions().getId(), INDICATOR_CODE, tenderIndicator);
+                uploadIndicator(tenderIndicator);
             });
 
             ZonedDateTime maxTenderDateCreated = getMaxTenderDateCreated(dimensionsMap, dateTime);

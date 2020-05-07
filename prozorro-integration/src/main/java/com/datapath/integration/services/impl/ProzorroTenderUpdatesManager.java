@@ -148,6 +148,10 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
                         log.info("No items found on page. Tenders loading break");
                         break;
                     }
+
+                    if (url.equalsIgnoreCase(nextPageUrl)) {
+                        break;
+                    }
                     log.info("All tenders from page {} saved.", url);
                     url = nextPageUrl;
                 } catch (ResourceAccessException e) {

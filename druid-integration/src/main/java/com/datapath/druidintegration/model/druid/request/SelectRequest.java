@@ -1,6 +1,5 @@
 package com.datapath.druidintegration.model.druid.request;
 
-import com.datapath.druidintegration.DruidConstants;
 import com.datapath.druidintegration.model.druid.request.common.Filter;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -26,7 +25,9 @@ public class SelectRequest {
     @AllArgsConstructor
     public static class PagingSpec {
         private Long threshold;
-        public PagingSpec(){}
+
+        public PagingSpec() {
+        }
     }
 
     public SelectRequest(String dataSource) {

@@ -42,8 +42,7 @@ public class Risk_2_1_Extractor extends BaseExtractor {
                 checkRisk2_1Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -64,8 +63,7 @@ public class Risk_2_1_Extractor extends BaseExtractor {
                 checkRisk2_1Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -91,36 +89,33 @@ public class Risk_2_1_Extractor extends BaseExtractor {
             List<TenderIndicator> tenderIndicators = tenders.stream().map(tenderInfo -> {
                 String tenderId = tenderInfo[0].toString();
                 tenderIds.add(tenderId);
-                try {
 
-                    String cpv = tenderInfo[1].toString();
-                    String procuringEntity = tenderInfo[2].toString();
-                    Double amount = isNull(tenderInfo[3]) ? null : Double.parseDouble(tenderInfo[3].toString());
-                    Double quantity = isNull(tenderInfo[4]) ? null : Double.parseDouble(tenderInfo[4].toString());
-                    Integer pendingContracts = isNull(tenderInfo[5]) ? null : Integer.parseInt(tenderInfo[5].toString());
 
-                    TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
+                String cpv = tenderInfo[1].toString();
+                String procuringEntity = tenderInfo[2].toString();
+                Double amount = isNull(tenderInfo[3]) ? null : Double.parseDouble(tenderInfo[3].toString());
+                Double quantity = isNull(tenderInfo[4]) ? null : Double.parseDouble(tenderInfo[4].toString());
+                Integer pendingContracts = isNull(tenderInfo[5]) ? null : Integer.parseInt(tenderInfo[5].toString());
 
-                    if (pendingContracts == 0) {
-                        return new TenderIndicator(tenderDimensions, indicator, -2, new ArrayList<>());
-                    }
-                    Object quantityByProcuringEntityAndCPV = tenderItemRepository.getQuantityByProcuringEntityAndCPV(procuringEntity, cpv);
-                    Object[] lastTender = (Object[]) quantityByProcuringEntityAndCPV;
-                    Double lastAmount = isNull(lastTender[1]) ? null : Double.parseDouble(lastTender[1].toString());
-                    Double lastQuantity = isNull(lastTender[2]) ? null : Double.parseDouble(lastTender[2].toString());
+                TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
 
-                    if (nonNull(amount) && nonNull(quantity) && nonNull(lastAmount) && nonNull(lastQuantity)) {
-
-                        double amountDiffShare = (Math.abs(amount - lastAmount) / amount) * 100;
-                        double quantityDiffShare = (Math.abs(quantity - lastQuantity) / quantity) * 100;
-                        Integer indicatorValue = (amountDiffShare < 10 && quantityDiffShare > 10) ? 1 : 0;
-                        return new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>());
-                    }
-                    return null;
-                } catch (Exception ex) {
-                    log.info(String.format(TENDER_INDICATOR_ERROR_MESSAGE, INDICATOR_CODE, tenderId));
-                    return null;
+                if (pendingContracts == 0) {
+                    return new TenderIndicator(tenderDimensions, indicator, -2, new ArrayList<>());
                 }
+                Object quantityByProcuringEntityAndCPV = tenderItemRepository.getQuantityByProcuringEntityAndCPV(procuringEntity, cpv);
+                Object[] lastTender = (Object[]) quantityByProcuringEntityAndCPV;
+                Double lastAmount = isNull(lastTender[1]) ? null : Double.parseDouble(lastTender[1].toString());
+                Double lastQuantity = isNull(lastTender[2]) ? null : Double.parseDouble(lastTender[2].toString());
+
+                if (nonNull(amount) && nonNull(quantity) && nonNull(lastAmount) && nonNull(lastQuantity)) {
+
+                    double amountDiffShare = (Math.abs(amount - lastAmount) / amount) * 100;
+                    double quantityDiffShare = (Math.abs(quantity - lastQuantity) / quantity) * 100;
+                    Integer indicatorValue = (amountDiffShare < 10 && quantityDiffShare > 10) ? 1 : 0;
+                    return new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>());
+                }
+                return null;
+
             }).filter(Objects::nonNull).collect(Collectors.toList());
 
             Map<String, TenderDimensions> dimensionsMap = getTenderDimensionsWithIndicatorLastIteration(tenderIds, INDICATOR_CODE);

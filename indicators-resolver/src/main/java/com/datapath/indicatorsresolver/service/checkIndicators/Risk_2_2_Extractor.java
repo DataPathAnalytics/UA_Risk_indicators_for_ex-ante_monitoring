@@ -117,6 +117,7 @@ public class Risk_2_2_Extractor extends BaseExtractor {
 
                             tenderIndicatorResult.get(tenderId).get(indicatorValue).add(lotId);
                         }catch (Exception ex) {
+                            log.error(ex.getMessage() ,ex);
                             log.info(String.format(TENDER_INDICATOR_ERROR_MESSAGE, INDICATOR_CODE, tenderId));
                         }
                     });

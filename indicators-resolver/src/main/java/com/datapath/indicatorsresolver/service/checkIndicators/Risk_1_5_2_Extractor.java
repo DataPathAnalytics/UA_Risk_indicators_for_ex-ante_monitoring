@@ -42,8 +42,7 @@ public class Risk_1_5_2_Extractor extends BaseExtractor {
                 checkRisk_1_5_2Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -64,8 +63,7 @@ public class Risk_1_5_2_Extractor extends BaseExtractor {
                 checkRisk_1_5_2Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -92,7 +90,7 @@ public class Risk_1_5_2_Extractor extends BaseExtractor {
             Map<String, List<TenderIndicator>> tenderIndicatorsMap = checkIndicator(tenders, indicator);
             tenderIndicatorsMap.forEach((tenderId, tenderIndicators) -> {
                 tenderIndicators.forEach(tenderIndicator -> tenderIndicator.setTenderDimensions(dimensionsMap.get(tenderId)));
-                uploadIndicatorIfNotExists(tenderId, INDICATOR_CODE, tenderIndicators);
+                uploadIndicators(tenderIndicators, dimensionsMap.get(tenderId).getDruidCheckIteration());
             });
 
             ZonedDateTime maxTenderDateCreated = getMaxTenderDateCreated(dimensionsMap, dateTime);
@@ -108,49 +106,46 @@ public class Risk_1_5_2_Extractor extends BaseExtractor {
     }
 
     private Map<String, List<TenderIndicator>> checkIndicator(List<String> tenderIds, Indicator indicator) {
-        try {
-            Map<String, Map<Integer, List<String>>> resultMap = new HashMap<>();
-            Map<String, List<TenderIndicator>> result = new HashMap<>();
-            List<Object[]> activeLotsAmountAndGuaranteeAmountWithCurrencies = lotRepository
-                    .getActiveLotsAmountAndGuaranteeAmountWithCurrencies(tenderIds);
 
-            activeLotsAmountAndGuaranteeAmountWithCurrencies.forEach(lotInfo -> {
-                String tenderId = lotInfo[0].toString();
-                String lotId = lotInfo[1].toString();
-                Double amount = Double.parseDouble(lotInfo[2].toString());
-                Integer indicatorValue;
-                if (nonNull(lotInfo[3])) {
-                    Double guaranteeAmount = Double.parseDouble(lotInfo[3].toString());
-                    Double guaranteeShare = (guaranteeAmount / amount) * 100;
-                    indicatorValue = guaranteeShare > PERCENTAGE_DIFF_LIMIT ? RISK : NOT_RISK;
-                } else {
-                    indicatorValue = -2;
-                }
+        Map<String, Map<Integer, List<String>>> resultMap = new HashMap<>();
+        Map<String, List<TenderIndicator>> result = new HashMap<>();
+        List<Object[]> activeLotsAmountAndGuaranteeAmountWithCurrencies = lotRepository
+                .getActiveLotsAmountAndGuaranteeAmountWithCurrencies(tenderIds);
 
-                if (!resultMap.containsKey(tenderId)) {
-                    resultMap.put(tenderId, new HashMap<>());
+        activeLotsAmountAndGuaranteeAmountWithCurrencies.forEach(lotInfo -> {
+            String tenderId = lotInfo[0].toString();
+            String lotId = lotInfo[1].toString();
+            Double amount = Double.parseDouble(lotInfo[2].toString());
+            Integer indicatorValue;
+            if (nonNull(lotInfo[3])) {
+                Double guaranteeAmount = Double.parseDouble(lotInfo[3].toString());
+                double guaranteeShare = (guaranteeAmount / amount) * 100;
+                indicatorValue = guaranteeShare > PERCENTAGE_DIFF_LIMIT ? RISK : NOT_RISK;
+            } else {
+                indicatorValue = -2;
+            }
+
+            if (!resultMap.containsKey(tenderId)) {
+                resultMap.put(tenderId, new HashMap<>());
+            }
+            if (!resultMap.get(tenderId).containsKey(indicatorValue)) {
+                resultMap.get(tenderId).put(indicatorValue, new ArrayList<>());
+            }
+            resultMap.get(tenderId).get(indicatorValue).add(lotId);
+        });
+
+        resultMap.forEach((tenderOuterId, value) -> {
+            TenderDimensions tenderDimensions = new TenderDimensions(tenderOuterId);
+            value.forEach((indicatorValue, lots) -> {
+                if (!result.containsKey(tenderOuterId)) {
+                    result.put(tenderOuterId, new ArrayList<>());
                 }
-                if (!resultMap.get(tenderId).containsKey(indicatorValue)) {
-                    resultMap.get(tenderId).put(indicatorValue, new ArrayList<>());
-                }
-                resultMap.get(tenderId).get(indicatorValue).add(lotId);
+                result.get(tenderOuterId).add(new TenderIndicator(tenderDimensions, indicator,
+                        indicatorValue, lots));
             });
+        });
+        return result;
 
-            resultMap.forEach((tenderOuterId, value) -> {
-                TenderDimensions tenderDimensions = new TenderDimensions(tenderOuterId);
-                value.forEach((indicatorValue, lots) -> {
-                    if (!result.containsKey(tenderOuterId)) {
-                        result.put(tenderOuterId, new ArrayList<>());
-                    }
-                    result.get(tenderOuterId).add(new TenderIndicator(tenderDimensions, indicator,
-                            indicatorValue, lots));
-                });
-            });
-            return result;
-        } catch (Exception ex) {
-            log.info(String.format("ERROR while processing indicator: %s ", INDICATOR_CODE));
-            return new HashMap<>();
-        }
     }
 
 }

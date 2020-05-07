@@ -36,7 +36,6 @@ public class Risk_2_5_1_Extractor extends BaseExtractor {
         indicatorsResolverAvailable = true;
     }
 
-
     public void checkIndicator(ZonedDateTime dateTime) {
         try {
             indicatorsResolverAvailable = false;
@@ -45,8 +44,7 @@ public class Risk_2_5_1_Extractor extends BaseExtractor {
                 checkRisk2_5_1Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -67,8 +65,7 @@ public class Risk_2_5_1_Extractor extends BaseExtractor {
                 checkRisk2_5_1Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -99,49 +96,44 @@ public class Risk_2_5_1_Extractor extends BaseExtractor {
 
             tendersInfo.forEach(tenderInfo -> {
                 String tenderId = tenderInfo[0].toString();
-                try {
-                    Integer pendingContractsCount = Integer.parseInt(tenderInfo[1].toString());
-                    List<String> suppliers = isNull(tenderInfo[2])
-                            ? null : Arrays.asList(tenderInfo[2].toString().split(","));
-                    Double amount = isNull(tenderInfo[3]) ? null : Double.parseDouble(tenderInfo[3].toString());
-                    String procuringEntity = tenderInfo[4].toString();
-                    String procuringEntityKind = tenderInfo[5].toString();
+                int pendingContractsCount = Integer.parseInt(tenderInfo[1].toString());
+                List<String> suppliers = isNull(tenderInfo[2])
+                        ? null : Arrays.asList(tenderInfo[2].toString().split(","));
+                Double amount = isNull(tenderInfo[3]) ? null : Double.parseDouble(tenderInfo[3].toString());
+                String procuringEntity = tenderInfo[4].toString();
+                String procuringEntityKind = tenderInfo[5].toString();
 
-                    TenderDimensions tenderDimensions = tenderDimensionsMap.get(tenderId);
-                    Integer indicatorValue = NOT_RISK;
+                TenderDimensions tenderDimensions = tenderDimensionsMap.get(tenderId);
+                int indicatorValue = NOT_RISK;
 
-                    if (pendingContractsCount == 0) {
-                        indicatorValue = -2;
-                    } else {
-                        switch (procuringEntityKind) {
-                            case "general":
-                                if (amount > 190000 && amount < 200000) {
-                                    indicatorValue = RISK;
-                                }
-                                break;
-                            case "special":
-                                if (amount > 950000 && amount < 1000000) {
-                                    indicatorValue = RISK;
-                                }
-                                break;
-                        }
-                        if (indicatorValue == 1) {
-                            Optional<NearThresholdOneSupplier> nearThreshold = nearThresholdOneSupplierRepository
-                                    .findFirstByProcuringEntityAndSupplierIn(procuringEntity, suppliers);
-                            if (!nearThreshold.isPresent()) {
-                                indicatorValue = NOT_RISK;
+                if (pendingContractsCount == 0) {
+                    indicatorValue = -2;
+                } else {
+                    switch (procuringEntityKind) {
+                        case "general":
+                            if (amount > 190000 && amount < 200000) {
+                                indicatorValue = RISK;
                             }
+                            break;
+                        case "special":
+                            if (amount > 950000 && amount < 1000000) {
+                                indicatorValue = RISK;
+                            }
+                            break;
+                    }
+                    if (indicatorValue == 1) {
+                        Optional<NearThresholdOneSupplier> nearThreshold = nearThresholdOneSupplierRepository
+                                .findFirstByProcuringEntityAndSupplierIn(procuringEntity, suppliers);
+                        if (!nearThreshold.isPresent()) {
+                            indicatorValue = NOT_RISK;
                         }
                     }
-
-                    TenderIndicator tenderIndicator = new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>());
-                    uploadIndicatorIfNotExists(tenderIndicator.getTenderDimensions().getId(), INDICATOR_CODE, tenderIndicator);
-                } catch (Exception ex) {
-                    log.info(String.format(TENDER_INDICATOR_ERROR_MESSAGE, INDICATOR_CODE, tenderId));
-                    ex.printStackTrace();
                 }
-            });
 
+                TenderIndicator tenderIndicator = new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>());
+                uploadIndicator(tenderIndicator);
+
+            });
 
             ZonedDateTime maxTenderDateCreated = getMaxTenderDateCreated(tenderDimensionsMap, dateTime);
             indicator.setLastCheckedDateCreated(maxTenderDateCreated);

@@ -19,11 +19,6 @@
             <artifactId>persistence</artifactId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
-        <!--<dependency>-->
-        <!--<groupId>com.datapath</groupId>-->
-        <!--<artifactId>druid-integration</artifactId>-->
-        <!--<version>0.0.1-SNAPSHOT</version>-->
-        <!--</dependency>-->
 
     </dependencies>
 

@@ -41,8 +41,7 @@ public class Risk_2_15_1Extractor extends BaseExtractor {
                 checkRisk2_15_1Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -63,8 +62,7 @@ public class Risk_2_15_1Extractor extends BaseExtractor {
                 checkRisk2_15_1Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -101,6 +99,7 @@ public class Risk_2_15_1Extractor extends BaseExtractor {
                     return new TenderIndicator(tenderDimensions, indicator,
                             indicatorValue, new ArrayList<>());
                 }catch (Exception ex) {
+                    log.error(ex.getMessage(), ex);
                     log.info(String.format(TENDER_INDICATOR_ERROR_MESSAGE, INDICATOR_CODE, tenderId));
                     return null;
                 }

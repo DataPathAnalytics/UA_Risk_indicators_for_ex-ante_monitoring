@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
@@ -30,7 +31,8 @@ public class ProzorroAuditService {
         this.restTemplate = restTemplate;
     }
 
-    public static ZonedDateTime parseZonedDateTime(String zonedDateTimeStr) {
+    private ZonedDateTime parseZonedDateTime(String zonedDateTimeStr) {
+        if (StringUtils.isEmpty(zonedDateTimeStr)) return null;
         return ZonedDateTime.parse(zonedDateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss[.SSSSSS]XXX"));
     }
 
@@ -39,11 +41,11 @@ public class ProzorroAuditService {
         List<Monitoring> monitorings = new ArrayList<>();
         ArrayList<Monitoring> pageMonitorings;
         String auditApiUrl = AUDIT_API_URL;
+        ObjectMapper mapper = new ObjectMapper();
         do {
             pageMonitorings = new ArrayList<>();
             log.info("Fetching monitorings by url {}", auditApiUrl);
             String rawMonitorings = restTemplate.getForObject(URLDecoder.decode(auditApiUrl, "utf8"), String.class);
-            ObjectMapper mapper = new ObjectMapper();
             JsonNode jsonNode = mapper.readTree(rawMonitorings);
             for (JsonNode node : jsonNode.get("data")) {
                 String monitoringId = node.at("/id").asText();
@@ -54,7 +56,6 @@ public class ProzorroAuditService {
 
                 String startDate = monitoringNode.at("/data/monitoringPeriod/startDate").asText();
                 String endDate = monitoringNode.at("/data/monitoringPeriod/endDate").asText();
-
 
                 Monitoring monitoring = new Monitoring();
                 monitoring.setId(monitoringNode.at("/data/tender_id").asText());

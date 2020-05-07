@@ -43,8 +43,7 @@ public class Risk_1_3_1_Extractor extends BaseExtractor {
                 checkRisk_1_3_1_Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -65,8 +64,7 @@ public class Risk_1_3_1_Extractor extends BaseExtractor {
                 checkRisk_1_3_1_Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -97,31 +95,28 @@ public class Risk_1_3_1_Extractor extends BaseExtractor {
                 List<String> documentFormats = isNull(tendersWithDocument[2])
                         ? null
                         : Arrays.asList(tendersWithDocument[2].toString().split(COMMA_SEPARATOR));
-                try {
-                    tenders.add(tenderId);
-                    Integer indicatorValue;
-                    TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
 
-                    if (nonNull(documentFormats)) {
-                        indicatorValue = documentFormats.contains(PKCS7_SIGNATURE_FORMAT) ? NOT_RISK : RISK;
-                    } else {
-                        indicatorValue = -2;
-                    }
+                tenders.add(tenderId);
+                int indicatorValue;
+                TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
 
-                    tenderIndicators.add(new TenderIndicator(tenderDimensions,
-                            indicator,
-                            indicatorValue,
-                            new ArrayList<>()));
-                } catch (Exception ex) {
-                    log.info(String.format(TENDER_INDICATOR_ERROR_MESSAGE, INDICATOR_CODE, tenderId));
+                if (nonNull(documentFormats)) {
+                    indicatorValue = documentFormats.contains(PKCS7_SIGNATURE_FORMAT) ? NOT_RISK : RISK;
+                } else {
+                    indicatorValue = -2;
                 }
+
+                tenderIndicators.add(new TenderIndicator(tenderDimensions,
+                        indicator,
+                        indicatorValue,
+                        new ArrayList<>()));
             }
 
             Map<String, TenderDimensions> dimensionsMap = getTenderDimensionsWithIndicatorLastIteration(tenders, INDICATOR_CODE);
 
             tenderIndicators.forEach(tenderIndicator -> {
                 tenderIndicator.setTenderDimensions(dimensionsMap.get(tenderIndicator.getTenderDimensions().getId()));
-                uploadIndicatorIfNotExists(tenderIndicator.getTenderDimensions().getId(), INDICATOR_CODE, tenderIndicator);
+                uploadIndicator(tenderIndicator);
             });
 
             indicator.setLastCheckedDateCreated(maxTenderDateCreated);

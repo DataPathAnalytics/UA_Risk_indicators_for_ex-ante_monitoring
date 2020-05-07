@@ -11,10 +11,10 @@ import java.time.Period;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static java.util.stream.Collectors.toList;
 
 
 @Service
@@ -44,8 +44,7 @@ public class Risk_1_1_Extractor extends BaseExtractor {
                 checkDasu1_1Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -66,8 +65,7 @@ public class Risk_1_1_Extractor extends BaseExtractor {
                 checkDasu1_1Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error(ex.getMessage());
+            log.error(ex.getMessage(), ex);
         } finally {
             indicatorsResolverAvailable = true;
         }
@@ -96,7 +94,7 @@ public class Risk_1_1_Extractor extends BaseExtractor {
                     .getMaxTendersIterationData(maxTendersIndicatorIteration, INDICATOR_CODE);
 
             tenders = tenders.stream().filter(tender -> !maxTendersIterationData.containsKey(tender) ||
-                    maxTendersIterationData.get(tender).equals(-2)).collect(Collectors.toList());
+                    maxTendersIterationData.get(tender).equals(-2)).collect(toList());
 
             List<Object[]> tenderIdPAndProcuringEntityAndCPVListWithPendingContract = tenderRepository
                     .findTenderIdPAndProcuringEntityAndCPVListWithPendingContract(String.join(",", tenders));
@@ -104,45 +102,40 @@ public class Risk_1_1_Extractor extends BaseExtractor {
             List<TenderIndicator> tenderIndicators = tenderIdPAndProcuringEntityAndCPVListWithPendingContract
                     .stream().map(tenderWithCPVInfo -> {
                         String tenderId = tenderWithCPVInfo[0].toString();
-                        try {
-                            String procuringEntity = tenderWithCPVInfo[1].toString();
-                            Integer pendingContractsCount = Integer.parseInt(tenderWithCPVInfo[2].toString());
-                            List<String> tenderCpv = Arrays.asList(tenderWithCPVInfo[3].toString().split(COMMA_SEPARATOR));
-                            Boolean twiceUnsuccessful = Boolean.parseBoolean(tenderWithCPVInfo[4].toString());
-                            TenderDimensions tenderDimensions = dimensionsMap.get(tenderId);
 
-                            Integer indicatorValue;
+                        String procuringEntity = tenderWithCPVInfo[1].toString();
+                        Integer pendingContractsCount = Integer.parseInt(tenderWithCPVInfo[2].toString());
+                        List<String> tenderCpv = Arrays.asList(tenderWithCPVInfo[3].toString().split(COMMA_SEPARATOR));
+                        Boolean twiceUnsuccessful = Boolean.parseBoolean(tenderWithCPVInfo[4].toString());
+                        TenderDimensions tenderDimensions = dimensionsMap.get(tenderId);
 
-                            List<Integer> proceduresCount = unsuccessfulAboveRepository
-                                    .getUnsuccessfulAboveCountByProcuringEntityAndTenderCpv(procuringEntity, tenderCpv);
+                        Integer indicatorValue;
 
-                            if (!twiceUnsuccessful || pendingContractsCount == 0) {
-                                indicatorValue = -2;
+                        List<Integer> proceduresCount = unsuccessfulAboveRepository
+                                .getUnsuccessfulAboveCountByProcuringEntityAndTenderCpv(procuringEntity, tenderCpv);
+
+                        if (!twiceUnsuccessful || pendingContractsCount == 0) {
+                            indicatorValue = -2;
+                        } else {
+                            if (proceduresCount.isEmpty()) {
+                                indicatorValue = RISK;
                             } else {
-                                if (proceduresCount.isEmpty()) {
-                                    indicatorValue = RISK;
-                                } else {
 
-                                    List<Integer> lessThenTwoUnsuccessfulProcedures = proceduresCount.stream()
-                                            .filter(item -> item < 2)
-                                            .collect(Collectors.toList());
+                                List<Integer> lessThenTwoUnsuccessfulProcedures = proceduresCount.stream()
+                                        .filter(item -> item < 2)
+                                        .collect(toList());
 
-                                    indicatorValue = (lessThenTwoUnsuccessfulProcedures.size() == proceduresCount.size())
-                                            ? RISK
-                                            : NOT_RISK;
-                                }
+                                indicatorValue = (lessThenTwoUnsuccessfulProcedures.size() == proceduresCount.size())
+                                        ? RISK
+                                        : NOT_RISK;
                             }
-                            return new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>());
-
-                        } catch (Exception ex) {
-                            log.info(String.format(TENDER_INDICATOR_ERROR_MESSAGE, INDICATOR_CODE, tenderId));
-                            return null;
                         }
+                        return new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>());
 
-                    }).filter(Objects::nonNull).collect(Collectors.toList());
+                    }).collect(toList());
 
             List<String> checkedTenders = tenderIndicators.stream()
-                    .map(item -> item.getTenderDimensions().getId()).collect(Collectors.toList());
+                    .map(item -> item.getTenderDimensions().getId()).collect(toList());
 
             tenders.forEach(tender -> {
                         TenderDimensions tenderDimensions = dimensionsMap.get(tender);
@@ -152,8 +145,7 @@ public class Risk_1_1_Extractor extends BaseExtractor {
                     }
             );
 
-            tenderIndicators.forEach(tenderIndicator ->
-                    uploadIndicatorIfNotExists(tenderIndicator.getTenderDimensions().getId(), INDICATOR_CODE, tenderIndicator));
+            tenderIndicators.forEach(this::uploadIndicator);
 
             ZonedDateTime maxTenderDateCreated = getMaxTenderDateCreated(dimensionsMap, dateTime);
             indicator.setLastCheckedDateCreated(maxTenderDateCreated);
