@@ -4,6 +4,7 @@ import com.datapath.indicatorsqueue.domain.audit.Monitoring;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
@@ -23,7 +24,8 @@ import static java.util.Objects.nonNull;
 @Service
 public class ProzorroAuditService {
 
-    private static final String AUDIT_API_URL = "https://audit-api.prozorro.gov.ua/api/2.4/monitorings";
+    @Value("${prozorro.monitorings.url}")
+    private String baseApiUrl;
 
     private RestTemplate restTemplate;
 
@@ -37,20 +39,19 @@ public class ProzorroAuditService {
     }
 
     public List<Monitoring> getMonitorings() throws IOException {
-        log.info("Fetching monitorings by url {}", AUDIT_API_URL);
+        log.info("Start fetching monitoring");
         List<Monitoring> monitorings = new ArrayList<>();
         ArrayList<Monitoring> pageMonitorings;
-        String auditApiUrl = AUDIT_API_URL;
+        String auditApiUrl = baseApiUrl;
         ObjectMapper mapper = new ObjectMapper();
         do {
             pageMonitorings = new ArrayList<>();
-            log.info("Fetching monitorings by url {}", auditApiUrl);
+            log.info("Fetching monitoring by url {}", auditApiUrl);
             String rawMonitorings = restTemplate.getForObject(URLDecoder.decode(auditApiUrl, "utf8"), String.class);
             JsonNode jsonNode = mapper.readTree(rawMonitorings);
             for (JsonNode node : jsonNode.get("data")) {
                 String monitoringId = node.at("/id").asText();
-                String rawMonitoring = restTemplate.getForObject(
-                        AUDIT_API_URL + "/" + monitoringId, String.class);
+                String rawMonitoring = restTemplate.getForObject(baseApiUrl + "/" + monitoringId, String.class);
 
                 JsonNode monitoringNode = mapper.readTree(rawMonitoring);
 
@@ -69,7 +70,7 @@ public class ProzorroAuditService {
                         ? parseZonedDateTime(endDate)
                         : parseZonedDateTime(startDate).plusDays(15)
                 );
-                String appealDocUrl = AUDIT_API_URL + "/" + monitoringId + "/appeal";
+                String appealDocUrl = baseApiUrl + "/" + monitoringId + "/appeal";
                 String appealDoc = restTemplate.getForObject(
                         appealDocUrl, String.class);
 

@@ -15,6 +15,7 @@ import com.datapath.persistence.entities.Contract;
 import com.datapath.persistence.entities.Tender;
 import com.datapath.persistence.entities.TenderContract;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -27,7 +28,8 @@ import java.util.Optional;
 @Slf4j
 public class ProzorroContractLoaderService implements ContractLoaderService {
 
-    private static final String CONTRACTS_SEARCH_URL = "https://public.api.openprocurement.org/api/2.4/contracts";
+    @Value("${prozorro.contracts.url}")
+    private String apiUrl;
 
     private RestTemplate restTemplate;
     private ContractService contractService;
@@ -58,7 +60,7 @@ public class ProzorroContractLoaderService implements ContractLoaderService {
     @Override
     public ContractResponseEntity loadContract(ContractUpdateInfo contractUpdateInfo) {
         final String contractUrl = ProzorroRequestUrlCreator.createContractUrl(
-                CONTRACTS_SEARCH_URL, contractUpdateInfo.getId());
+                apiUrl, contractUpdateInfo.getId());
 
         String responseData = restTemplate.getForObject(contractUrl, String.class);
         ContractResponseEntity contract = new ContractResponseEntity();
@@ -123,10 +125,6 @@ public class ProzorroContractLoaderService implements ContractLoaderService {
 
                 String tenderCPV = tvResolver.getTenderCPV(tender);
                 tender.setTvTenderCPV(tenderCPV);
-
-//                if (tenderDataValidator.isTenderFromFinanceCategory(tender)) {
-//                    return null;
-//                }
 
                 Tender existingTender = tenderLoaderService.saveTender(tender);
 

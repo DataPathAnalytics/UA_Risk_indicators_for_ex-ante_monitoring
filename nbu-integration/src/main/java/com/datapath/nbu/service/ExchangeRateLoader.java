@@ -5,6 +5,7 @@ import com.datapath.persistence.entities.nbu.ExchangeRateId;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -24,8 +25,8 @@ import java.util.List;
 @Service
 public class ExchangeRateLoader {
 
-    private static final String API_URL = "https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange";
-
+    @Value("${nbu.exchange.url}")
+    private String apiUrl;
     private RestTemplate restTemplate;
 
     public ExchangeRateLoader(RestTemplate restTemplate) {
@@ -35,7 +36,7 @@ public class ExchangeRateLoader {
     public List<ExchangeRate> loadExchangeRatesByDate(ZonedDateTime date) {
         String formattedDate = date.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 
-        UriBuilder builder = UriComponentsBuilder.fromHttpUrl(API_URL);
+        UriBuilder builder = UriComponentsBuilder.fromHttpUrl(apiUrl);
         builder.queryParam("date", formattedDate);
         builder.queryParam("json");
         URI requestURI = builder.build();

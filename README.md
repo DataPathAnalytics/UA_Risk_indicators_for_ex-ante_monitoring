@@ -1,5 +1,33 @@
 Release notes
 
+#### Version 1.1.1
+
+Added new configuration properties for loading data from external resources
+
+`nbu.exchange.url` 
+
+Getting exchange rates from National Bank Of Ukraine
+
+`prozorro.weekends-on.url`
+
+Getting list of working weekends 
+
+`prozorro.workdays-off.url`
+
+Getting list of days off
+
+`prozorro.monitorings.url`
+
+Getting tender monitoring
+
+`prozorro.tenders.url`
+
+Getting Prozorro tenders
+
+`prozorro.contracts.url`
+
+Getting Prozorro contracts
+
 #### Version 1.1.0
 
 Changed log level for different parts of application	

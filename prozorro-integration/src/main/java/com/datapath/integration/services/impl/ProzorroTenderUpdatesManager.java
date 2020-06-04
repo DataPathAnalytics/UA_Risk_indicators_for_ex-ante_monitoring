@@ -19,6 +19,7 @@ import com.datapath.persistence.entities.Tender;
 import com.datapath.persistence.entities.TenderContract;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
@@ -36,7 +37,8 @@ import java.util.Map;
 @Service
 public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
 
-    public static final String TENDERS_SEARCH_URL = "https://public.api.openprocurement.org/api/2.4/tenders";
+    @Value("${prozorro.tenders.url}")
+    private String apiUrl;
 
     private TenderLoaderService tenderLoaderService;
     private ContractLoaderService contractLoaderService;
@@ -67,7 +69,7 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
             ZonedDateTime dateOffset = tenderLoaderService.resolveDateOffset()
                     .withZoneSameInstant(ZoneId.of("Europe/Kiev"));
 
-            String url = ProzorroRequestUrlCreator.createTendersUrl(TENDERS_SEARCH_URL, dateOffset);
+            String url = ProzorroRequestUrlCreator.createTendersUrl(apiUrl, dateOffset);
             while (true) {
                 log.info("Fetch tenders from Prozorro: url = {}", url);
                 try {
@@ -122,9 +124,9 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
                                 continue;
                             }
 
-                                Tender savedTender = tenderLoaderService.saveTender(tender);
-                                setUpdatesAvailability(true);
-                                log.info("Tender saved, id = {}", savedTender.getId());
+                            Tender savedTender = tenderLoaderService.saveTender(tender);
+                            setUpdatesAvailability(true);
+                            log.info("Tender saved, id = {}", savedTender.getId());
                         } catch (TenderValidationException e) {
                             log.warn("Tender expired or it is test tender: outerId = {}", tenderUpdateInfo.getId(), e);
                         } catch (ConstraintViolationException e) {
@@ -222,7 +224,7 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
             } catch (Exception ex) {
                 log.info("Failed to load tender {}", tenderUpdateInfo.getId(), ex);
             }
-    }
+        }
     }
 
     private boolean newTendersVersionExists(TenderUpdateInfo tenderUpdateInfo, Tender tender) {

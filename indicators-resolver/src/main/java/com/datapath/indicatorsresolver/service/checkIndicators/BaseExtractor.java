@@ -40,9 +40,9 @@ public class BaseExtractor {
 
     protected Integer AVAILABLE_HOURS_DIFF = 2;
 
-    @Value("${workdays-off.url}")
+    @Value("${prozorro.workdays-off.url}")
     private String workdaysOffUrl;
-    @Value("${weekends-on.url}")
+    @Value("${prozorro.weekends-on.url}")
     private String weekendsOnUrl;
 
     protected final String INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT = "%s Extractor is not available";

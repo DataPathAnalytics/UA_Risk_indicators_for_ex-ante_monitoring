@@ -14,6 +14,7 @@ import com.datapath.integration.utils.ProzorroRequestUrlCreator;
 import com.datapath.integration.utils.ServiceStatus;
 import com.datapath.persistence.entities.Contract;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
@@ -27,7 +28,9 @@ import java.util.List;
 @Service
 public class ProzorroContractUpdatesManager implements ContractUpdatesManager {
 
-    private static final String CONTRACTS_SEARCH_URL = "https://public.api.openprocurement.org/api/2.4/contracts";
+
+    @Value("${prozorro.contracts.url}")
+    private String apiUrl;
 
     private ContractLoaderService contractLoaderService;
     private TenderLoaderService tenderLoaderService;
@@ -47,7 +50,7 @@ public class ProzorroContractUpdatesManager implements ContractUpdatesManager {
         changeServiceStatus(ServiceStatus.DISABLED);
         ZonedDateTime dateOffset = contractLoaderService.resolveDateOffset()
                 .withZoneSameInstant(ZoneId.of("Europe/Kiev"));
-        String url = ProzorroRequestUrlCreator.createTendersUrl(CONTRACTS_SEARCH_URL, dateOffset);
+        String url = ProzorroRequestUrlCreator.createTendersUrl(apiUrl, dateOffset);
         ZonedDateTime nextDateOffset = dateOffset;
         while (true) {
             ZonedDateTime tenderDateOffset = tenderLoaderService.resolveDateOffset();
@@ -80,7 +83,7 @@ public class ProzorroContractUpdatesManager implements ContractUpdatesManager {
 
                         if (contractUpdateInfo.getDateModified().isAfter(tenderDateOffset)) {
                             log.info("Contracts date modified is after newest tender was " +
-                                    "modified. Contract date modified {}, newest tender date {}",
+                                            "modified. Contract date modified {}, newest tender date {}",
                                     contractUpdateInfo.getDateModified(), tenderDateOffset);
 
                             Thread.sleep(60000);

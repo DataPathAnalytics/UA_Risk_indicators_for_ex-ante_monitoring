@@ -10,6 +10,7 @@ import com.datapath.integration.utils.DateUtils;
 import com.datapath.integration.utils.ProzorroRequestUrlCreator;
 import com.datapath.persistence.entities.Tender;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.net.URLDecoder;
@@ -24,6 +25,9 @@ import java.util.stream.Collectors;
 public class TenderUpdatesValidator {
 
     private static final int TENDERS_LIMIT = 1000;
+
+    @Value("${prozorro.tenders.url}")
+    private String tendersApiUrl;
 
     private TenderService tenderService;
     private TenderLoaderService tenderLoaderService;
@@ -50,7 +54,7 @@ public class TenderUpdatesValidator {
         ZonedDateTime dateOffset = yearEarlier.withZoneSameInstant(ZoneId.of("Europe/Kiev"));
 
         String url = ProzorroRequestUrlCreator.createTendersUrl(
-                ProzorroTenderUpdatesManager.TENDERS_SEARCH_URL, dateOffset, TENDERS_LIMIT);
+                tendersApiUrl, dateOffset, TENDERS_LIMIT);
 
         List<TenderUpdateInfo> tenderUpdateInfos = new ArrayList<>();
 

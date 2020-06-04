@@ -4,7 +4,6 @@ import com.datapath.integration.domain.TenderResponseEntity;
 import com.datapath.integration.domain.TenderUpdateInfo;
 import com.datapath.integration.domain.TendersPageResponseEntity;
 import com.datapath.integration.services.TenderLoaderService;
-import com.datapath.integration.services.impl.ProzorroTenderUpdatesManager;
 import com.datapath.integration.services.impl.TenderService;
 import com.datapath.integration.utils.DateUtils;
 import com.datapath.integration.utils.JsonUtils;
@@ -14,6 +13,7 @@ import com.datapath.persistence.repositories.validation.TenderValidationHistoryR
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
@@ -28,6 +28,9 @@ import java.util.stream.Collectors;
 public class TenderExistenceValidator {
 
     private static final int TENDERS_LIMIT = 1000;
+
+    @Value("${prozorro.tenders.url}")
+    private String tendersApiUrl;
 
     private TenderService tenderService;
     private TenderLoaderService tenderLoaderService;
@@ -52,7 +55,7 @@ public class TenderExistenceValidator {
         ZonedDateTime dateOffset = yearEarlier.withZoneSameInstant(ZoneId.of("Europe/Kiev"));
 
         String url = ProzorroRequestUrlCreator.createTendersUrl(
-                ProzorroTenderUpdatesManager.TENDERS_SEARCH_URL, dateOffset, TENDERS_LIMIT);
+                tendersApiUrl, dateOffset, TENDERS_LIMIT);
 
         List<TenderUpdateInfo> tenderUpdateInfos = new ArrayList<>();
 

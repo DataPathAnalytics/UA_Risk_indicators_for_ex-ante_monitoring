@@ -8,6 +8,7 @@ import com.datapath.integration.utils.DateUtils;
 import com.datapath.integration.utils.ProzorroRequestUrlCreator;
 import com.datapath.persistence.entities.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -24,7 +25,8 @@ import java.util.stream.Collectors;
 @Service
 public class ProzorroTenderLoaderService implements TenderLoaderService {
 
-    private static final String TENDERS_SEARCH_URL = "https://public.api.openprocurement.org/api/2.4/tenders";
+    @Value("${prozorro.tenders.url}")
+    private String apiUrl;
 
     private RestTemplate restTemplate;
     private TenderService tenderService;
@@ -49,7 +51,7 @@ public class ProzorroTenderLoaderService implements TenderLoaderService {
     @Override
     public TenderResponseEntity loadTender(TenderUpdateInfo tenderUpdateInfo) {
         final String tenderUrl = ProzorroRequestUrlCreator.createTenderUrl(
-                TENDERS_SEARCH_URL, tenderUpdateInfo.getId());
+                apiUrl, tenderUpdateInfo.getId());
 
         final String responseData = restTemplate.getForObject(tenderUrl, String.class);
         TenderResponseEntity tender = new TenderResponseEntity();
