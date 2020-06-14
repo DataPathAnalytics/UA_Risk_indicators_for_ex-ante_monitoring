@@ -40,6 +40,9 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
     @Value("${prozorro.tenders.url}")
     private String apiUrl;
 
+    @Value("${prozorro.tenders.skip-test}")
+    private boolean skipTestTenders;
+
     private TenderLoaderService tenderLoaderService;
     private ContractLoaderService contractLoaderService;
     private TransactionVariablesResolver tvResolver;
@@ -87,8 +90,12 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
                             }
                             TenderResponseEntity tenderResponseEntity = tenderLoaderService.loadTender(tenderUpdateInfo);
                             log.info("Fetching tender: id = {}", tenderResponseEntity.getId());
-                            TenderParser tenderParser = TenderParser.create(tenderResponseEntity.getData());
-                            Tender tender = tenderParser.buildTenderEntity();
+
+                            TenderParser tenderParser = new TenderParser();
+                            tenderParser.setRawData(tenderResponseEntity.getData());
+                            tenderParser.setSkipTestTenders(skipTestTenders);
+                            tenderParser.parseRawData();
+                            Tender tender = tenderParser.buildTender();
                             tender.setSource(EntitySource.TENDERING.toString());
 
                             if (tenderUpdateInfo.getDateModified().isBefore(tender.getDateModified())) {
@@ -178,8 +185,13 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
             try {
                 TenderResponseEntity tenderResponseEntity = tenderLoaderService.loadTender(tenderUpdateInfo);
                 log.info("Fetching tender: id = {}", tenderResponseEntity.getId());
-                TenderParser tenderParser = TenderParser.create(tenderResponseEntity.getData());
-                Tender tender = tenderParser.buildTenderEntity();
+
+                TenderParser tenderParser = new TenderParser();
+                tenderParser.setRawData(tenderResponseEntity.getData());
+                tenderParser.setSkipTestTenders(skipTestTenders);
+                tenderParser.parseRawData();
+                Tender tender = tenderParser.buildTender();
+
                 tender.setSource(EntitySource.TENDERING.toString());
 
                 if (tenderUpdateInfo.getDateModified().isBefore(tender.getDateModified())) {

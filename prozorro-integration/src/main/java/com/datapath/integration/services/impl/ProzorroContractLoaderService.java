@@ -31,6 +31,9 @@ public class ProzorroContractLoaderService implements ContractLoaderService {
     @Value("${prozorro.contracts.url}")
     private String apiUrl;
 
+    @Value("${prozorro.tenders.skip-test}")
+    private boolean skipTestTenders;
+
     private RestTemplate restTemplate;
     private ContractService contractService;
     private TenderContractService tenderContractService;
@@ -109,8 +112,14 @@ public class ProzorroContractLoaderService implements ContractLoaderService {
             tenderUpdateInfo.setId(contract.getTenderOuterId());
             try {
                 TenderResponseEntity tenderResponseEntity = tenderLoaderService.loadTender(tenderUpdateInfo);
-                TenderParser tenderParser = TenderParser.create(tenderResponseEntity.getData(), true);
-                Tender tender = tenderParser.buildTenderEntity();
+
+                TenderParser tenderParser = new TenderParser();
+                tenderParser.setRawData(tenderResponseEntity.getData());
+                tenderParser.setSkipExpiredTenders(false);
+                tenderParser.setSkipTestTenders(skipTestTenders);
+                tenderParser.parseRawData();
+
+                Tender tender = tenderParser.buildTender();
 
                 if (!tenderDataValidator.isValidTender(tender)) {
                     log.error("Tender validation failed while contract loading.");

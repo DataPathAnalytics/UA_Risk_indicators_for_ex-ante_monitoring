@@ -1,5 +1,15 @@
 Release notes
 
+#### Version 1.1.2
+
+Implemented functionality to disable skipping test tenders from Prozorro.
+
+Based on new configuration property
+
+`prozorro.tenders.skip-test`
+ 
+if false - application will save all tenders including test (mode equals test)
+
 #### Version 1.1.1
 
 Added new configuration properties for loading data from external resources

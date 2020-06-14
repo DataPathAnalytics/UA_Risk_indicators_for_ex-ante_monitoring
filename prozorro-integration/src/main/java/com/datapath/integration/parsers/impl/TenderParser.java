@@ -40,38 +40,49 @@ public class TenderParser implements EntityParser {
     // Transaction variables
     private String[] tvTenderCPVList;
 
-    private TenderParser(String rawData) throws IOException {
+    private boolean skipExpiredTenders;
+    private boolean skipTestTenders;
+
+    public TenderParser() {
+        skipTestTenders = true;
+        skipExpiredTenders = true;
+    }
+
+    public void setRawData(String rawData) {
         this.rawData = rawData;
+    }
+
+    public void setSkipExpiredTenders(boolean skipExpiredTenders) {
+        this.skipExpiredTenders = skipExpiredTenders;
+    }
+
+    public void setSkipTestTenders(boolean skipTestTenders) {
+        this.skipTestTenders = skipTestTenders;
+    }
+
+    public void parseRawData() throws IOException {
         ObjectMapper objectMapper = new ObjectMapper();
         this.dataNode = objectMapper.readTree(rawData).get("data");
+
+        defineAutocreatedLot();
+        parseProcuringEntity();
+        parseTender();
+        parseTenderData();
+        parseTenderComplaints();
+        parseTenderDocuments();
+        parseTenderEligibilityDocuments();
+        parseTenderFinancialDocuments();
+        parseTenderItems();
+        parseTenderQuestions();
+        parseTenderAwards();
+        parseTenderContracts();
+        parseTenderLots();
+        parseTenderBids();
+        parseTvTenderCpvList();
+        parseTenderQualification();
     }
 
-    public static TenderParser create(String rawData) throws IOException {
-        return create(rawData, false);
-    }
-
-    public static TenderParser create(String rawData, boolean skipExpiredTenders) throws IOException {
-        final TenderParser tenderParser = new TenderParser(rawData);
-        tenderParser.defineAutocreatedLot();
-        tenderParser.parseProcuringEntity();
-        tenderParser.parseTender(skipExpiredTenders);
-        tenderParser.parseTenderData();
-        tenderParser.parseTenderComplaints();
-        tenderParser.parseTenderDocuments();
-        tenderParser.parseTenderEligibilityDocuments();
-        tenderParser.parseTenderFinancialDocuments();
-        tenderParser.parseTenderItems();
-        tenderParser.parseTenderQuestions();
-        tenderParser.parseTenderAwards();
-        tenderParser.parseTenderContracts();
-        tenderParser.parseTenderLots();
-        tenderParser.parseTenderBids();
-        tenderParser.parseTvTenderCpvList();
-        tenderParser.parseTenderQualification();
-        return tenderParser;
-    }
-
-    public Tender buildTenderEntity() {
+    public Tender buildTender() {
         tenderData.setTender(tender);
         tenderAwards.forEach(award -> award.setTender(tender));
         tenderItems.forEach(items -> items.setTender(tender));
@@ -323,7 +334,7 @@ public class TenderParser implements EntityParser {
         procuringEntity.setRegion(region);
     }
 
-    private void parseTender(boolean skipExpiredTenders) {
+    private void parseTender() {
         String outerId = dataNode.at("/id").asText();
         String tenderId = dataNode.at("/tenderID").asText();
         String status = dataNode.at("/status").asText();
@@ -345,7 +356,7 @@ public class TenderParser implements EntityParser {
         ZonedDateTime awardStartDate = JsonUtils.getDate(dataNode, "/awardPeriod/startDate");
         ZonedDateTime awardEndDate = JsonUtils.getDate(dataNode, "/awardPeriod/endDate");
 
-        validateTender(date, skipExpiredTenders);
+        validateTender(date);
 
         tender = new Tender();
         tender.setOuterId(outerId);
@@ -893,18 +904,17 @@ public class TenderParser implements EntityParser {
         return complaints;
     }
 
-    private void validateTender(ZonedDateTime date,
-                                Boolean skipExpiredTenders) {
+    private void validateTender(ZonedDateTime date) {
 
-        if (!skipExpiredTenders && date == null) {
+        if (skipExpiredTenders && date == null) {
             throw new TenderDateNotFoundException();
         }
 
-        if (!skipExpiredTenders && date.isBefore(DateUtils.yearEarlierFromNow())) {
+        if (skipExpiredTenders && date.isBefore(DateUtils.yearEarlierFromNow())) {
             throw new TenderValidationException("Tender expired");
         }
 
-        if (dataNode.at("/mode").asText().equals("test")) {
+        if (skipTestTenders && dataNode.at("/mode").asText().equals("test")) {
             throw new TenderValidationException("Test tender");
         }
     }
