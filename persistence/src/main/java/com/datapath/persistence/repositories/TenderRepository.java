@@ -64,7 +64,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "and amount is not null order by amount")
     List<Object> findTendersWithAmountByExcludingStatus(List<String> statuses);
 
-    @Query(value = "Select t.outer_id, amount from tender t " +
+    @Query(value = "Select t.outer_id, amount, tender_id from tender t " +
             "where t.status not in ?1 " +
             "and t.outer_id = ANY (SELECT regexp_split_to_table(?2, ',')) " +
             "and amount is not null order by amount", nativeQuery = true)
@@ -1136,7 +1136,8 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "        from (select * from award\n" +
             "                              join complaint c2 on award.id = c2.award_id where award.tender_id = tender.id and c2.complaint_type = 'complaint') a), \n" +
             "       tender.title,\n" +
-            "       (SELECT COUNT(*) > 0 FROM complaint WHERE tender_id = tender.id AND complaint_type = 'complaint') has_tender_complaints\n" +
+            "       (SELECT COUNT(*) > 0 FROM complaint WHERE tender_id = tender.id AND complaint_type = 'complaint') has_tender_complaints,\n" +
+            "       tender.procurement_method_rationale\n" +
             "from tender\n" +
             "       left join procuring_entity on tender.procuring_entity_id = procuring_entity.id\n" +
             "       left join cpv_catalogue cpv on tender.tv_tender_cpv = cpv.cpv\n" +

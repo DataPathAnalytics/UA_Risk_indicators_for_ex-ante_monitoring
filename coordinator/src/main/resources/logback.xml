@@ -674,6 +674,10 @@
         </encoder>
     </appender>
 
+    <appender name="async-elastic-integration" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="elastic-integration"/>
+    </appender>
+
     <appender name="async-indicators" class="ch.qos.logback.classic.AsyncAppender">
         <appender-ref ref="indicators"/>
     </appender>

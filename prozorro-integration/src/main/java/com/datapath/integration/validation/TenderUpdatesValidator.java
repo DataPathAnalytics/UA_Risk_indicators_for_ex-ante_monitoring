@@ -4,7 +4,6 @@ import com.datapath.integration.domain.TenderUpdateInfo;
 import com.datapath.integration.domain.TendersPageResponseEntity;
 import com.datapath.integration.services.TenderLoaderService;
 import com.datapath.integration.services.TenderUpdatesManager;
-import com.datapath.integration.services.impl.ProzorroTenderUpdatesManager;
 import com.datapath.integration.services.impl.TenderService;
 import com.datapath.integration.utils.DateUtils;
 import com.datapath.integration.utils.ProzorroRequestUrlCreator;

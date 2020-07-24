@@ -9,6 +9,7 @@ import com.datapath.druidintegration.model.druid.response.common.Event;
 import com.datapath.persistence.entities.Indicator;
 import com.datapath.persistence.repositories.IndicatorRepository;
 import com.datapath.persistence.repositories.TenderRepository;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,6 +25,8 @@ import java.util.stream.IntStream;
 import static com.datapath.druidintegration.DruidConstants.DEFAULT_INTERVAL;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 @Service
 @Slf4j
@@ -38,6 +41,15 @@ public class TenderRateService {
     private static final String ITERATION_ID = "iterationId";
     private static final String STATUS = "status";
 
+    private static final Comparator<TenderScoreData> TENDER_SCORE_COMPARATOR = Comparator
+            .comparing(TenderScoreData::getRiskScore)
+            .thenComparing(TenderScoreData::getAmount)
+            .thenComparing(TenderScoreData::getTenderId);
+
+    private static final Comparator<AmountScoreData> AMOUNT_SCORE_COMPARATOR = Comparator
+            .comparing(AmountScoreData::getAmount)
+            .thenComparing(AmountScoreData::getTenderId);
+
     @Value("${tenders.completed.days:30}")
     private Integer daysForQueue;
     private String druidUrl;
@@ -45,6 +57,12 @@ public class TenderRateService {
     private RestTemplate restTemplate;
     protected TenderRepository tenderRepository;
     protected IndicatorRepository indicatorRepository;
+    private boolean isAmountBasedTenderRiskScore;
+
+    @Value("${queue.amount-based-tender-risk-score}")
+    public void setAmountBasedTenderRiskScore(Boolean amountBasedTenderRiskScore) {
+        isAmountBasedTenderRiskScore = amountBasedTenderRiskScore;
+    }
 
     @Value("${druid.url}")
     public void setDruidUrl(String url) {
@@ -93,9 +111,13 @@ public class TenderRateService {
                 .map(item -> (Object[]) item)
                 .collect(Collectors.toMap(i -> i[0].toString(), i -> Double.valueOf(i[1].toString()), (oldTender, newTender) -> newTender));
 
+        Map<String, String> tenderIdMap = topTendersWithAmount.stream()
+                .map(item -> (Object[]) item)
+                .collect(toMap(i -> i[0].toString(), i -> i[2].toString()));
+
         List<String> topTenders = new ArrayList<>(tenderAmountMap.keySet());
         Map<String, Double> tenderIdScoreMap = new HashMap<>();
-        Map<String, Double> tenderRiskScoreMap = new HashMap<>();
+
         int chunkSize = 1000;
         if (!topTenders.isEmpty()) {
             for (int start = 0; start < topTenders.size(); start += chunkSize) {
@@ -160,42 +182,21 @@ public class TenderRateService {
                 }
             }
 
-
-            Map<String, Double> tenderIdScoreSortedMap = tenderIdScoreMap.entrySet().stream()
-                    .sorted(Entry.comparingByValue())
-                    .collect(Collectors.toMap(Entry::getKey, Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
-
-
-            List<String> tenderIds = new ArrayList<>(tenderIdScoreSortedMap.keySet());
-            List<Double> tenderScores = new ArrayList<>(new TreeSet<>(tenderIdScoreSortedMap.values()));
-            Map<Double, Integer> tenderRiskScoreRankMap = IntStream.range(0, tenderScores.size())
-                    .boxed()
-                    .collect(Collectors.toMap(tenderScores::get, i -> i + 1));
-
-            List<Double> tenderAmounts = new ArrayList<>(tenderAmountMap.entrySet().stream()
-                    .filter(item -> tenderIds.contains(item.getKey()))
-                    .map(Entry::getValue).sorted()
-                    .collect(Collectors.toCollection(TreeSet::new)));
-
-            Map<Double, Integer> tenderAmountsRankMap = IntStream.range(0, tenderAmounts.size())
-                    .boxed()
-                    .collect(Collectors.toMap(tenderAmounts::get, i -> i + 1));
-
-            tenderIdScoreSortedMap.forEach((tenderOuterId, value) -> {
-                Double tenderRiskScore = Double.valueOf(tenderRiskScoreRankMap.get(value)) * RISK_IMPORTANCE_SHARE;
-                Double amountScore = Double.valueOf(tenderAmountsRankMap.get(tenderAmountMap.get(tenderOuterId))) * AMOUNT_IMPORTANCE_SHARE;
-                tenderRiskScoreMap.put(tenderOuterId, tenderRiskScore + amountScore);
-            });
+            Map<String, Double> tenderRiskScoreMap = getTenderRiskScores(
+                    tenderIdScoreMap,
+                    tenderAmountMap,
+                    tenderIdMap
+            );
 
             Map<String, Double> sortedTenderRiskScoreMap = tenderRiskScoreMap.entrySet().stream()
                     .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-            List outerIds = new ArrayList<>(sortedTenderRiskScoreMap.keySet());
+            List<String> outerIds = new ArrayList<>(sortedTenderRiskScoreMap.keySet());
 
             int partitionSize = 1000;
             List<List<String>> partitions = new ArrayList<>();
             for (int i = 0; i < outerIds.size(); i += partitionSize) {
-                List list = outerIds.subList(i, Math.min(i + partitionSize, outerIds.size()));
+                List<String> list = outerIds.subList(i, Math.min(i + partitionSize, outerIds.size()));
                 partitions.add(list);
             }
 
@@ -269,5 +270,140 @@ public class TenderRateService {
                 .build();
     }
 
+    private Map<String, Double> getTenderRiskScores(Map<String, Double> tenderIdScoreMap,
+                                                    Map<String, Double> tenderAmountMap,
+                                                    Map<String, String> tenderIdMap) {
+        Map<String, Double> tenderIdScoreSortedMap = tenderIdScoreMap.entrySet().stream()
+                .sorted(Entry.comparingByValue())
+                .collect(toMap(Entry::getKey, Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
 
+        if (isAmountBasedTenderRiskScore) {
+            return getScoreWithAmountBasedTenderScoreRankCalculation(
+                    tenderIdScoreSortedMap,
+                    tenderAmountMap,
+                    tenderIdMap
+            );
+        } else {
+            return getScoreWithSimpleRankCalculation(
+                    tenderIdScoreSortedMap,
+                    tenderAmountMap
+            );
+        }
+    }
+
+    private Map<String, Double> getScoreWithAmountBasedTenderScoreRankCalculation(Map<String, Double> tenderIdScoreSortedMap,
+                                                                                  Map<String, Double> tenderAmountMap,
+                                                                                  Map<String, String> tenderIdMap) {
+        Map<String, Double> tenderRiskScoreMap = new HashMap<>();
+
+        Map<AmountScoreData, String> amountScoreDataOuterIdMap = tenderIdScoreSortedMap.keySet().stream()
+                .map(outerId -> {
+                    TenderData tender = new TenderData();
+                    tender.setOuterId(outerId);
+
+                    AmountScoreData amountScoreData = new AmountScoreData();
+                    amountScoreData.setAmount(tenderAmountMap.get(outerId));
+                    amountScoreData.setTenderId(tenderIdMap.get(outerId));
+                    tender.setAmountScoreData(amountScoreData);
+
+                    return tender;
+                }).collect(Collectors.toMap(TenderData::getAmountScoreData, TenderData::getOuterId));
+
+        List<AmountScoreData> sortedAmountScores = amountScoreDataOuterIdMap.keySet().stream()
+                .sorted(AMOUNT_SCORE_COMPARATOR)
+                .collect(toList());
+
+        Map<AmountScoreData, Integer> amountScoreRankMap = IntStream.range(0, sortedAmountScores.size())
+                .boxed()
+                .collect(toMap(sortedAmountScores::get, i -> i + 1));
+
+        Map<String, Integer> amountScoreOuterIdRankMap = new HashMap<>();
+
+        amountScoreDataOuterIdMap.forEach((amountScoreData, outerId) -> amountScoreOuterIdRankMap.put(outerId, amountScoreRankMap.get(amountScoreData)));
+
+        Map<TenderScoreData, String> tenderScoreDataOuterIdMap = tenderIdScoreSortedMap.entrySet().stream()
+                .map(e -> {
+                    TenderData tender = new TenderData();
+                    tender.setOuterId(e.getKey());
+
+                    TenderScoreData amountScoreData = new TenderScoreData();
+                    amountScoreData.setRiskScore(e.getValue());
+                    amountScoreData.setAmount(tenderAmountMap.get(e.getKey()));
+                    amountScoreData.setTenderId(tenderIdMap.get(e.getKey()));
+                    tender.setTenderScoreData(amountScoreData);
+
+                    return tender;
+                }).collect(Collectors.toMap(TenderData::getTenderScoreData, TenderData::getOuterId));
+
+        List<TenderScoreData> sortedTenderScores = tenderScoreDataOuterIdMap.keySet().stream()
+                .sorted(TENDER_SCORE_COMPARATOR)
+                .collect(toList());
+
+        Map<TenderScoreData, Integer> tenderScoreRankMap = IntStream.range(0, sortedTenderScores.size())
+                .boxed()
+                .collect(toMap(sortedTenderScores::get, i -> i + 1));
+
+        Map<String, Integer> tenderScoreOuterIdRankMap = new HashMap<>();
+
+        tenderScoreDataOuterIdMap.forEach((tenderScoreData, outerId) -> tenderScoreOuterIdRankMap.put(outerId, tenderScoreRankMap.get(tenderScoreData)));
+
+        tenderIdScoreSortedMap.forEach((tenderOuterId, value) -> {
+            Double tenderRiskScore = Double.valueOf(tenderScoreOuterIdRankMap.get(tenderOuterId)) * RISK_IMPORTANCE_SHARE;
+            Double amountScore = Double.valueOf(amountScoreOuterIdRankMap.get(tenderOuterId)) * AMOUNT_IMPORTANCE_SHARE;
+            tenderRiskScoreMap.put(tenderOuterId, tenderRiskScore + amountScore);
+        });
+
+        return tenderRiskScoreMap;
+    }
+
+    private Map<String, Double> getScoreWithSimpleRankCalculation(Map<String, Double> tenderIdScoreSortedMap,
+                                                                  Map<String, Double> tenderAmountMap) {
+        Map<String, Double> tenderRiskScoreMap = new HashMap<>();
+
+        List<String> tenderIds = new ArrayList<>(tenderIdScoreSortedMap.keySet());
+
+        List<Double> tenderAmounts = tenderAmountMap.entrySet().stream()
+                .filter(item -> tenderIds.contains(item.getKey()))
+                .map(Entry::getValue)
+                .distinct()
+                .sorted()
+                .collect(toList());
+
+        List<Double> tenderScores = new ArrayList<>(new TreeSet<>(tenderIdScoreSortedMap.values()));
+        Map<Double, Integer> tenderRiskScoreRankMap = IntStream.range(0, tenderScores.size())
+                .boxed()
+                .collect(toMap(tenderScores::get, i -> i + 1));
+
+        Map<Double, Integer> tenderAmountsRankMap = IntStream.range(0, tenderAmounts.size())
+                .boxed()
+                .collect(toMap(tenderAmounts::get, i -> i + 1));
+
+        tenderIdScoreSortedMap.forEach((tenderOuterId, value) -> {
+            Double tenderRiskScore = Double.valueOf(tenderRiskScoreRankMap.get(value)) * RISK_IMPORTANCE_SHARE;
+            Double amountScore = Double.valueOf(tenderAmountsRankMap.get(tenderAmountMap.get(tenderOuterId))) * AMOUNT_IMPORTANCE_SHARE;
+            tenderRiskScoreMap.put(tenderOuterId, tenderRiskScore + amountScore);
+        });
+
+        return tenderRiskScoreMap;
+    }
+
+    @Data
+    private static class TenderData {
+        private String outerId;
+        private TenderScoreData tenderScoreData;
+        private AmountScoreData amountScoreData;
+    }
+
+    @Data
+    private static class TenderScoreData {
+        private Double amount;
+        private Double riskScore;
+        private String tenderId;
+    }
+
+    @Data
+    private static class AmountScoreData {
+        private Double amount;
+        private String tenderId;
+    }
 }

@@ -1,5 +1,19 @@
 Release notes
 
+#### Version 1.1.3
+
+Updated queue functionality to include value in risk score ranking
+
+Added new configuration property
+
+`queue.amount-based-tender-risk-score`
+
+To enable value of the tender to be involved in risk score ranking, set the following
+
+`queue.amount-based-tender-risk-score=true`
+
+If `queue.amount-based-tender-risk-score=false`, risk score ranking would work with tender risk score data
+
 #### Version 1.1.2
 
 Implemented functionality to disable skipping test tenders from Prozorro.

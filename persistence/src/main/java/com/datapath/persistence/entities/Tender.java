@@ -62,6 +62,9 @@ public class Tender {
     @Column(name = "tv_subject_of_procurement")
     private String tvSubjectOfProcurement;
 
+    @Column(columnDefinition = "text", name = "procurement_method_rationale")
+    private String procurementMethodRationale;
+
     @Column(name = "tv_tender_cpv")
     private String tvTenderCPV;
 

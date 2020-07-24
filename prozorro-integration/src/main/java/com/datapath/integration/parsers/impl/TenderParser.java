@@ -357,6 +357,9 @@ public class TenderParser implements EntityParser {
         ZonedDateTime awardEndDate = JsonUtils.getDate(dataNode, "/awardPeriod/endDate");
 
         validateTender(date);
+        String procurementMethodRationale = procurementMethodType.equals("reporting") ?
+                dataNode.at("/procurementMethodRationale").asText() :
+                null;
 
         tender = new Tender();
         tender.setOuterId(outerId);
@@ -367,6 +370,7 @@ public class TenderParser implements EntityParser {
         tender.setDate(date);
         tender.setProcurementMethodType(procurementMethodType);
         tender.setProcurementMethod(procurementMethod);
+        tender.setProcurementMethodRationale(procurementMethodRationale);
         tender.setCause(cause);
         tender.setAmount(amount);
         tender.setCurrency(currency);
