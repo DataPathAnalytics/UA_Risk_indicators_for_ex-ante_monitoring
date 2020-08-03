@@ -1,5 +1,11 @@
 Release notes
 
+#### Version 1.2.0
+
+Fixed issue for application stopping while loosing conectivity to prozorro API. 
+
+Setup 404 http code when requested tender or contract not found in a system
+
 #### Version 1.1.3
 
 Updated queue functionality to include value in risk score ranking
