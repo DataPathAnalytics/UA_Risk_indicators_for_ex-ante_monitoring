@@ -3,55 +3,38 @@ package com.datapath.integration.scheduling;
 import com.datapath.integration.services.ContractUpdatesManager;
 import com.datapath.integration.services.TenderUpdatesManager;
 import com.datapath.integration.utils.ServiceStatus;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
+@AllArgsConstructor
 public class TendersUpdateScheduler {
 
-    private static final int TENDERS_UPDATES_RATE = 100_000;
-    private static final int TENDERS_UPDATES_DELAY = 1_000;
+    private static final int TENDERS_UPDATES_RATE = 180_000;
+    private static final int CONTRACTS_UPDATES_RATE = 180_000;
 
-    private static final int CONTRACTS_UPDATES_RATE = 100_000;
-    private static final int CONTRACTS_UPDATES_DELAY = 5_000;
+    private final TenderUpdatesManager tenderUpdatesManager;
+    private final ContractUpdatesManager contractUpdatesManager;
 
-    private TenderUpdatesManager tenderUpdatesManager;
-    private ContractUpdatesManager contractUpdatesManager;
-
-    public TendersUpdateScheduler(TenderUpdatesManager tenderUpdatesManager,
-                                  ContractUpdatesManager contractUpdatesManager) {
-        this.tenderUpdatesManager = tenderUpdatesManager;
-        this.contractUpdatesManager = contractUpdatesManager;
-    }
-
-    @Scheduled(fixedRate = TENDERS_UPDATES_RATE, initialDelay = TENDERS_UPDATES_DELAY)
+    @Scheduled(fixedDelay = TENDERS_UPDATES_RATE)
     public void checkTendersForUpdates() {
-        try {
-            log.info("Check tenders updates scheduled started.");
-            if (tenderUpdatesManager.getServiceStatus() == ServiceStatus.ENABLED) {
-                this.tenderUpdatesManager.loadLastModifiedTenders();
-            } else {
-                log.info("TendersUpdateManager disabled.");
-            }
-        } catch (Exception ex) {
-            log.error("Error CheckTendersForUpdates failed {}", ex.getMessage());
-            this.tenderUpdatesManager.changeServiceStatus(ServiceStatus.ENABLED);
-        }
+        tenderUpdatesManager.loadLastModifiedTenders();
     }
 
-    @Scheduled(fixedRate = CONTRACTS_UPDATES_RATE, initialDelay = CONTRACTS_UPDATES_DELAY)
+    @Scheduled(fixedDelay = CONTRACTS_UPDATES_RATE)
     public void checkContractsForUpdates() {
         log.info("Check contract updates scheduled started.");
         try {
             if (contractUpdatesManager.getServiceStatus() == ServiceStatus.ENABLED) {
-                this.contractUpdatesManager.loadLastModifiedContracts();
+                contractUpdatesManager.loadLastModifiedContracts();
             } else {
                 log.info("ContractsUpdateManager disabled.");
             }
         } catch (Exception ex) {
-            log.error("Error CheckContractsForUpdates failed {}", ex.getMessage());
+            log.error(ex.getMessage(), ex);
             this.contractUpdatesManager.changeServiceStatus(ServiceStatus.ENABLED);
         }
     }

@@ -15,7 +15,6 @@ import com.datapath.integration.utils.ServiceStatus;
 import com.datapath.persistence.entities.Contract;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 
@@ -35,7 +34,6 @@ public class ProzorroContractUpdatesManager implements ContractUpdatesManager {
     private ContractLoaderService contractLoaderService;
     private TenderLoaderService tenderLoaderService;
     private ServiceStatus serviceStatus;
-    private boolean updatesAvailable;
 
     public ProzorroContractUpdatesManager(ContractLoaderService contractLoaderService,
                                           TenderLoaderService tenderLoaderService) {
@@ -44,7 +42,6 @@ public class ProzorroContractUpdatesManager implements ContractUpdatesManager {
         this.serviceStatus = ServiceStatus.ENABLED;
     }
 
-    @Async
     @Override
     public void loadLastModifiedContracts() {
         changeServiceStatus(ServiceStatus.DISABLED);
@@ -98,7 +95,6 @@ public class ProzorroContractUpdatesManager implements ContractUpdatesManager {
 
                     } catch (TenderValidationException ex) {
                         log.error("Contract not saved. Tender is invalid", ex);
-                        setUpdatesAvailability(true);
                     } catch (ResourceAccessException e) {
                         changeServiceStatus(ServiceStatus.ENABLED);
                         log.error("Error in loading tender {}", contractUpdateInfo.getId(), e);
@@ -135,11 +131,6 @@ public class ProzorroContractUpdatesManager implements ContractUpdatesManager {
     }
 
     @Override
-    public void removeExpiredContacts() {
-
-    }
-
-    @Override
     public void changeServiceStatus(ServiceStatus serviceStatus) {
         this.serviceStatus = serviceStatus;
     }
@@ -149,15 +140,4 @@ public class ProzorroContractUpdatesManager implements ContractUpdatesManager {
         return serviceStatus;
     }
 
-    @Override
-    public boolean isUpdatesAvailable() {
-        boolean updatesAvailable = this.updatesAvailable;
-        setUpdatesAvailability(false);
-        return updatesAvailable;
-    }
-
-    @Override
-    public void setUpdatesAvailability(boolean availability) {
-        this.updatesAvailable = availability;
-    }
 }
