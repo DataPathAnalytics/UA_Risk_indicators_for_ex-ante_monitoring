@@ -10,9 +10,6 @@ import org.springframework.web.filter.CorsFilter;
 import java.util.Arrays;
 import java.util.Collections;
 
-/**
- * @author vitalii.
- */
 @Configuration
 public class RestConfiguration {
 

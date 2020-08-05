@@ -72,7 +72,7 @@
 
     <appender name="elastic-integration" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${ELASTIC_UPLOADER_FOLDER}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -83,7 +83,7 @@
 
     <appender name="validation" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${VALIDATION_FOLDER}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -94,7 +94,7 @@
 
     <appender name="risk_1_16" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_16}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -105,7 +105,7 @@
 
     <appender name="risk_1_17" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_17}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -116,7 +116,7 @@
 
     <appender name="risk_1_18" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_18}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -127,7 +127,7 @@
 
     <appender name="risk_1_1" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_1}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -138,7 +138,7 @@
 
     <appender name="risk_1_2_1" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_2_1}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -149,7 +149,7 @@
 
     <appender name="risk_1_2_2" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_2_2}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -160,7 +160,7 @@
 
     <appender name="risk_1_3_1" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_3_1}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -171,7 +171,7 @@
 
     <appender name="risk_1_3_2" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_3_2}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -182,7 +182,7 @@
 
     <appender name="risk_1_3_3" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_3_3}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -193,7 +193,7 @@
 
     <appender name="risk_1_4_1" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_4_1}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -204,7 +204,7 @@
 
     <appender name="risk_1_4_2" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_4_2}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -215,7 +215,7 @@
 
     <appender name="risk_1_5_1" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_5_1}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -226,7 +226,7 @@
 
     <appender name="risk_1_5_2" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_5_2}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -237,7 +237,7 @@
 
     <appender name="risk_1_6_1" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_6_1}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -248,7 +248,7 @@
 
     <appender name="risk_1_8_1" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_8_1}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -259,7 +259,7 @@
 
     <appender name="risk_1_8_2" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_8_2}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -270,7 +270,7 @@
 
     <appender name="risk_1_10_1" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_10_1}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -281,7 +281,7 @@
 
     <appender name="risk_1_10_2" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_10_2}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -292,7 +292,7 @@
 
     <appender name="risk_1_10_3" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_10_3}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -303,7 +303,7 @@
 
     <appender name="risk_1_10_4" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_10_4}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -314,7 +314,7 @@
 
     <appender name="risk_1_12" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_12}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -325,7 +325,7 @@
 
     <appender name="risk_1_13_1" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_13_1}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -336,7 +336,7 @@
 
     <appender name="risk_1_13_2" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_13_2}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -347,7 +347,7 @@
 
     <appender name="risk_1_13_3" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_13_3}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -358,7 +358,7 @@
 
     <appender name="risk_1_14" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_1_14}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -369,7 +369,7 @@
 
     <appender name="risk_2_1" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_1}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -380,7 +380,7 @@
 
     <appender name="risk_2_2_1" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_2_1}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -391,7 +391,7 @@
 
     <appender name="risk_2_2_2" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_2_2}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -402,7 +402,7 @@
 
     <appender name="risk_2_2" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_2}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -413,7 +413,7 @@
 
     <appender name="risk_2_3" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_3}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -424,7 +424,7 @@
 
     <appender name="risk_2_4" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_4}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -435,7 +435,7 @@
 
     <appender name="risk_2_5_1" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_5_1}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -446,7 +446,7 @@
 
     <appender name="risk_2_5_2" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_5_2}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -457,7 +457,7 @@
 
     <appender name="risk_2_5_3" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_5_3}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -468,7 +468,7 @@
 
     <appender name="risk_2_5" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_5}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -479,7 +479,7 @@
 
     <appender name="risk_2_6_1" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_6_1}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -490,7 +490,7 @@
 
     <appender name="risk_2_6_2" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_6_2}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -501,7 +501,7 @@
 
     <appender name="risk_2_6_3" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_6_3}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -512,7 +512,7 @@
 
     <appender name="risk_2_6" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_6}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -523,7 +523,7 @@
 
     <appender name="risk_2_9" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_9}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -534,7 +534,7 @@
 
     <appender name="risk_2_10" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_10}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -545,7 +545,7 @@
 
     <appender name="risk_2_11" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_11}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -556,7 +556,7 @@
 
     <appender name="risk_2_12" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_12}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -567,7 +567,7 @@
 
     <appender name="risk_2_13_1" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_13_1}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -578,7 +578,7 @@
 
     <appender name="risk_2_13" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_13}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -589,7 +589,7 @@
 
     <appender name="risk_2_14_1" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_14_1}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -600,7 +600,7 @@
 
     <appender name="risk_2_14" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_14}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -611,7 +611,7 @@
 
     <appender name="risk_2_15_1" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_15_1}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -622,7 +622,7 @@
 
     <appender name="risk_2_15" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_15}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -633,7 +633,7 @@
 
     <appender name="risk_2_16_2" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_16_2}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -644,7 +644,7 @@
 
     <appender name="risk_2_17_2" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_FOLDER_2_17_2}log-%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -656,7 +656,7 @@
     <appender name="main" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_ROOT_FOLDER}loader.log</file>
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
             <fileNamePattern>${LOG_ROOT_FOLDER}dasu-%i.log</fileNamePattern>
@@ -670,7 +670,7 @@
 
     <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d %p --- [%t] %c{5}   : %m%n</pattern>
+            <pattern>%d %p --- [%t] %c{5} : %m%n</pattern>
         </encoder>
     </appender>
 

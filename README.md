@@ -1,8 +1,11 @@
 Release notes
+#### Version 1.3.0
+
+Removed email reporting part on failed loading after logging was reworked within past release.
 
 #### Version 1.2.0
 
-Fixed issue for application stopping while loosing conectivity to prozorro API. 
+Fixed issue for application stopping while loosing connectivity to Prozorro API. 
 
 Setup 404 http code when requested tender or contract not found in a system
 

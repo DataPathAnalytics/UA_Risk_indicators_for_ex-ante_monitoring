@@ -1,7 +1,6 @@
 package com.datapath.integration.services.impl;
 
 import com.datapath.integration.domain.*;
-import com.datapath.integration.email.EmailSender;
 import com.datapath.integration.parsers.exceptions.TenderValidationException;
 import com.datapath.integration.parsers.impl.TenderParser;
 import com.datapath.integration.resolvers.TransactionVariablesResolver;
@@ -122,8 +121,7 @@ public class ProzorroContractLoaderService implements ContractLoaderService {
                 Tender tender = tenderParser.buildTender();
 
                 if (!tenderDataValidator.isValidTender(tender)) {
-                    log.error("Tender validation failed while contract loading.");
-                    sendValidationFailedReport(tender);
+                    log.error("Tender [{}] validation failed while contract loading.", tender.getOuterId());
                     return null;
                 }
 
@@ -153,11 +151,5 @@ public class ProzorroContractLoaderService implements ContractLoaderService {
         }
 
         return null;
-    }
-
-    private void sendValidationFailedReport(Tender tender) {
-        log.info("Tender {} validation failed while contract loading. Send email notification...", tender.getOuterId());
-        boolean isSent = EmailSender.sendTenderValidationFailedNotification(tender.getOuterId());
-        log.warn("Notification {} sent", isSent ? "" : "not");
     }
 }

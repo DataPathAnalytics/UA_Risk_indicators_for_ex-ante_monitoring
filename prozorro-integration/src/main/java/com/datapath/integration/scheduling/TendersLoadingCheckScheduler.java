@@ -1,6 +1,5 @@
 package com.datapath.integration.scheduling;
 
-import com.datapath.integration.email.EmailSender;
 import com.datapath.integration.services.impl.TendersLoadingChecker;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -21,8 +20,7 @@ public class TendersLoadingCheckScheduler {
         try {
             boolean alive = tendersLoadingChecker.isAlive();
             if (!alive) {
-                EmailSender.sendTendersLoadingCheckerNotification();
-                log.warn("Tenders loading FAILED");
+                log.error("Tenders loading FAILED!!!");
             }
         } catch (Exception ex) {
             log.error("TendersLoadingCheckScheduler failed {}", ex.getMessage());

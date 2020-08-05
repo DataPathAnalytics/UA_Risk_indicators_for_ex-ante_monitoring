@@ -1,7 +1,6 @@
 package com.datapath.integration.services.impl;
 
 import com.datapath.integration.domain.*;
-import com.datapath.integration.email.EmailSender;
 import com.datapath.integration.parsers.exceptions.TenderValidationException;
 import com.datapath.integration.parsers.impl.ContractParser;
 import com.datapath.integration.parsers.impl.TenderParser;
@@ -25,9 +24,7 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Service
@@ -42,7 +39,6 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
     private TenderLoaderService tenderLoaderService;
     private ContractLoaderService contractLoaderService;
     private TransactionVariablesResolver tvResolver;
-    private Map<String, ZonedDateTime> failedTenders;
     private TenderDataValidator tenderDataValidator;
 
     public ProzorroTenderUpdatesManager(TenderLoaderService tenderLoaderService,
@@ -53,7 +49,6 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
         this.tvResolver = tvResolver;
         this.contractLoaderService = contractLoaderService;
         this.tenderDataValidator = tenderDataValidator;
-        this.failedTenders = new HashMap<>();
     }
 
     @Override
@@ -117,7 +112,6 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
 
                         if (!tenderDataValidator.isValidTender(tender)) {
                             log.error("Tender validation failed. Tender outer id = {}", tender.getOuterId());
-                            sendValidationFailedReport(tender);
                             continue;
                         }
 
@@ -134,7 +128,6 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
                         return;
                     } catch (Exception e) {
                         log.error("Error while processing the tender: outerId = {}", tenderUpdateInfo.getId(), e);
-                        sendNotification(tenderUpdateInfo);
                         return;
                     }
                 }
@@ -203,7 +196,6 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
 
                 if (!tenderDataValidator.isValidTender(tender)) {
                     log.error("Tender validation failed. Tender outer id = {}", tender.getOuterId());
-                    sendValidationFailedReport(tender);
                     continue;
                 }
 
@@ -224,25 +216,5 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
         } catch (Exception ex) {
             log.info("Tender delete error. Tender outer id: {}", outerId, ex);
         }
-    }
-
-    private void sendNotification(TenderUpdateInfo tenderUpdateInfo) {
-        ZonedDateTime failedTenderTime = failedTenders.get(tenderUpdateInfo.getId());
-        if (failedTenderTime != null) {
-            if (ZonedDateTime.now().minusHours(1).isAfter(failedTenderTime)) {
-                log.info("Tender {} loading failed. Send email notification...");
-                boolean isSent = EmailSender.sendFailedTenderNotification(tenderUpdateInfo.getId());
-                log.info("Notification {} sent", isSent ? "" : "not");
-                failedTenders.remove(tenderUpdateInfo.getId());
-            }
-        } else {
-            failedTenders.put(tenderUpdateInfo.getId(), ZonedDateTime.now());
-        }
-    }
-
-    private void sendValidationFailedReport(Tender tender) {
-        log.info("Tender {} validation failed. Send email notification...", tender.getId());
-        boolean isSent = EmailSender.sendTenderValidationFailedNotification(tender.getOuterId());
-        log.info("Notification {} sent", isSent ? "" : "not");
     }
 }
