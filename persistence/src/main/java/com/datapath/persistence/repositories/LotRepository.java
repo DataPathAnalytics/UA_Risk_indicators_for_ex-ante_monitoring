@@ -10,9 +10,6 @@ import java.util.List;
 @Repository
 public interface LotRepository extends JpaRepository<Lot, Long> {
 
-    @Query(value = "select DISTINCT l.outer_id from lot l join award a on l.id = a.lot_id where a.outer_id = ?1 ", nativeQuery = true)
-    List<String> findByAwardId(String awardId);
-
     @Query(value = "SELECT\n" +
             "  tender.outer_id tenderid, lot.outer_id,\n" +
             "  CASE WHEN lot.currency <> lot.guarantee_currency\n" +
@@ -24,7 +21,7 @@ public interface LotRepository extends JpaRepository<Lot, Long> {
             "        (SELECT rate\n" +
             "         FROM exchange_rate\n" +
             "         WHERE lot.currency = exchange_rate.code AND\n" +
-            "               concat(substr(to_char(tender.enquiry_start_date, 'YYYY-MM-DD HH:mm:ss.zzzzzz'), 0, 11),\n" +
+            "               concat(substr(to_char(COALESCE(tender.start_date,tender.date), 'YYYY-MM-DD HH:mm:ss.zzzzzz'), 0, 11),\n" +
             "                      ' 00:00:00.000000') :::: DATE = exchange_rate.date)\n" +
             "      END ELSE lot.amount\n" +
             "  END amount,\n" +
@@ -37,14 +34,14 @@ public interface LotRepository extends JpaRepository<Lot, Long> {
             "        (SELECT rate\n" +
             "         FROM exchange_rate\n" +
             "         WHERE lot.guarantee_currency = exchange_rate.code AND\n" +
-            "               concat(substr(to_char(tender.enquiry_start_date, 'YYYY-MM-DD HH:mm:ss.zzzzzz'), 0, 11),\n" +
+            "               concat(substr(to_char(COALESCE(tender.start_date,tender.date), 'YYYY-MM-DD HH:mm:ss.zzzzzz'), 0, 11),\n" +
             "                      ' 00:00:00.000000') :::: DATE = exchange_rate.date)\n" +
             "      END ELSE lot.guarantee_amount\n" +
             "  END guarantee_amount\n" +
             "FROM lot\n" +
             "  JOIN tender ON lot.tender_id = tender.id\n" +
-            "WHERE tender.outer_id in ?1 " +
-            "AND case WHEN lot.outer_id<>'autocreated' THEN lot.status = 'active'  ELSE  (lot.status = 'active' or lot.status <> 'active') END ", nativeQuery = true)
+            "WHERE tender.outer_id IN ?1 " +
+            "AND CASE WHEN lot.outer_id<>'autocreated' THEN lot.status = 'active'  ELSE  (lot.status = 'active' OR lot.status <> 'active') END ", nativeQuery = true)
     List<Object[]> getActiveLotsAmountAndGuaranteeAmountWithCurrencies(List<String> tenderId);
 
     @Query(value = "" +

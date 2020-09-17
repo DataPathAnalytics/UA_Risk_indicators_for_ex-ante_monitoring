@@ -28,6 +28,9 @@ public class Risk_1_10_4_Extractor extends BaseExtractor {
 
     private Map<String, Long> paKindAmountLimitMap = new HashMap<String, Long>() {{
         put("general", 1500000L);
+        put("authority", 1500000L);
+        put("central", 1500000L);
+        put("social", 1500000L);
         put("special", 5000000L);
     }};
 

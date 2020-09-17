@@ -20,7 +20,7 @@ public class GeneralSpecialProvider {
             "       SELECT DISTINCT procuring_entity.identifier_id procuring_entity_id\n" +
             "       FROM tender\n" +
             "         JOIN procuring_entity ON tender.procuring_entity_id = procuring_entity.id\n" +
-            "       WHERE procuring_entity_kind IN ('general', 'special')\n" +
+            "       WHERE procuring_entity_kind IN ('general','authority','central','social','special')\n" +
             "             AND procuring_entity.identifier_scheme = 'UA-EDR'\n" +
             "             AND tender.date > now() - INTERVAL '1 year'\n" +
             "     ) a";

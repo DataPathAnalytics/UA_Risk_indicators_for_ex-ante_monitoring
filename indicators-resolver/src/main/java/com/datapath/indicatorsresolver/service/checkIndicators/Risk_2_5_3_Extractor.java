@@ -27,6 +27,15 @@ public class Risk_2_5_3_Extractor extends BaseExtractor {
     Повторна закупівля у одного Постачальника близька до порогу визначеного Законом („reporting“, товари/послуги, 5% нижче 200К).
     */
 
+    private final static List<String> GENERAL_ENTITY_KINDS = Arrays.asList(
+            "general",
+            "authority",
+            "central",
+            "social"
+    );
+
+    private final static String SPECIAL_ENTITY_KIND = "special";
+
     private final String INDICATOR_CODE = "RISK2-5_3";
     private boolean indicatorsResolverAvailable;
     private NearThresholdOneSupplierRepository nearThresholdOneSupplierRepository;
@@ -105,18 +114,17 @@ public class Risk_2_5_3_Extractor extends BaseExtractor {
                 if (isNull(amount)) {
                     indicatorValue = -1;
                 } else {
-                    switch (procuringEntityKind) {
-                        case "general":
-                            if (amount > 190000 && amount < 200000) {
-                                indicatorValue = RISK;
-                            }
-                            break;
-                        case "special":
-                            if (amount > 950000 && amount < 1000000) {
-                                indicatorValue = RISK;
-                            }
-                            break;
+
+                    if (GENERAL_ENTITY_KINDS.contains(procuringEntityKind)) {
+                        if (amount > 190000 && amount < 200000) {
+                            indicatorValue = RISK;
+                        }
+                    } else if (SPECIAL_ENTITY_KIND.equals(procuringEntityKind)) {
+                        if (amount > 950000 && amount < 1000000) {
+                            indicatorValue = RISK;
+                        }
                     }
+
                     if (indicatorValue == 1) {
                         Optional<NearThresholdOneSupplier> nearThreshold = nearThresholdOneSupplierRepository
                                 .findFirstByProcuringEntityAndSupplierIn(procuringEntity, suppliers);

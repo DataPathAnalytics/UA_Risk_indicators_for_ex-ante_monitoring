@@ -27,6 +27,15 @@ public class Risk_2_6_Extractor extends BaseExtractor {
     Закупівля близька до порогу визначенного Законом (роботи, 10% нижче 1.5М)
     */
 
+    private final static List<String> GENERAL_ENTITY_KINDS = Arrays.asList(
+            "general",
+            "authority",
+            "central",
+            "social"
+    );
+
+    private final static String SPECIAL_ENTITY_KIND = "special";
+
     private final String INDICATOR_CODE = "RISK2-6";
     private boolean indicatorsResolverAvailable;
     private NearThresholdRepository nearThresholdRepository;
@@ -109,18 +118,15 @@ public class Risk_2_6_Extractor extends BaseExtractor {
                         indicatorValue = NOT_RISK;
                     } else {
                         amount += nearThreshold.get().getAmount();
-                        switch (procuringEntityKind) {
 
-                            case "general":
-                                if (amount >= 1500000) {
-                                    indicatorValue = RISK;
-                                }
-                                break;
-                            case "special":
-                                if (amount >= 5000000) {
-                                    indicatorValue = RISK;
-                                }
-                                break;
+                        if (GENERAL_ENTITY_KINDS.contains(procuringEntityKind)) {
+                            if (amount >= 1500000) {
+                                indicatorValue = RISK;
+                            }
+                        } else if (SPECIAL_ENTITY_KIND.equals(procuringEntityKind)) {
+                            if (amount >= 5000000) {
+                                indicatorValue = RISK;
+                            }
                         }
                     }
                 }

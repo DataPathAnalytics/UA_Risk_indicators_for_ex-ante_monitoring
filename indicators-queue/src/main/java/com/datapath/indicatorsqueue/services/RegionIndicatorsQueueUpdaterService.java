@@ -5,12 +5,16 @@ import com.datapath.indicatorsqueue.comparators.RegionIndicatorsMapByMateriality
 import com.datapath.indicatorsqueue.domain.audit.Monitoring;
 import com.datapath.indicatorsqueue.mappers.TenderScoreMapper;
 import com.datapath.indicatorsqueue.services.audit.ProzorroAuditService;
+import com.datapath.persistence.entities.Contract;
 import com.datapath.persistence.entities.Tender;
+import com.datapath.persistence.entities.TenderContract;
 import com.datapath.persistence.entities.queue.IndicatorsQueueHistory;
 import com.datapath.persistence.entities.queue.RegionIndicatorsQueueItem;
 import com.datapath.persistence.repositories.TenderRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.time.ZoneId;
@@ -18,9 +22,17 @@ import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+import static java.util.stream.Collectors.toList;
+import static org.springframework.util.CollectionUtils.isEmpty;
+
 @Slf4j
 @Service
 public class RegionIndicatorsQueueUpdaterService {
+
+    private List<String> ignoredMethodTypes;
+    private List<String> ignoredContractStatuses;
 
     private Long queueId;
     private ZonedDateTime dateCreated;
@@ -34,13 +46,15 @@ public class RegionIndicatorsQueueUpdaterService {
 
     private List<String> unresolvedRegions;
 
-    public RegionIndicatorsQueueUpdaterService(IndicatorsQueueHistoryService indicatorsQueueHistoryService,
+    public RegionIndicatorsQueueUpdaterService(@Value("${queue.ignore.method-type}") String ignoreMethodTypes,
+                                               @Value("${queue.ignore.contract-statuses}") String ignoreContractStatuses,
+                                               IndicatorsQueueHistoryService indicatorsQueueHistoryService,
                                                TenderRateService tenderRateService,
                                                RegionIndicatorsQueueItemService regionIndicatorsQueueItemService,
                                                IndicatorsQueueRegionProvider indicatorsQueueRegionProvider,
                                                IndicatorsQueueConfigurationProvider configProvider,
-                                               ProzorroAuditService auditService, TenderRepository tenderRepository) {
-
+                                               ProzorroAuditService auditService,
+                                               TenderRepository tenderRepository) {
         this.indicatorsQueueHistoryService = indicatorsQueueHistoryService;
         this.tenderRateService = tenderRateService;
         this.regionIndicatorsQueueItemService = regionIndicatorsQueueItemService;
@@ -49,6 +63,8 @@ public class RegionIndicatorsQueueUpdaterService {
         this.auditService = auditService;
         this.tenderRepository = tenderRepository;
         this.unresolvedRegions = new ArrayList<>();
+        this.ignoredMethodTypes = Arrays.asList(ignoreMethodTypes.split(","));
+        this.ignoredContractStatuses = Arrays.asList(ignoreContractStatuses.split(","));
     }
 
     public ZonedDateTime getDateCreated() {
@@ -59,32 +75,44 @@ public class RegionIndicatorsQueueUpdaterService {
         return this.queueId;
     }
 
+    @Transactional
     public void updateIndicatorsQueue() {
         configProvider.init();
         log.info("Updating region queue items starts");
 
         List<RegionIndicatorsQueueItem> indicatorsQueue = getIndicatorsQueue();
 
-        indicatorsQueue = indicatorsQueue.parallelStream().filter(item -> {
-            try {
-                Tender tender = tenderRepository.findFirstByOuterId(item.getTenderOuterId());
-                if (tender.getTvTenderCPV().startsWith("6611")) {
-                    log.info("Tender with outer Id {} skipped due to finance category", item.getTenderId());
-                    return false;
-                } else {
-                    return true;
-                }
-            } catch (Exception e) {
-                log.error(e.getMessage(), e);
-                return true;
-            }
-        }).collect(Collectors.toList());
+        Map<String, String> tenderOuterIdMethodType = new HashMap<>();
+
+        indicatorsQueue = indicatorsQueue.stream()
+                .filter(item -> {
+                    Tender tender = tenderRepository.findFirstByOuterId(item.getTenderOuterId());
+
+                    if (isNull(tender)) return false;
+
+                    try {
+                        log.info("Processing tender {}", tender.getOuterId());
+
+                        if (tender.getTvTenderCPV().startsWith("6611")) {
+                            log.info("Tender with outer Id {} skipped due to finance category", item.getTenderId());
+                            return false;
+                        } else if (!hasNoTerminatedContract(tender)) {
+                            return false;
+                        }
+                        tenderOuterIdMethodType.put(tender.getOuterId(), tender.getProcurementMethodType());
+                        return true;
+                    } catch (Exception e) {
+                        log.error(e.getMessage(), e);
+                        tenderOuterIdMethodType.put(tender.getOuterId(), tender.getProcurementMethodType());
+                        return true;
+                    }
+                }).collect(toList());
 
         mapQueueItemsRegion(indicatorsQueue);
 
         Map<String, List<RegionIndicatorsQueueItem>> indicatorsByRegion = groupIndicatorsByRegion(indicatorsQueue);
 
-        indicatorsByRegion.forEach((s, regionIndicatorsQueueItems) -> categorizeIndicatorsQueueItems(regionIndicatorsQueueItems));
+        indicatorsByRegion.forEach((s, regionIndicatorsQueueItems) -> categorizeIndicatorsQueueItems(regionIndicatorsQueueItems, tenderOuterIdMethodType));
 
         List<RegionIndicatorsQueueItem> allIndicatorsQueue = new ArrayList<>();
 
@@ -107,6 +135,25 @@ public class RegionIndicatorsQueueUpdaterService {
         dateCreated = savedHistory.getDateCreated();
 
         log.info("Save indicator history {}", savedHistory);
+    }
+
+    private boolean hasNoTerminatedContract(Tender tender) {
+        if (isEmpty(tender.getTenderContracts())) {
+            return true;
+        }
+
+        List<Contract> contracts = tender.getTenderContracts()
+                .stream()
+                .filter(c -> nonNull(c.getContract()))
+                .map(TenderContract::getContract)
+                .collect(toList());
+
+        if (isEmpty(contracts)) {
+            return true;
+        }
+
+        return contracts.stream()
+                .anyMatch(c -> !ignoredContractStatuses.contains(c.getStatus()));
     }
 
     private List<RegionIndicatorsQueueItem> getIndicatorsQueue() {
@@ -136,7 +183,7 @@ public class RegionIndicatorsQueueUpdaterService {
         });
     }
 
-    private List<RegionIndicatorsQueueItem> categorizeIndicatorsQueueItems(List<RegionIndicatorsQueueItem> items) {
+    private void categorizeIndicatorsQueueItems(List<RegionIndicatorsQueueItem> items, Map<String, String> tenderOuterIdMethodType) {
         Comparator<RegionIndicatorsQueueItem> scoreComparator = Comparator.comparing(
                 RegionIndicatorsQueueItem::getMaterialityScore);
 
@@ -166,6 +213,10 @@ public class RegionIndicatorsQueueUpdaterService {
 
         int lowIndex = 0;
         for (RegionIndicatorsQueueItem item : low) {
+            if (hasIgnoreMethodType(tenderOuterIdMethodType.get(item.getTenderOuterId()))) {
+                item.setTopRisk(false);
+                continue;
+            }
             item.setTopRisk(lowIndex <= maxLowIndex);
             if (lowIndex <= maxLowIndex) {
                 item.setRiskStage("Materiality score");
@@ -178,6 +229,10 @@ public class RegionIndicatorsQueueUpdaterService {
 
         int mediumIndex = 0;
         for (RegionIndicatorsQueueItem item : medium) {
+            if (hasIgnoreMethodType(tenderOuterIdMethodType.get(item.getTenderOuterId()))) {
+                item.setTopRisk(false);
+                continue;
+            }
             item.setTopRisk(mediumIndex <= maxMediumIndex);
             if (mediumIndex <= maxMediumIndex) {
                 item.setRiskStage("Materiality score");
@@ -190,6 +245,10 @@ public class RegionIndicatorsQueueUpdaterService {
 
         int highIndex = 0;
         for (RegionIndicatorsQueueItem item : high) {
+            if (hasIgnoreMethodType(tenderOuterIdMethodType.get(item.getTenderOuterId()))) {
+                item.setTopRisk(false);
+                continue;
+            }
             item.setTopRisk(highIndex <= maxHighIndex);
             if (highIndex <= maxHighIndex) {
                 item.setRiskStage("Materiality score");
@@ -197,20 +256,16 @@ public class RegionIndicatorsQueueUpdaterService {
             highIndex++;
         }
 
-        enableTopRiskByProcuringEntity(low, configProvider.getLowTopRiskProcuringEntityPercentage());
-        enableTopRiskByProcuringEntity(medium, configProvider.getMediumTopRiskProcuringEntityPercentage());
-        enableTopRiskByProcuringEntity(high, configProvider.getHighTopRiskProcuringEntityPercentage());
-
-        List<RegionIndicatorsQueueItem> allItems = new ArrayList<>();
-
-        allItems.addAll(low);
-        allItems.addAll(medium);
-        allItems.addAll(high);
-
-        return allItems;
+        enableTopRiskByProcuringEntity(low, configProvider.getLowTopRiskProcuringEntityPercentage(), tenderOuterIdMethodType);
+        enableTopRiskByProcuringEntity(medium, configProvider.getMediumTopRiskProcuringEntityPercentage(), tenderOuterIdMethodType);
+        enableTopRiskByProcuringEntity(high, configProvider.getHighTopRiskProcuringEntityPercentage(), tenderOuterIdMethodType);
     }
 
-    private void enableTopRiskByProcuringEntity(List<RegionIndicatorsQueueItem> items, Double percents) {
+    private boolean hasIgnoreMethodType(String methodType) {
+        return ignoredMethodTypes.contains(methodType);
+    }
+
+    private void enableTopRiskByProcuringEntity(List<RegionIndicatorsQueueItem> items, Double percents, Map<String, String> tenderOuterIdMethodType) {
         Map<String, List<RegionIndicatorsQueueItem>> itemsByProcuringEntity = new HashMap<>();
         items.stream().filter(item -> !item.getTopRisk()).forEach(item -> {
             List<RegionIndicatorsQueueItem> existingItems = itemsByProcuringEntity.get(item.getProcuringEntityId());
@@ -233,11 +288,21 @@ public class RegionIndicatorsQueueUpdaterService {
 
         int index = 0;
         for (Map.Entry<String, List<RegionIndicatorsQueueItem>> entry : sortedItemsByProcuringEntity.entrySet()) {
+            long noIgnoredByMethodTypeTendersCount = entry.getValue()
+                    .stream()
+                    .filter(i -> !hasIgnoreMethodType(tenderOuterIdMethodType.get(i.getTenderOuterId())))
+                    .count();
+
+            if (noIgnoredByMethodTypeTendersCount == 0) continue;
+
             if (index <= maxIndex) {
-                entry.getValue().forEach(item -> {
-                    item.setTopRisk(true);
-                    item.setRiskStage("Procuring entity");
-                });
+                entry.getValue()
+                        .stream()
+                        .filter(i -> !hasIgnoreMethodType(tenderOuterIdMethodType.get(i.getTenderOuterId())))
+                        .forEach(i -> {
+                            i.setTopRisk(true);
+                            i.setRiskStage("Procuring entity");
+                        });
             }
             index++;
         }

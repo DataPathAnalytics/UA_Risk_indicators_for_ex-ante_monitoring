@@ -21,10 +21,6 @@ import static java.util.Objects.nonNull;
 @Slf4j
 public class Risk_1_14_Extractor extends BaseExtractor {
 
-    /*
-    Порушення терміну оприлюднення тендерної документації (понад «європейські пороги»)
-    */
-
     private final String INDICATOR_CODE = "RISK1-14";
 
     private boolean indicatorsResolverAvailable;

@@ -8,14 +8,22 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static java.util.stream.Collectors.toList;
+import static org.apache.commons.lang3.StringUtils.contains;
 
 @Slf4j
 @Component
 public class TenderDataValidator {
 
+    private static final String TEST_TITLE = "ТЕСТУВАННЯ";
+    private static final String PRICE_QUOTATION = "priceQuotation";
+
     public boolean isValidTender(Tender tender) {
+
+        if (contains(tender.getTitle(), TEST_TITLE)) return false;
+        if (PRICE_QUOTATION.equalsIgnoreCase(tender.getProcurementMethodType())) return false;
 
         boolean procuringEntityIsValid = validateProcuringEntity(tender.getProcuringEntity());
 
@@ -29,12 +37,11 @@ public class TenderDataValidator {
         boolean bidsIsValid = validateBids(tender.getBids());
 
         return Stream.of(
-                new Boolean[]{
-                        procuringEntityIsValid,
-                        suppliersIsValid,
-                        awardsIsValid,
-                        bidsIsValid
-                }).filter(val -> !val).collect(Collectors.toList()).isEmpty();
+                procuringEntityIsValid,
+                suppliersIsValid,
+                awardsIsValid,
+                bidsIsValid
+        ).filter(val -> !val).collect(toList()).isEmpty();
     }
 
     private boolean validateProcuringEntity(ProcuringEntity procuringEntity) {
@@ -54,7 +61,7 @@ public class TenderDataValidator {
                         || !ValidationUtils.validateIdentifierLegalName(supplier.getIdentifierLegalName())
                         || !ValidationUtils.validateTelephone(supplier.getTelephone())
                         || !ValidationUtils.validateEmail(supplier.getEmail()))
-                .collect(Collectors.toList())
+                .collect(toList())
                 .isEmpty();
     }
 
@@ -67,7 +74,7 @@ public class TenderDataValidator {
                         || !ValidationUtils.validateIdentifierScheme(award.getSupplierIdentifierScheme())
                         || !ValidationUtils.validateIdentifierLegalName(award.getSupplierIdentifierScheme())
                         || !ValidationUtils.validateEmail(award.getSupplierEmail()))
-                .collect(Collectors.toList())
+                .collect(toList())
                 .isEmpty();
     }
 
@@ -79,15 +86,7 @@ public class TenderDataValidator {
                 .filter(award -> !ValidationUtils.validateIdentifierId(award.getSupplierIdentifierId())
                         || !ValidationUtils.validateIdentifierScheme(award.getSupplierIdentifierScheme())
                         || !ValidationUtils.validateEmail(award.getSupplierEmail()))
-                .collect(Collectors.toList())
+                .collect(toList())
                 .isEmpty();
-    }
-
-    public boolean isTenderFromFinanceCategory(Tender tender) {
-        if (tender.getTvTenderCPV().startsWith("6611")) {
-            log.trace("Tender {} from category 'Банківські послуги' skipped.", tender.getId());
-            return true;
-        }
-        return false;
     }
 }

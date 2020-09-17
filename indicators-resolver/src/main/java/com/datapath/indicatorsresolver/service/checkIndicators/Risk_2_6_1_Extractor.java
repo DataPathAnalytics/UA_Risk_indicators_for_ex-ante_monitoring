@@ -27,6 +27,15 @@ public class Risk_2_6_1_Extractor extends BaseExtractor {
     Повторювана закупівля у одного постачальника близька до порогу визначенного Законом (роботи, 10% нижче 1.5М)
     */
 
+    private final static List<String> GENERAL_ENTITY_KINDS = Arrays.asList(
+            "general",
+            "authority",
+            "central",
+            "social"
+    );
+
+    private final static String SPECIAL_ENTITY_KIND = "special";
+
     private final String INDICATOR_CODE = "RISK2-6_1";
     private boolean indicatorsResolverAvailable;
     private NearThresholdOneSupplierRepository nearThresholdOneSupplierRepository;
@@ -42,7 +51,7 @@ public class Risk_2_6_1_Extractor extends BaseExtractor {
             indicatorsResolverAvailable = false;
             Indicator indicator = getActiveIndicator(INDICATOR_CODE);
             if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
-                checkRiskDasu12_1Indicator(indicator, dateTime);
+                checkIndicator(indicator, dateTime);
             }
         } catch (Exception ex) {
             log.error(ex.getMessage(), ex);
@@ -63,7 +72,7 @@ public class Risk_2_6_1_Extractor extends BaseExtractor {
                 ZonedDateTime dateTime = isNull(indicator.getLastCheckedDateCreated())
                         ? ZonedDateTime.now(ZoneId.of("UTC")).minus(Period.ofYears(1)).withHour(0)
                         : indicator.getLastCheckedDateCreated();
-                checkRiskDasu12_1Indicator(indicator, dateTime);
+                checkIndicator(indicator, dateTime);
             }
         } catch (Exception ex) {
             log.error(ex.getMessage(), ex);
@@ -72,7 +81,7 @@ public class Risk_2_6_1_Extractor extends BaseExtractor {
         }
     }
 
-    private void checkRiskDasu12_1Indicator(Indicator indicator, ZonedDateTime dateTime) {
+    private void checkIndicator(Indicator indicator, ZonedDateTime dateTime) {
         int size = 100;
         int page = 0;
         while (true) {
@@ -106,18 +115,17 @@ public class Risk_2_6_1_Extractor extends BaseExtractor {
                 if (pendingContractsCount == 0) {
                     indicatorValue = -2;
                 } else {
-                    switch (procuringEntityKind) {
-                        case "general":
-                            if (amount > 1350000 && amount < 1500000) {
-                                indicatorValue = RISK;
-                            }
-                            break;
-                        case "special":
-                            if (amount > 4500000 && amount < 5000000) {
-                                indicatorValue = RISK;
-                            }
-                            break;
+
+                    if (GENERAL_ENTITY_KINDS.contains(procuringEntityKind)) {
+                        if (amount > 1350000 && amount < 1500000) {
+                            indicatorValue = RISK;
+                        }
+                    } else if (SPECIAL_ENTITY_KIND.equals(procuringEntityKind)) {
+                        if (amount > 4500000 && amount < 5000000) {
+                            indicatorValue = RISK;
+                        }
                     }
+
                     if (indicatorValue == 1) {
                         Optional<NearThresholdOneSupplier> nearThreshold = nearThresholdOneSupplierRepository
                                 .findFirstByProcuringEntityAndSupplierIn(procuringEntity, suppliers);

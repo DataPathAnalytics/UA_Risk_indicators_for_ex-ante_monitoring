@@ -28,6 +28,15 @@ public class Risk_2_5_Extractor extends BaseExtractor {
      з однаковим кодом предмета закупівлі (cpv), загальна сума яких дорівнює або перевищує 200 тис грн
     */
 
+    private final static List<String> GENERAL_ENTITY_KINDS = Arrays.asList(
+            "general",
+            "authority",
+            "central",
+            "social"
+    );
+
+    private final static String SPECIAL_ENTITY_KIND = "special";
+
     private final String INDICATOR_CODE = "RISK2-5";
     private boolean indicatorsResolverAvailable;
     private NearThresholdRepository nearThresholdRepository;
@@ -107,17 +116,15 @@ public class Risk_2_5_Extractor extends BaseExtractor {
                         indicatorValue = NOT_RISK;
                     } else {
                         amount += nearThreshold.get().getAmount();
-                        switch (procuringEntityKind) {
-                            case "general":
-                                if (amount >= 200000) {
-                                    indicatorValue = 1;
-                                }
-                                break;
-                            case "special":
-                                if (amount >= 1000000) {
-                                    indicatorValue = 1;
-                                }
-                                break;
+
+                        if (GENERAL_ENTITY_KINDS.contains(procuringEntityKind)) {
+                            if (amount >= 200000) {
+                                indicatorValue = 1;
+                            }
+                        } else if (SPECIAL_ENTITY_KIND.equals(procuringEntityKind)) {
+                            if (amount >= 1000000) {
+                                indicatorValue = 1;
+                            }
                         }
                     }
                 }

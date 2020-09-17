@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalTime;
 import java.time.Period;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -809,32 +810,33 @@ public class IndicatorsResolver {
             LOG.info("Daily recalculation started");
 
             tendersIndicatorsResolverAvailable = false;
-            ZonedDateTime yearAgo = ZonedDateTime.now().minus(Period.ofYears(1)).withHour(0);
+            ZonedDateTime monthAgo = ZonedDateTime.now().minus(Period.ofMonths(1)).with(LocalTime.now());
             ZonedDateTime twoDaysAgo = ZonedDateTime.now().minus(Period.ofDays(2)).withHour(0);
 
             List<Runnable> indicatorsToCheck = new ArrayList<>();
-            indicatorsToCheck.add(() -> checkRisk_1_1(yearAgo));
-            indicatorsToCheck.add(() -> checkRisk_1_4_1(yearAgo));
-            indicatorsToCheck.add(() -> checkRisk_1_4_2(yearAgo));
-            indicatorsToCheck.add(() -> checkRisk_1_8_2(yearAgo));
-            indicatorsToCheck.add(() -> checkRisk_1_14(yearAgo));
-            indicatorsToCheck.add(() -> checkRisk_2_1(yearAgo));
-            indicatorsToCheck.add(() -> checkRisk_2_2(yearAgo));
-            indicatorsToCheck.add(() -> checkRisk_2_2_1(yearAgo));
-            indicatorsToCheck.add(() -> checkRisk_2_2_2(yearAgo));
-            indicatorsToCheck.add(() -> checkRisk_2_5(yearAgo));
-            indicatorsToCheck.add(() -> checkRisk_2_5_1(yearAgo));
+            indicatorsToCheck.add(() -> checkRisk_1_1(monthAgo));
+            indicatorsToCheck.add(() -> checkRisk_1_4_1(monthAgo));
+            indicatorsToCheck.add(() -> checkRisk_1_4_2(monthAgo));
+            indicatorsToCheck.add(() -> checkRisk_1_8_2(monthAgo));
+            indicatorsToCheck.add(() -> checkRisk_1_14(monthAgo));
+            indicatorsToCheck.add(() -> checkRisk_2_1(monthAgo));
+            indicatorsToCheck.add(() -> checkRisk_2_2(monthAgo));
+            indicatorsToCheck.add(() -> checkRisk_2_2_1(monthAgo));
+            indicatorsToCheck.add(() -> checkRisk_2_2_2(monthAgo));
+            indicatorsToCheck.add(() -> checkRisk_2_5(monthAgo));
+            indicatorsToCheck.add(() -> checkRisk_2_5_1(monthAgo));
+            indicatorsToCheck.add(() -> checkRisk_2_6(monthAgo));
+            indicatorsToCheck.add(() -> checkRisk_2_6_1(monthAgo));
+            indicatorsToCheck.add(() -> checkRisk_2_9(monthAgo));
+            indicatorsToCheck.add(() -> checkRisk_2_15(monthAgo));
+            indicatorsToCheck.add(() -> checkRisk_2_15_1(monthAgo));
+            indicatorsToCheck.add(() -> checkRisk_2_16_2(monthAgo));
+            indicatorsToCheck.add(() -> checkRisk_2_17_2(monthAgo));
+
             indicatorsToCheck.add(() -> checkRisk_2_5_2(twoDaysAgo));
             indicatorsToCheck.add(() -> checkRisk_2_5_3(twoDaysAgo));
-            indicatorsToCheck.add(() -> checkRisk_2_6(yearAgo));
-            indicatorsToCheck.add(() -> checkRisk_2_6_1(yearAgo));
             indicatorsToCheck.add(() -> checkRisk_2_6_2(twoDaysAgo));
             indicatorsToCheck.add(() -> checkRisk_2_6_3(twoDaysAgo));
-            indicatorsToCheck.add(() -> checkRisk_2_9(yearAgo));
-            indicatorsToCheck.add(() -> checkRisk_2_15(yearAgo));
-            indicatorsToCheck.add(() -> checkRisk_2_15_1(yearAgo));
-            indicatorsToCheck.add(() -> checkRisk_2_16_2(yearAgo));
-            indicatorsToCheck.add(() -> checkRisk_2_17_2(yearAgo));
 
             ExecutorService executor = Executors.newFixedThreadPool(50);
             indicatorsToCheck.forEach(executor::execute);

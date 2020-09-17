@@ -44,8 +44,8 @@ public class NearThresholdOneSupplierProvider {
             "              (procurement_method_type = 'reporting' AND DATE_PART('day', current_date-tender.date) > 3)) " +
             "                    AND substr(tender.tender_id, 4, 4) = to_char(CURRENT_DATE, 'YYYY')\n" +
             "                    AND award.status = 'active') a\n" +
-            "       WHERE (procuring_entity_kind = 'general' AND tv_subject_of_procurement LIKE '45%' AND amount > 1350000 AND amount < 1500000)\n" +
-            "             OR (procuring_entity_kind = 'general' AND tv_subject_of_procurement NOT LIKE '45%' AND amount > 190000 AND amount < 200000)\n" +
+            "       WHERE (procuring_entity_kind IN ('general','authority','central','social') AND tv_subject_of_procurement LIKE '45%' AND amount > 1350000 AND amount < 1500000)\n" +
+            "             OR (procuring_entity_kind IN ('general','authority','central','social') AND tv_subject_of_procurement NOT LIKE '45%' AND amount > 190000 AND amount < 200000)\n" +
             "             OR (procuring_entity_kind = 'special' AND tv_subject_of_procurement LIKE '45%' AND amount > 4500000 AND amount < 5000000)\n" +
             "             OR (procuring_entity_kind = 'special' AND tv_subject_of_procurement NOT LIKE '45%' AND amount > 950000 AND amount < 1000000)\n" +
             "       GROUP BY procuring_entity, supplier\n" +

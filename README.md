@@ -1,4 +1,30 @@
 Release notes
+#### Version 1.4.0
+
+Changed an algorithm to indicate tender cpv parent
+
+Ignore handling tenders where title contains '`Тестування`'
+
+Changed risk procedure priority
+
+Added new rule to exclude tenders from queue
+
+Changed tenders ranking by risk level in procedure priority
+
+Changed a formula to get exchange rate in indicator handlers  
+
+Changed nightly recalculation interval from 1 year to 1 month
+
+Ignored tenders with procurementMethodType equal `priceQuotation`
+
+Handling new procuring entity kinds
+
+To migrate to new version add new keys to `application.properties`
+
+`queue.ignore.contract-statuses=terminated`
+
+`queue.ignore.method-type=reporting,belowThreshold `
+
 #### Version 1.3.0
 
 Removed email reporting part on failed loading after logging was reworked within past release.

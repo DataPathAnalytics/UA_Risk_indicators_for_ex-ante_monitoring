@@ -57,105 +57,98 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
     @Query(value = "SELECT t.outerId, t.dateModified from Tender t where t.outerId in ?1")
     List<Object[]> findAllOuterIdsAndDateModifiedByOuterIdIn(List<String> outerIds);
 
-    @Query(value = "Select t.outerId, amount from Tender t " +
-            "where t.status not in ?1 " +
-            "and t.procurementMethodType in ('aboveThresholdUA', 'aboveThresholdEU', 'belowThreshold') " +
-            "and t.procuringEntityKind in ('general', 'special')" +
-            "and amount is not null order by amount")
-    List<Object> findTendersWithAmountByExcludingStatus(List<String> statuses);
-
-    @Query(value = "Select t.outer_id, amount, tender_id from tender t " +
-            "where t.status not in ?1 " +
-            "and t.outer_id = ANY (SELECT regexp_split_to_table(?2, ',')) " +
-            "and amount is not null order by amount", nativeQuery = true)
+    @Query(value = "SELECT t.outer_id, amount, tender_id FROM tender t " +
+            "WHERE t.status NOT IN ?1 " +
+            "AND t.outer_id = ANY (SELECT regexp_split_to_table(?2, ',')) " +
+            "AND amount IS NOT NULL ORDER BY amount", nativeQuery = true)
     List<Object> findTendersWithAmountByTendersExcludingStatus(List<String> statuses, String tenderIds);
 
     @Query(value = "" +
-            "select tenderid,\n" +
+            "SELECT tenderid,\n" +
             "       lotid,\n" +
             "       award_date,\n" +
-            "       case\n" +
-            "         when procurement_method_type = 'aboveThresholdUA' then min_bid_doc_date\n" +
-            "         else least(min_bid_doc_date, min_eligibility_doc_date, min_financial_doc_date) end min_date,\n" +
+            "       CASE\n" +
+            "         WHEN procurement_method_type = 'aboveThresholdUA' THEN min_bid_doc_date\n" +
+            "         ELSE least(min_bid_doc_date, min_eligibility_doc_date, min_financial_doc_date) END min_date,\n" +
             "       docs\n" +
-            "from (select tenderid,\n" +
+            "FROM (SELECT tenderid,\n" +
             "             lotid,\n" +
             "             procurement_method_type,\n" +
             "             award.date                               award_date,\n" +
-            "             case\n" +
-            "               when procurement_method_type = 'aboveThresholdUA'\n" +
-            "                       then count(distinct case\n" +
-            "                                             when document.document_of <> 'lot' or document.related_item = lotid\n" +
-            "                                                     then document.id end)\n" +
-            "               else greatest(count(distinct case\n" +
-            "                                               when document.document_of <> 'lot' or document.related_item = lotid\n" +
-            "                                                       then document.id end),\n" +
-            "                              count(distinct case\n" +
-            "                                               when eligibility_document.document_of <> 'lot' or\n" +
+            "             CASE\n" +
+            "               WHEN procurement_method_type = 'aboveThresholdUA'\n" +
+            "                       THEN count(DISTINCT CASE\n" +
+            "                                             WHEN document.document_of <> 'lot' OR document.related_item = lotid\n" +
+            "                                                     THEN document.id END)\n" +
+            "               ELSE greatest(count(DISTINCT CASE\n" +
+            "                                               WHEN document.document_of <> 'lot' OR document.related_item = lotid\n" +
+            "                                                       THEN document.id END),\n" +
+            "                              count(DISTINCT CASE\n" +
+            "                                               WHEN eligibility_document.document_of <> 'lot' OR\n" +
             "                                                    eligibility_document.related_item = lotid\n" +
-            "                                                       then eligibility_document.id end),\n" +
-            "                              count(distinct case\n" +
-            "                                               when financial_document.document_of <> 'lot' or\n" +
+            "                                                       THEN eligibility_document.id END),\n" +
+            "                              count(DISTINCT CASE\n" +
+            "                                               WHEN financial_document.document_of <> 'lot' OR\n" +
             "                                                    financial_document.related_item = lotid\n" +
-            "                                                       then financial_document.id end))\n" +
-            "                 end                                  docs,\n" +
+            "                                                       THEN financial_document.id END))\n" +
+            "                 END                                  docs,\n" +
             "             min(document.date_published)             min_bid_doc_date,\n" +
             "             min(eligibility_document.date_published) min_eligibility_doc_date,\n" +
             "             min(financial_document.date_published)   min_financial_doc_date\n" +
             "\n" +
-            "      from (select tenderid, lotid, procurement_method_type, unnest(active_award_id) :::: BIGINT award_id\n" +
-            "            from (select tenderid,\n" +
+            "      FROM (SELECT tenderid, lotid, procurement_method_type, unnest(active_award_id) :::: BIGINT award_id\n" +
+            "            FROM (SELECT tenderid,\n" +
             "                         procurement_method_type,\n" +
             "                         lotid,\n" +
-            "                         case\n" +
-            "                           when active_award_id is null\n" +
-            "                                   then '{null}'\n" +
-            "                           else string_to_array(active_award_id, ',') end active_award_id\n" +
-            "                  from (select tender.outer_id                                                                      tenderid,\n" +
+            "                         CASE\n" +
+            "                           WHEN active_award_id IS NULL\n" +
+            "                                   THEN '{null}'\n" +
+            "                           ELSE string_to_array(active_award_id, ',') END active_award_id\n" +
+            "                  FROM (SELECT tender.outer_id                                                                      tenderid,\n" +
             "                               tender.procurement_method_type,\n" +
             "                               lot.outer_id                                                                         lotid,\n" +
             "                               string_agg(\n" +
-            "                                 case when award.status = 'active' then award.id :::: TEXT end,\n" +
+            "                                 CASE WHEN award.status = 'active' THEN award.id :::: TEXT END,\n" +
             "                                 ',')                                                                               active_award_id\n" +
-            "                        from tender\n" +
-            "                               join lot on tender.id = lot.tender_id\n" +
-            "                               join award on lot.id = award.lot_id\n" +
+            "                        FROM tender\n" +
+            "                               JOIN lot ON tender.id = lot.tender_id\n" +
+            "                               JOIN award ON lot.id = award.lot_id\n" +
             "                                WHERE tender.outer_id = ANY (SELECT regexp_split_to_table(?1, ','))\n" +
-            "                        group by tender.outer_id,\n" +
+            "                        GROUP BY tender.outer_id,\n" +
             "                                 procurement_method_type,\n" +
             "                                 lot.outer_id) a)b)c\n" +
-            "             left join award on award.id = award_id\n" +
-            "             left join bid on award.bid_id = bid.id\n" +
-            "             left join document on bid.id = document.bid_id\n" +
-            "             left join eligibility_document on bid.id = eligibility_document.bid_id\n" +
-            "             left join financial_document on bid.id = financial_document.bid_id\n" +
-            "      group by tenderid, lotid, award.date, procurement_method_type) a\n", nativeQuery = true)
+            "             LEFT JOIN award ON award.id = award_id\n" +
+            "             LEFT JOIN bid ON award.bid_id = bid.id\n" +
+            "             LEFT JOIN document ON bid.id = document.bid_id\n" +
+            "             LEFT JOIN eligibility_document ON bid.id = eligibility_document.bid_id\n" +
+            "             LEFT JOIN financial_document ON bid.id = financial_document.bid_id\n" +
+            "      GROUP BY tenderid, lotid, award.date, procurement_method_type) a\n", nativeQuery = true)
     List<Object[]> getTenderLotWithActiveAwardDateMinDocumentPublishedAndDocsCount(String tenderIds);
 
 
-    @Query(value = "select tenderid,\n" +
+    @Query(value = "SELECT tenderid,\n" +
             "       lotid,\n" +
             "       unsuccessful_awards,\n" +
             "       bid.supplier_identifier_scheme,\n" +
             "       bid.supplier_identifier_id,\n" +
-            "       (select cpv_count\n" +
-            "        from supplier_for_pe_with_3cpv\n" +
-            "        where supplier_for_pe_with_3cpv.supplier = concat(bid.supplier_identifier_scheme, '-', bid.supplier_identifier_id)\n" +
-            "          and procuring_entity = a.procuring_entity)\n" +
-            "from (select tender.outer_id                                                           tenderid,\n" +
+            "       (SELECT cpv_count\n" +
+            "        FROM supplier_for_pe_with_3cpv\n" +
+            "        WHERE supplier_for_pe_with_3cpv.supplier = concat(bid.supplier_identifier_scheme, '-', bid.supplier_identifier_id)\n" +
+            "          AND procuring_entity = a.procuring_entity)\n" +
+            "FROM (SELECT tender.outer_id                                                           tenderid,\n" +
             "             tender.tv_procuring_entity                                                procuring_entity,\n" +
             "             lot.outer_id                                                              lotid,\n" +
-            "             count(distinct case when award.status = 'unsuccessful' then award.id end) unsuccessful_awards,\n" +
-            "             string_agg(distinct case when award.status = 'active' then award.id :::: text end,\n" +
+            "             count(DISTINCT CASE WHEN award.status = 'unsuccessful' THEN award.id END) unsuccessful_awards,\n" +
+            "             string_agg(DISTINCT CASE WHEN award.status = 'active' THEN award.id :::: TEXT END,\n" +
             "                                 ',')                                                  active_awards\n" +
-            "      from tender\n" +
-            "             join lot on tender.id = lot.tender_id\n" +
-            "             join award on lot.id = award.lot_id\n" +
-            "             join bid on award.bid_id = bid.id\n" +
-            "      where tender.outer_id = ANY (SELECT regexp_split_to_table(?1, ','))\n" +
-            "      group by tender.outer_id, lot.outer_id, tender.tv_procuring_entity) a\n" +
-            "       left join award on active_awards :::: BIGINT = award.id\n" +
-            "       left join bid on award.bid_id = bid.id", nativeQuery = true)
+            "      FROM tender\n" +
+            "             JOIN lot ON tender.id = lot.tender_id\n" +
+            "             JOIN award ON lot.id = award.lot_id\n" +
+            "             JOIN bid ON award.bid_id = bid.id\n" +
+            "      WHERE tender.outer_id = ANY (SELECT regexp_split_to_table(?1, ','))\n" +
+            "      GROUP BY tender.outer_id, lot.outer_id, tender.tv_procuring_entity) a\n" +
+            "       LEFT JOIN award ON active_awards :::: BIGINT = award.id\n" +
+            "       LEFT JOIN bid ON award.bid_id = bid.id", nativeQuery = true)
     List<Object[]> findTendersWithLotUnsuccessfulAwardsSupplierAndCpvCount(String tenderIds);
 
     @Query(value = "SELECT\n" +
@@ -257,9 +250,9 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "  ELSE TRUE END  contains_cpv,\n" +
             "  CASE WHEN tender.amount >=\n" +
             "            CASE\n" +
-            "            WHEN procuring_entity_kind = 'general' AND tv_tender_cpv NOT LIKE '45%'\n" +
+            "            WHEN procuring_entity_kind IN ('general','authority','central','social') AND tv_tender_cpv NOT LIKE '45%'\n" +
             "              THEN 200000\n" +
-            "            WHEN procuring_entity_kind = 'general' AND tv_tender_cpv LIKE '45%'\n" +
+            "            WHEN procuring_entity_kind IN ('general','authority','central','social') AND tv_tender_cpv LIKE '45%'\n" +
             "              THEN 1500000\n" +
             "            WHEN procuring_entity_kind = 'special' AND tv_tender_cpv NOT LIKE '45%'\n" +
             "              THEN 1000000\n" +
@@ -272,7 +265,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "    THEN TRUE\n" +
             "  ELSE FALSE END\n" +
             "    monopoly_supplier,\n" +
-            "  case WHEN cause = 'noCompetition' THEN true ELSE FALSE END noCompetition\n" +
+            "  CASE WHEN cause = 'noCompetition' THEN TRUE ELSE FALSE END noCompetition\n" +
             "FROM tender\n" +
             "  LEFT JOIN tender_contract ON tender.id = tender_contract.tender_id\n" +
             "  LEFT JOIN procured_cpv ON procured_cpv.cpv = ANY (tv_tender_cpv_list)\n" +
@@ -340,7 +333,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "             (SELECT a FROM unnest(buyersupplier) a WHERE a IS NOT NULL) buyersupplies\n" +
             "      FROM (SELECT tenderid,\n" +
             "                   lotid,\n" +
-            "                   sum(case when awardstatus = 'unsuccessful' then 1 else 0 end) unsuccessfulaward,\n" +
+            "                   sum(CASE WHEN awardstatus = 'unsuccessful' THEN 1 ELSE 0 END) unsuccessfulaward,\n" +
             "                   array_agg(buyer_supplier)                                     buyersupplier\n" +
             "            FROM (SELECT tender.outer_id                                                           tenderid,\n" +
             "                         lot.outer_id                                                              lotid,\n" +
@@ -379,7 +372,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             ") a", nativeQuery = true)
     List<Object[]> getTenderBiddersWithPendingContracts(String tenderIds);
 
-    @Query(value = "SELECT outer_id, start_date, procuring_entity_kind, currency, amount\n" +
+    @Query(value = "SELECT outer_id, COALESCE(start_date,date), procuring_entity_kind, currency, amount,date \n" +
             "FROM tender t\n" +
             "WHERE tv_tender_cpv NOT LIKE '45%' AND \n" +
             "      tv_tender_cpv NOT LIKE  '6611%' AND \n" +
@@ -404,7 +397,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "    (SELECT rate\n" +
             "     FROM exchange_rate\n" +
             "     WHERE currency = exchange_rate.code AND\n" +
-            "           concat(substr(to_char(t.start_date, 'YYYY-MM-DD HH:mm:ss.zzzzzz'), 0, 11),' 00:00:00.000000')\n" +
+            "           concat(substr(to_char(COALESCE(t.start_date,t.date), 'YYYY-MM-DD HH:mm:ss.zzzzzz'), 0, 11),' 00:00:00.000000')\n" +
             "           :::: DATE = exchange_rate.date)\n" +
             "    END amount, tv_subject_of_procurement \n" +
             "FROM tender t\n" +
@@ -430,41 +423,49 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
                                                               Pageable pageable);
 
     @Query(value = "" +
-            "SELECT\n" +
-            "  outer_id,\n" +
-            "  tv_procuring_entity,\n" +
-            "  procuring_entity_kind,\n" +
-            "  suppliers,\n" +
-            "  CASE WHEN currency = 'UAH'\n" +
-            "    THEN amount\n" +
-            "  ELSE CASE WHEN rate IS NOT NULL\n" +
-            "    THEN amount * rate\n" +
-            "       ELSE NULL END END\n" +
+            "SELECT" +
+            " outer_id,\n" +
+            "       tv_procuring_entity,\n" +
+            "       procuring_entity_kind,\n" +
+            "       suppliers,\n" +
+            "       CASE\n" +
+            "           WHEN currency = 'UAH'\n" +
+            "               THEN amount\n" +
+            "           ELSE CASE\n" +
+            "                    WHEN rate IS NOT NULL\n" +
+            "                        THEN amount * rate\n" +
+            "                    ELSE NULL END END\n" +
             "FROM (\n" +
-            "       SELECT\n" +
-            "         tender.outer_id,\n" +
-            "         string_agg(DISTINCT CASE WHEN award.status = 'active' THEN concat(award.supplier_identifier_scheme, '-', award.supplier_identifier_id) END, ',') suppliers,\n" +
-            "         tender.currency,\n" +
-            "         tender.amount,\n" +
-            "         tv_procuring_entity, procuring_entity_kind ,\n" +
-            "         CASE WHEN  tender.currency <> 'UAH' THEN (SELECT rate\n" +
-            "                                                   FROM exchange_rate\n" +
-            "                                                   WHERE tender.currency = exchange_rate.code AND\n" +
-            "                                                         concat(substr(tender.tender_id, 4, 10), ' 00:00:00.000000')\n" +
-            "           :::: DATE = exchange_rate.date) ELSE NULL END rate,\n" +
-            "         tender.date_created\n" +
+            "         SELECT" +
+            " tender.outer_id,\n" +
+            "                string_agg(DISTINCT CASE\n" +
+            "                                        WHEN award.status = 'active' THEN concat(award.supplier_identifier_scheme, '-',\n" +
+            "                                                                                 award.supplier_identifier_id) END,\n" +
+            "                           ',')                                                                                                        suppliers,\n" +
+            "                tender.currency,\n" +
+            "                tender.amount,\n" +
+            "                tv_procuring_entity,\n" +
+            "                procuring_entity_kind,\n" +
+            "                CASE\n" +
+            "                    WHEN tender.currency <> 'UAH' THEN (SELECT rate\n" +
+            "                                                        FROM exchange_rate\n" +
+            "                                                        WHERE tender.currency = exchange_rate.code\n" +
+            "                                                          AND" +
+            " COALESCE(tender.start_date, tender.date)::::DATE = exchange_rate.date) END rate,\n" +
+            "                " +
+            "tender.date_created\n" +
             "\n" +
-            "       FROM tender\n" +
-            "         LEFT JOIN award ON tender.id = award.tender_id\n" +
-            "       WHERE  tv_tender_cpv NOT LIKE '45%'\n" +
-            "             AND tender.date_created > ?1\n" +
-            "             AND tender.date > now() - INTERVAL '2 day'\n" +
-            "             AND procurement_method_type IN ?3\n" +
-            "             AND tender.procuring_entity_kind IN ?4\n" +
-            "             AND tender.status IN ?2\n" +
-            "       GROUP BY tender.outer_id, tender.currency,\n" +
-            "         tender.amount,\n" +
-            "         tv_procuring_entity, procuring_entity_kind,tender.tender_id,tender.date_created\n" +
+            "         FROM tender\n" +
+            "                  LEFT JOIN award ON tender.id = award.tender_id\n" +
+            "         WHERE tv_tender_cpv NOT LIKE '45%'\n" +
+            "           AND tender.date_created > ?1\n" +
+            "           AND tender.date > now() - INTERVAL '2 day'\n" +
+            "           AND procurement_method_type IN ?3\n" +
+            "           AND tender.procuring_entity_kind IN ?4\n" +
+            "           AND tender.status IN ?2\n" +
+            "         GROUP BY tender.outer_id, tender.currency,\n" +
+            "                  tender.amount,\n" +
+            "                  tv_procuring_entity, procuring_entity_kind, tender.tender_id, tender.date_created,tender.start_date,tender.date\n" +
             "     ) a\n" +
             "ORDER BY date_created", nativeQuery = true)
     List<Object[]> findGoodsServicesProcuringEntityKindAndSupplierAmount(ZonedDateTime date,
@@ -494,8 +495,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "         CASE WHEN  tender.currency <> 'UAH' THEN (SELECT rate\n" +
             "                                                   FROM exchange_rate\n" +
             "                                                   WHERE tender.currency = exchange_rate.code AND\n" +
-            "                                                         concat(substr(tender.tender_id, 4, 10), ' 00:00:00.000000')\n" +
-            "           :::: DATE = exchange_rate.date) ELSE NULL END rate,\n" +
+            "                                                         COALESCE(tender.start_date, tender.date):::: DATE = exchange_rate.date) ELSE NULL END rate,\n" +
             "         tender.date_created\n" +
             "\n" +
             "       FROM tender\n" +
@@ -508,7 +508,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "             AND tender.status IN ?2\n" +
             "       GROUP BY tender.outer_id, tender.currency,\n" +
             "         tender.amount,\n" +
-            "         tv_procuring_entity, procuring_entity_kind,tender.tender_id,tender.date_created\n" +
+            "         tv_procuring_entity, procuring_entity_kind,tender.tender_id,tender.date_created,tender.start_date,tender.date\n" +
             "     ) a\n" +
             "ORDER BY date_created", nativeQuery = true)
     List<Object[]> findWorksProcuringEntityKindAndSupplierAmount(ZonedDateTime date,
@@ -587,8 +587,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "         CASE WHEN  tender.currency <> 'UAH' THEN (SELECT rate\n" +
             "          FROM exchange_rate\n" +
             "          WHERE tender.currency = exchange_rate.code AND\n" +
-            "                concat(substr(to_char(tender.start_date, 'YYYY-MM-DD HH:mm:ss.zzzzzz'), 0, 11), ' 00:00:00.000000')\n" +
-            "                :::: DATE = exchange_rate.date) ELSE NULL END rate,\n" +
+            "                COALESCE(tender.start_date, tender.date)::::DATE = exchange_rate.date) END rate,\n" +
             "         tender.date_created\n" +
             "\n" +
             "       FROM tender\n" +
@@ -600,7 +599,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "             AND procurement_method_type IN ?3\n" +
             "             AND tender.procuring_entity_kind IN ?4\n" +
             "             AND tender.status IN ?2\n" +
-            "       GROUP BY tender.outer_id, tender.date_created, tender.currency, tender.amount, tender.start_date, tv_procuring_entity, procuring_entity_kind \n" +
+            "       GROUP BY tender.outer_id, tender.date_created, tender.currency, tender.amount, tender.start_date, tv_procuring_entity, procuring_entity_kind,start_date,tender.date \n" +
             "     ) a\n" +
             "ORDER BY date_created", nativeQuery = true)
     List<Object[]> findWorksPendingContractsCountProcuringEntityKindAndSupplierAmount(ZonedDateTime date,
@@ -632,8 +631,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "         (SELECT rate\n" +
             "          FROM exchange_rate\n" +
             "          WHERE currency = exchange_rate.code\n" +
-            "                AND concat(substr(to_char(t.start_date, 'YYYY-MM-DD HH:mm:ss.zzzzzz'), 0, 11),\n" +
-            "                           ' 00:00:00.000000') :::: DATE = exchange_rate.date) rate \n" +
+            "                AND COALESCE(t.start_date,t.date)::::DATE = exchange_rate.date) rate \n" +
             "       FROM tender t \n" +
             "       WHERE tv_tender_cpv LIKE '45%'\n" +
             "                  AND t.date_created > ?1\n" +
@@ -652,7 +650,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
 
     @Query(value = "" +
             "SELECT tender.outer_id tender_id, contract.outer_id contract_id, contract.date_signed," +
-            " min(case when contract_change.status = 'active' THEN contract_change.date_signed ELSE null END ), " +
+            " min(CASE WHEN contract_change.status = 'active' THEN contract_change.date_signed ELSE NULL END ), " +
             " count(DISTINCT contract_change.id) contractChanges \n" +
             "FROM tender\n" +
             "  JOIN tender_contract ON tender.id = tender_contract.tender_id\n" +
@@ -671,7 +669,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
                                                                           List<String> procuringEntityKind,
                                                                           Pageable pageable);
 
-    @Query(value = "SELECT outer_id, start_date, procuring_entity_kind, currency, amount\n" +
+    @Query(value = "SELECT outer_id, COALESCE(start_date,date), procuring_entity_kind, currency, amount\n" +
             "FROM tender t\n " +
             "WHERE tv_tender_cpv LIKE '45%' AND \n" +
             "      t.date_created > ?1 AND t.date > now() - INTERVAL '1 year' AND \n" +
@@ -743,7 +741,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "       tender.tv_procuring_entity,\n" +
             "       tender.amount,\n" +
             "       sum(tender_item.quantity),\n" +
-            "       count(distinct case when tender_contract.status = 'pending' then tender_contract.id end)\n" +
+            "       count(DISTINCT CASE WHEN tender_contract.status = 'pending' THEN tender_contract.id END)\n" +
             "FROM unsuccessful_above\n" +
             "       JOIN tender ON tender.tv_procuring_entity = unsuccessful_above.procuring_entity\n" +
             "                             AND unsuccessful_above.tender_cpv = ANY (tender.tv_tender_cpv_list)\n" +
@@ -759,7 +757,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "  AND unsuccessful_above.unsuccessful_above_procedures_count = 2\n" +
             "GROUP BY tender.outer_id, tender.date_created, tender_item.classification_id, " +
             " tender.tv_procuring_entity, tender.amount\n" +
-            "order by tender.date_created", nativeQuery = true)
+            "ORDER BY tender.date_created", nativeQuery = true)
     List<Object[]> findTenderIdPWithPendingContractAndTwiceUnsuccessful(ZonedDateTime date,
                                                                         List<String> procedureStatus,
                                                                         List<String> procedureType,
@@ -780,7 +778,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
 
     @Query(value = "" +
             "SELECT tender.outer_id,\n" +
-            "       count(DISTINCT  (CASE WHEN award.status = 'active' THEN lot.id else null end ))  lot_count,\n" +
+            "       count(DISTINCT  (CASE WHEN award.status = 'active' THEN lot.id ELSE NULL END ))  lot_count,\n" +
             "       count(DISTINCT (CASE WHEN award.status = 'unsuccessful' THEN supplier_id ELSE NULL END)) unseccessfull_supplier_count,\n" +
             "       count(DISTINCT (CASE WHEN award.status = 'active' THEN supplier_id ELSE NULL END)) supplier_count\n" +
             "FROM tender\n" +
@@ -794,7 +792,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
     @Query(value = "SELECT t.outer_id, " +
             "t.currency, " +
             "t.amount, " +
-            "CASE WHEN t.start_date < t.enquiry_start_date THEN t.start_date ELSE t.enquiry_start_date END,  " +
+            "COALESCE(t.start_date, t.date), " +
             "t.date_created " +
             "FROM tender t " +
             "WHERE t.date_created > ?1 AND t.date > now() - INTERVAL '1 year' " +
@@ -813,7 +811,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
     @Query(value = "SELECT t.outer_id, " +
             "t.currency, " +
             "t.amount, " +
-            "CASE WHEN t.start_date < t.enquiry_start_date THEN t.start_date ELSE t.enquiry_start_date END, " +
+            "COALESCE(t.start_date, t.date), " +
             "t.date_created " +
             "FROM tender t " +
             "WHERE t.date_created > ?1 AND t.date > now() - INTERVAL '1 year' " +
@@ -821,7 +819,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "AND t.procurement_method_type IN ?3 " +
             "AND t.procuring_entity_kind IN ?4 " +
             "AND t.tv_subject_of_procurement NOT LIKE '45%' " +
-            "AND (t.start_date::::timestamp::::date <= current_date OR t.enquiry_start_date::::timestamp::::date <= current_date) " +
+            "AND (t.start_date::::TIMESTAMP::::date <= CURRENT_DATE OR t.enquiry_start_date::::TIMESTAMP::::date <= CURRENT_DATE) " +
             "ORDER BY t.date_created", nativeQuery = true)
     List<Object[]> findGoodsServicesTenderIdCurrencyAmountByProcedureStatusAndProcedureType(ZonedDateTime date,
                                                                                             List<String> procedureStatus,
@@ -850,12 +848,12 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "         ELSE NULL END                                         active_award_date,\n" +
             "       tender_contract.status,\n" +
             "       count(DISTINCT CASE\n" +
-            "                        WHEN (document.format <> 'application/pkcs7-signature' or document.format is null)\n" +
+            "                        WHEN (document.format <> 'application/pkcs7-signature' OR document.format IS NULL)\n" +
             "                                THEN document.id END)          tender_docs,\n" +
-            "       count(distinct case\n" +
-            "                        when contract_document.document_of = 'contract' and\n" +
-            "                             (contract_document.format <> 'application/pkcs7-signature' or document.format is null)\n" +
-            "                                then contract_document.id end) contract_docs,\n" +
+            "       count(DISTINCT CASE\n" +
+            "                        WHEN contract_document.document_of = 'contract' AND\n" +
+            "                             (contract_document.format <> 'application/pkcs7-signature' OR document.format IS NULL)\n" +
+            "                                THEN contract_document.id END) contract_docs,\n" +
             "       lotstatus\n" +
             "FROM (SELECT tenderouterid,\n" +
             "             lot_outer_id,\n" +
@@ -878,8 +876,8 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "             LEFT JOIN award ON lotid = award.lot_id) b\n" +
             "       LEFT JOIN tender_contract ON b.award_id = tender_contract.award_id\n" +
             "       LEFT JOIN document ON tender_contract.id = document.contract_id\n" +
-            "       LEFT JOIN contract on tender_contract.id = contract.tender_contract_id\n" +
-            "       left join contract_document on contract.id = contract_document.contract_id\n" +
+            "       LEFT JOIN contract ON tender_contract.id = contract.tender_contract_id\n" +
+            "       LEFT JOIN contract_document ON contract.id = contract_document.contract_id\n" +
             "GROUP BY tenderouterid,\n" +
             "         lot_outer_id,\n" +
             "         complaints_count, active_award_date, tender_contract.status, lotstatus", nativeQuery = true)
@@ -890,7 +888,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "  lotid,\n" +
             "  awardid,\n" +
             "  award.date,\n" +
-            "  sum(CASE WHEN (document.format <> 'application/pkcs7-signature' or document.format is null) AND\n" +
+            "  sum(CASE WHEN (document.format <> 'application/pkcs7-signature' OR document.format IS NULL) AND\n" +
             "                (document.author IS NULL OR document.author <> 'bots')\n" +
             "    THEN 1\n" +
             "      ELSE 0 END) doccount,\n" +
@@ -1008,23 +1006,23 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "                lot_id,\n" +
             "                tender_contract_status,\n" +
             "                aword_date , min_date_modified,\n" +
-            "                case when aword_date is not NULL  AND  min_date_modified is not NULL " +
-            " THEN abs(date_part('day', aword_date::::TIMESTAMP - min_date_modified::::TIMESTAMP)) else null END DAYS\n" +
+            "                CASE WHEN aword_date IS NOT NULL  AND  min_date_modified IS NOT NULL " +
+            " THEN abs(date_part('day', aword_date::::TIMESTAMP - min_date_modified::::TIMESTAMP)) ELSE NULL END DAYS\n" +
             "              FROM (\n" +
             "                     SELECT\n" +
             "                       tender.outer_id                    tender_id,\n" +
             "                       lot.outer_id                       lot_id,\n" +
             "                       tender_contract.status             tender_contract_status,\n" +
             "                       CASE WHEN tender_contract.status = 'active'\n" +
-            "                         THEN (award.date::::timestamp with time zone at time zone 'Europe/Kiev')::::date\n" +
+            "                         THEN (award.date::::TIMESTAMP WITH TIME ZONE AT TIME ZONE 'Europe/Kiev')::::date\n" +
             "                       ELSE NULL END                      aword_date,\n" +
-            "                       (MIN(CASE WHEN (document.format <> 'application/pkcs7-signature' or document.format is null)\n" +
-            "                         THEN document.date_modified END)::::timestamp with time zone at time zone 'Europe/Kiev')::::date min_date_modified\n" +
+            "                       (MIN(CASE WHEN (DOCUMENT.format <> 'application/pkcs7-signature' OR DOCUMENT.format IS NULL)\n" +
+            "                         THEN DOCUMENT.date_modified END)::::TIMESTAMP WITH TIME ZONE AT TIME ZONE 'Europe/Kiev')::::date min_date_modified\n" +
             "                     FROM tender\n" +
             "                       JOIN lot ON tender.id = lot.tender_id\n" +
             "                       JOIN award ON lot.id = award.lot_id\n" +
             "                       JOIN tender_contract ON award.id = tender_contract.award_id\n" +
-            "                       LEFT JOIN document ON tender_contract.id = document.contract_id\n" +
+            "                       LEFT JOIN DOCUMENT ON tender_contract.id = DOCUMENT.contract_id\n" +
             "                     WHERE tender.outer_id = ANY (SELECT regexp_split_to_table(?1, ','))\n" +
             "                     GROUP BY tender.outer_id, lot.outer_id, tender_contract.status, award.date\n" +
             "                   ) a) b\n" +
@@ -1034,8 +1032,8 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
     @Query(value = "SELECT\n" +
             "  tender.outer_id,\n" +
             "  min(CASE WHEN award.status = 'active' THEN award.date ELSE NULL END) min_active_award_date,\n" +
-            "  min(CASE WHEN (document.author is null or document.author <> 'auction') " +
-            " AND (document.format is null or document.format <>'application/pkcs7-signature')" +
+            "  min(CASE WHEN (document.author IS NULL OR document.author <> 'auction') " +
+            " AND (document.format IS NULL OR document.format <>'application/pkcs7-signature')" +
             " THEN  document.date_published ELSE NULL END )\n" +
             "FROM tender\n" +
             "  JOIN award ON tender.id = award.tender_id\n" +
@@ -1047,8 +1045,8 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
     @Query(value = "SELECT\n" +
             "  tender.outer_id,\n" +
             "  tender.award_start_date,\n" +
-            "  min(CASE WHEN ( document.author is null or document.author <> 'auction') " +
-            " AND (document.author is null or document.format <> 'application/pkcs7-signature') \n" +
+            "  min(CASE WHEN ( document.author IS NULL OR document.author <> 'auction') " +
+            " AND (document.author IS NULL OR document.format <> 'application/pkcs7-signature') \n" +
             "    THEN document.date_published\n" +
             "      ELSE NULL END)\n" +
             "FROM tender\n" +
@@ -1058,10 +1056,10 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
     List<Object[]> getTenderWithStartAwardDateAndMinDocDatePublished(String tenderIds);
 
     @Query(value = "SELECT\n" +
-            "  tender.outer_id tender_outer_id, lot.outer_id, sum( CASE  when qualification.status ='unsuccessful' THEN 1 ELSE 0 END )\n" +
+            "  tender.outer_id tender_outer_id, lot.outer_id, sum( CASE  WHEN qualification.status ='unsuccessful' THEN 1 ELSE 0 END )\n" +
             "FROM lot\n" +
             "  LEFT JOIN qualification ON lot.id = qualification.lot_id\n" +
-            "  join tender on lot.tender_id = tender.id\n" +
+            "  JOIN tender ON lot.tender_id = tender.id\n" +
             " WHERE tender.outer_id =  ANY (SELECT regexp_split_to_table(?1, ',')) " +
             "GROUP BY tender.outer_id, lot.outer_id", nativeQuery = true)
     List<Object[]> findTenderLotWithUnsuccessfulQualificationsCountByTenderId(String tenderIds);
@@ -1080,8 +1078,8 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "    tender.amount *\n" +
             "    (SELECT rate\n" +
             "     FROM exchange_rate\n" +
-            "     WHERE currency = exchange_rate.code AND\n" +
-            "           concat(substr(to_char(tender.start_date, 'YYYY-MM-DD HH:mm:ss.zzzzzz'), 0, 11), ' 00:00:00.000000') :::: DATE =\n" +
+            "     WHERE tender.currency = exchange_rate.code AND\n" +
+            "           concat(substr(to_char( COALESCE(tender.start_date,tender.date), 'YYYY-MM-DD HH:mm:ss.zzzzzz'), 0, 11), ' 00:00:00.000000')::::DATE =\n" +
             "           exchange_rate.date)\n" +
             "  END result_amount,\n" +
             "  tender.tv_procuring_entity,\n" +
@@ -1090,7 +1088,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "  LEFT JOIN tender_contract ON tender.id = tender_contract.tender_id\n" +
             "  LEFT JOIN award ON tender.id = award.tender_id\n" +
             "WHERE tender.outer_id = ANY (SELECT regexp_split_to_table(?1, ','))\n" +
-            "GROUP BY tender.outer_id, tender.currency, tender.amount, tender.start_date,\n" +
+            "GROUP BY tender.outer_id, tender.currency, tender.amount, tender.start_date,tender.date," +
             "tender.tv_procuring_entity,\n" +
             "tender.procuring_entity_kind\n", nativeQuery = true)
     List<Object[]> getTenderIdPendingContractsCountProcuringEnrityIdKindSupplierAndAmount(String tenderIds);
@@ -1114,11 +1112,11 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             nativeQuery = true)
     void updateTitleFromTenderData(Long minId, Long maxId);
 
-    @Query(value = "SELECT outer_id, status from Tender where tender.outer_id in ?1", nativeQuery = true)
+    @Query(value = "SELECT outer_id, status FROM Tender WHERE tender.outer_id IN ?1", nativeQuery = true)
     List<Object[]> findTenderOuterIdAndStatusByTendersOuterIdIn(List<String> outerIds);
 
 
-    @Query(value = "select tender.outer_id,\n" +
+    @Query(value = "SELECT tender.outer_id,\n" +
             "       tender.tender_id,\n" +
             "       tender.status,\n" +
             "       tender.procurement_method_type,\n" +
@@ -1132,26 +1130,29 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "       tender.procuring_entity_kind,\n" +
             "       procuring_entity.identifier_legal_name,\n" +
             "       indicators_queue_region.correct_name,\n" +
-            "       (select count(*) > 0\n" +
-            "        from (select * from award\n" +
-            "                              join complaint c2 on award.id = c2.award_id where award.tender_id = tender.id and c2.complaint_type = 'complaint') a), \n" +
+            "       (SELECT count(*) > 0\n" +
+            "        FROM (SELECT * FROM award\n" +
+            "                              JOIN complaint c2 ON award.id = c2.award_id WHERE award.tender_id = tender.id AND c2.complaint_type = 'complaint') a), \n" +
             "       tender.title,\n" +
             "       (SELECT COUNT(*) > 0 FROM complaint WHERE tender_id = tender.id AND complaint_type = 'complaint') has_tender_complaints,\n" +
             "       tender.procurement_method_rationale\n" +
-            "from tender\n" +
-            "       left join procuring_entity on tender.procuring_entity_id = procuring_entity.id\n" +
-            "       left join cpv_catalogue cpv on tender.tv_tender_cpv = cpv.cpv\n" +
-            "       left join cpv_catalogue cpv2 on cpv.cpv2 = cpv2.cpv\n" +
-            "       left join indicators_queue_region on procuring_entity.region = indicators_queue_region.original_name where tender.outer_id = ANY (SELECT regexp_split_to_table(?1, ','))", nativeQuery = true)
+            "FROM tender\n" +
+            "       LEFT JOIN procuring_entity ON tender.procuring_entity_id = procuring_entity.id\n" +
+            "       LEFT JOIN cpv_catalogue cpv ON tender.tv_tender_cpv = cpv.cpv\n" +
+            "       LEFT JOIN cpv_catalogue cpv2 ON cpv.cpv2 = cpv2.cpv\n" +
+            "       LEFT JOIN indicators_queue_region ON procuring_entity.region = indicators_queue_region.original_name WHERE tender.outer_id = ANY (SELECT regexp_split_to_table(?1, ','))", nativeQuery = true)
     List<Object[]> getTendersCommonInfo(String tenderIds);
 
     @Query(value = "SELECT t.*\n" +
             "FROM tender t\n" +
-            "JOIN procuring_entity pe on t.procuring_entity_id = pe.id\n" +
+            "JOIN procuring_entity pe ON t.procuring_entity_id = pe.id\n" +
             "WHERE t.status IN ('active.awarded', 'active.qualification', 'complete')\n" +
             "AND t.procurement_method_type IN ('aboveThresholdEU','aboveThresholdUA')\n" +
-            "AND pe.kind IN ('general', 'special')\n" +
+            "AND pe.kind IN ('general', 'authority', 'central', 'social', 'special')\n" +
             "AND t.date_created > ?1\n" +
             "ORDER BY t.date_created ", nativeQuery = true)
     Page<Tender> getRisk1_8_2Tenders(ZonedDateTime date, Pageable pageable);
+
+    @Query(value = "SELECT outer_id FROM tender WHERE date_modified > ?1 ORDER BY date_modified", nativeQuery = true)
+    Page<String> findAllAfterDateModified(ZonedDateTime since, Pageable pageRequest);
 }
