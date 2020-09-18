@@ -1,4 +1,9 @@
 Release notes
+
+#### Version 1.4.1
+
+Moved calculating transaction variables after tender validation
+
 #### Version 1.4.0
 
 Changed an algorithm to indicate tender cpv parent
