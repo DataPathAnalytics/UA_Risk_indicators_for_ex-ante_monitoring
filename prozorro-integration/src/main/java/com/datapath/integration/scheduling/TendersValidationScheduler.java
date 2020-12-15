@@ -29,7 +29,7 @@ public class TendersValidationScheduler {
         tenderExistenceValidator.validate();
     }
 
-    @Scheduled(cron = "0 0 */6 * * *")
+    @Scheduled(cron = "0 0 6 * * *")
     public void validateTenderUpdates() {
         tenderUpdatesValidator.validate();
     }

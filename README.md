@@ -1,5 +1,9 @@
 Release notes
 
+#### Version 1.4.2
+
+Changed supplier telephone columns from varchar to text type
+
 #### Version 1.4.1
 
 Moved calculating transaction variables after tender validation
