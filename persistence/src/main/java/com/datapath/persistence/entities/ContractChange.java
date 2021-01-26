@@ -9,6 +9,7 @@ import org.hibernate.annotations.TypeDef;
 
 import javax.persistence.*;
 import java.time.ZonedDateTime;
+import java.util.List;
 
 @Data
 @Entity
@@ -30,6 +31,9 @@ public class ContractChange {
     @Column(name = "status")
     private String status;
 
+    @Convert(converter = ZonedDateTimeConverter.class)
+    private ZonedDateTime date;
+
     @Column(name = "date_signed")
     @Convert(converter = ZonedDateTimeConverter.class)
     private ZonedDateTime dateSigned;
@@ -42,4 +46,6 @@ public class ContractChange {
     @Type(type = "array")
     private String[] rationaleTypes;
 
+    @OneToMany(mappedBy = "change", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<ContractDocument> documents;
 }

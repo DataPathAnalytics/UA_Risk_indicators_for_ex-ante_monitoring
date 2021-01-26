@@ -12,7 +12,6 @@ import java.time.ZonedDateTime;
 import java.util.*;
 
 import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
 
 
 @Service
@@ -35,8 +34,8 @@ public class Risk_2_17_2Extractor extends BaseExtractor {
     public void checkIndicator(ZonedDateTime dateTime) {
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 checkRisk_2_17_2Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
@@ -53,8 +52,8 @@ public class Risk_2_17_2Extractor extends BaseExtractor {
         }
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 ZonedDateTime dateTime = isNull(indicator.getDateChecked())
                         ? ZonedDateTime.now(ZoneId.of("UTC")).minus(Period.ofYears(1)).withHour(0)
                         : indicator.getLastCheckedDateCreated();
@@ -69,17 +68,14 @@ public class Risk_2_17_2Extractor extends BaseExtractor {
 
 
     private void checkRisk_2_17_2Indicator(Indicator indicator, ZonedDateTime dateTime) {
-        int size = 100;
-        int page = 0;
-
+        log.info("{} indicator started", INDICATOR_CODE);
         while (true) {
 
             List<String> tenders = findTenders(
                     dateTime,
                     Arrays.asList(indicator.getProcedureStatuses()),
                     Arrays.asList(indicator.getProcedureTypes()),
-                    Arrays.asList(indicator.getProcuringEntityKind()),
-                    page, size);
+                    Arrays.asList(indicator.getProcuringEntityKind()));
 
             if (tenders.isEmpty()) {
                 break;
@@ -98,6 +94,9 @@ public class Risk_2_17_2Extractor extends BaseExtractor {
 
             tendersWithLotUnsuccessfulAwardsSupplierAndCpvCount.forEach(tenderItem -> {
                 String tenderId = tenderItem[0].toString();
+
+                log.info("Process tender {}", tenderId);
+
                 String lotId = tenderItem[1].toString();
                 int unsuccessfulAwards = Integer.parseInt(tenderItem[2].toString());
                 String supplierScheme = isNull(tenderItem[3]) ? null : tenderItem[3].toString();
@@ -105,9 +104,9 @@ public class Risk_2_17_2Extractor extends BaseExtractor {
                 Integer cpvCount = isNull(tenderItem[5]) ? null : Integer.parseInt(tenderItem[5].toString());
 
                 int indicatorValue;
-                if (unsuccessfulAwards == 0 || isNull(supplierId)) indicatorValue = -2;
-                else if (!supplierScheme.equals("UA-EDR") || supplierId.length() != 10) indicatorValue = 0;
-                else indicatorValue = isNull(cpvCount) || cpvCount < 3 ? 0 : 1;
+                if (unsuccessfulAwards == 0 || isNull(supplierId)) indicatorValue = CONDITIONS_NOT_MET;
+                else if (!supplierScheme.equals("UA-EDR") || supplierId.length() != 10) indicatorValue = NOT_RISK;
+                else indicatorValue = isNull(cpvCount) || cpvCount < 3 ? NOT_RISK : RISK;
 
                 if (!resultMap.containsKey(tenderId)) {
                     resultMap.put(tenderId, new HashMap<>());
@@ -142,6 +141,7 @@ public class Risk_2_17_2Extractor extends BaseExtractor {
         indicator.setDateChecked(now);
         indicatorRepository.save(indicator);
 
+        log.info("{} indicator finished", INDICATOR_CODE);
     }
 
 }

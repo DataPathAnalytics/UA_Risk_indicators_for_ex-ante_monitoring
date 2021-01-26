@@ -56,8 +56,8 @@ public class Indicator {
     @Column
     private String risk;
 
-    @Column(name = "active")
-    private Boolean isActive;
+    @Column
+    private boolean active;
 
     @Column(name = "last_checked_date_created")
     @Convert(converter = ZonedDateTimeConverter.class)
@@ -69,4 +69,10 @@ public class Indicator {
 
     @Column(name = "checking_frequency")
     private Integer checkingFrequency;
+
+    @Column(name = "base_question", columnDefinition = "text")
+    private String baseQuestion;
+
+    @Column(name = "algorithm_description", columnDefinition = "text")
+    private String algorithmDescription;
 }

@@ -48,7 +48,7 @@ public class TenderService implements EntityService<Tender> {
     }
 
     public Tender findLastModifiedEntry() {
-        return repository.findFirstBySourceOrderByDateModifiedDesc(EntitySource.TENDERING.toString());
+        return repository.findFirstBySourceAndDateModifiedIsNotNullOrderByDateModifiedDesc(EntitySource.TENDERING.toString());
     }
 
     public Tender findByOuterId(String outerId) {
@@ -57,10 +57,6 @@ public class TenderService implements EntityService<Tender> {
 
     public void removeByDate(ZonedDateTime date) {
         repository.deleteAllByDateBefore(date);
-    }
-
-    public boolean newestVersionExists(String outerId, ZonedDateTime dateModified) {
-        return repository.existsByOuterIdAndDateModifiedAfter(outerId, dateModified);
     }
 
     public List<String> getExistingTenderOuterIdsByOuterIds(List<String> outerIds) {

@@ -31,7 +31,7 @@ public class Supplier {
     @Column(name = "email")
     private String email;
 
-    @Column(name = "telephone")
+    @Column(name = "telephone", length = 2500)
     private String telephone;
 
     @OneToMany(mappedBy = "supplier")

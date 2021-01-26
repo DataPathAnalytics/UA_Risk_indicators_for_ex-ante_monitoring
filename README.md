@@ -1,5 +1,9 @@
 Release notes
 
+#### Version 2.0.0
+
+Added new indicators
+
 #### Version 1.4.2
 
 Changed supplier telephone columns from varchar to text type

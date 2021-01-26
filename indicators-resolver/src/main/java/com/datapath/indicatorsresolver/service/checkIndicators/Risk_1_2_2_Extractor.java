@@ -5,7 +5,6 @@ import com.datapath.indicatorsresolver.model.TenderIndicator;
 import com.datapath.persistence.entities.Indicator;
 import com.datapath.persistence.entities.nbu.ExchangeRate;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
@@ -14,6 +13,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
 
+import static com.datapath.indicatorsresolver.IndicatorConstants.UA_ZONE;
 import static com.datapath.persistence.utils.DateUtils.toZonedDateTime;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -37,8 +37,8 @@ public class Risk_1_2_2_Extractor extends BaseExtractor {
     public void checkIndicator(ZonedDateTime dateTime) {
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 checkRisk_1_2_2_Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
@@ -55,8 +55,8 @@ public class Risk_1_2_2_Extractor extends BaseExtractor {
         }
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 ZonedDateTime dateTime = isNull(indicator.getLastCheckedDateCreated())
                         ? ZonedDateTime.now(ZoneId.of("UTC")).minus(Period.ofYears(1)).withHour(0)
                         : indicator.getLastCheckedDateCreated();
@@ -70,16 +70,14 @@ public class Risk_1_2_2_Extractor extends BaseExtractor {
     }
 
     private void checkRisk_1_2_2_Indicator(Indicator indicator, ZonedDateTime dateTime) {
-        int size = 100;
-        int page = 0;
+        log.info("{} indicator started", INDICATOR_CODE);
         while (true) {
 
             List<Object[]> tendersInfo = tenderRepository.findWorkTenderIdCurrencyAmountByProcedureStatusAndProcedureType(
                     dateTime,
                     Arrays.asList(indicator.getProcedureStatuses()),
                     Arrays.asList(indicator.getProcedureTypes()),
-                    Arrays.asList(indicator.getProcuringEntityKind()),
-                    PageRequest.of(page, size));
+                    Arrays.asList(indicator.getProcuringEntityKind()));
 
             if (tendersInfo.isEmpty()) {
                 break;
@@ -91,6 +89,8 @@ public class Risk_1_2_2_Extractor extends BaseExtractor {
             List<TenderIndicator> tenderIndicators = new ArrayList<>();
             for (Object[] tenderData : tendersInfo) {
                 String tenderId = tenderData[0].toString();
+
+                log.info("Process tender {}", tenderId);
 
                 String currency = tenderData[1].toString();
                 Double amount = Double.parseDouble(tenderData[2].toString());
@@ -107,7 +107,7 @@ public class Risk_1_2_2_Extractor extends BaseExtractor {
                         indicatorValue = IMPOSSIBLE_TO_DETECT;
                     } else {
                         ZonedDateTime zonedDateTime = toZonedDateTime(timestampStartDate)
-                                .withZoneSameInstant(ZoneId.of("Europe/Kiev"))
+                                .withZoneSameInstant(UA_ZONE)
                                 .withHour(0)
                                 .withMinute(0)
                                 .withSecond(0)
@@ -153,6 +153,7 @@ public class Risk_1_2_2_Extractor extends BaseExtractor {
         indicator.setDateChecked(now);
         indicatorRepository.save(indicator);
 
+        log.info("{} indicator finished", INDICATOR_CODE);
     }
 
 }

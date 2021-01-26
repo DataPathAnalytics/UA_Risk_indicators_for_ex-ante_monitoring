@@ -14,9 +14,9 @@ public class UnsuccessfulAbove {
     private Integer id;
     @Column(name = "procuring_entity")
     private String procuringEntity;
-    @Column(name = "tender_cpv")
-    private String tenderCpv;
-    @Column(name = "unsuccessful_above_procedures_count")
-    private Integer unsuccessfulAboveProceduresCount;
+    @Column(name = "cpv")
+    private String cpv;
+    @Column(name = "lots_count")
+    private Integer lotsCount;
 
 }

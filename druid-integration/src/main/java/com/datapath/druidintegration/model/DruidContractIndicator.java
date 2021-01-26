@@ -3,8 +3,6 @@ package com.datapath.druidintegration.model;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.util.List;
-
 @Data()
 @EqualsAndHashCode(callSuper = false)
 public class DruidContractIndicator extends DruidIndicator {
@@ -22,6 +20,5 @@ public class DruidContractIndicator extends DruidIndicator {
     private Integer indicatorValue;
     private Long iterationId;
     private Double indicatorImpact;
-    private List<String> lotIds;
 
 }

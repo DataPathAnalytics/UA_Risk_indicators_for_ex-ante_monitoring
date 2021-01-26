@@ -5,6 +5,7 @@ import com.datapath.druidintegration.service.ExtractContractDataService;
 import com.datapath.druidintegration.service.ExtractTenderDataService;
 import com.datapath.druidintegration.service.UploadDataService;
 import com.datapath.indicatorsresolver.model.ContractDimensions;
+import com.datapath.indicatorsresolver.model.ContractIndicator;
 import com.datapath.indicatorsresolver.model.TenderDimensions;
 import com.datapath.indicatorsresolver.model.TenderIndicator;
 import com.datapath.indicatorsresolver.service.DruidIndicatorMapper;
@@ -16,22 +17,22 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.sql.Timestamp;
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 
+import static com.datapath.indicatorsresolver.IndicatorConstants.UA_ZONE;
 import static com.datapath.persistence.utils.DateUtils.toZonedDateTime;
 import static java.util.Objects.isNull;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 
 @Service
@@ -53,10 +54,13 @@ public class BaseExtractor {
     protected final String EUR_CURRENCY = "EUR";
     protected final String UAH_CURRENCY = "UAH";
 
-    protected final Integer RISK = 1;
-    protected final Integer NOT_RISK = 0;
-    protected final Integer IMPOSSIBLE_TO_DETECT = -1;
+    protected static final Integer RISK = 1;
+    protected static final Integer NOT_RISK = 0;
+    protected static final Integer IMPOSSIBLE_TO_DETECT = -1;
+    protected static final Integer CONDITIONS_NOT_MET = -2;
 
+    protected static final List<String> workingDays = Arrays.asList("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY");
+    protected static final List<String> weekEndDays = Arrays.asList("SATURDAY", "SUNDAY");
 
     protected final String COMMA_SEPARATOR = ",";
 
@@ -194,19 +198,48 @@ public class BaseExtractor {
             datesList.addAll(objectMapper.readValue(forObject, List.class));
             datesList.forEach(date -> {
                         LocalDate parse = LocalDate.parse(date.toString(), DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-                        dates.add(ZonedDateTime.of(parse, LocalTime.MIDNIGHT, ZoneId.of("Europe/Kiev")));
+                        dates.add(ZonedDateTime.of(parse, LocalTime.MIDNIGHT, UA_ZONE));
                     }
             );
         } catch (IOException e) {
             e.printStackTrace();
-        } finally {
-            return dates;
         }
+        return dates;
+    }
+
+    public long getDaysBetween(ZonedDateTime startDate, ZonedDateTime endDate) {
+        startDate = toUaMidnight(startDate);
+        endDate = toUaMidnight(endDate);
+        return Duration.between(startDate, endDate).toDays();
+    }
+
+    public int getWorkingDaysBetween(ZonedDateTime startDate, ZonedDateTime endDate) {
+        List<ZonedDateTime> listOfWorkingWeekEnds = getListOfWorkingWeekEnds();
+        List<ZonedDateTime> listOfWeekEnds = getListOfWeekEnds();
+
+        int count = 0;
+
+        startDate = toUaMidnight(startDate).plusDays(1);
+
+        endDate = toUaMidnight(endDate);
+
+        ZonedDateTime current = startDate;
+
+        while (current.isBefore(endDate) || current.equals(endDate)) {
+            String dayName = current.getDayOfWeek().toString();
+            if ((workingDays.contains(dayName) && !listOfWeekEnds.contains(current)) ||
+                    (weekEndDays.contains(dayName) && listOfWorkingWeekEnds.contains(current))) {
+                count++;
+            }
+            current = current.plusDays(1);
+        }
+
+        return count;
     }
 
     protected ZonedDateTime getDateOfCurrentDateMinusNWorkingDays(Integer daysAmount) {
-        Integer count = 0;
-        ZonedDateTime now = ZonedDateTime.now().withZoneSameInstant(ZoneId.of("Europe/Kiev")).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        int count = 0;
+        ZonedDateTime now = ZonedDateTime.now().withZoneSameInstant(UA_ZONE).withHour(0).withMinute(0).withSecond(0).withNano(0);
         List<ZonedDateTime> listOfWorkingWeekEnds = getListOfWorkingWeekEnds();
         List<ZonedDateTime> listOfWeekEnds = getListOfWeekEnds();
         List<String> workingDays = Arrays.asList("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY");
@@ -224,8 +257,8 @@ public class BaseExtractor {
     }
 
     public ZonedDateTime getDateOfDateMinusNWorkingDays(ZonedDateTime date, Integer daysAmount) {
-        Integer count = 0;
-        date = date.withZoneSameInstant(ZoneId.of("Europe/Kiev")).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        int count = 0;
+        date = date.withZoneSameInstant(UA_ZONE).withHour(0).withMinute(0).withSecond(0).withNano(0);
         List<ZonedDateTime> listOfWorkingWeekEnds = getListOfWorkingWeekEnds();
         List<ZonedDateTime> listOfWeekEnds = getListOfWeekEnds();
         List<String> workingDays = Arrays.asList("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY");
@@ -246,27 +279,32 @@ public class BaseExtractor {
     List<String> findTenders(ZonedDateTime date,
                              List<String> procedureStatuses,
                              List<String> procedureTypes,
-                             List<String> procuringEntityKind,
-                             Integer page,
-                             Integer size) {
+                             List<String> procuringEntityKind) {
         if (!procedureStatuses.isEmpty() && !procedureTypes.isEmpty()) {
             return tenderRepository.findTenderIdByProcedureStatusAndProcedureType(date, procedureStatuses,
-                    procedureTypes, procuringEntityKind, PageRequest.of(page, size));
+                    procedureTypes, procuringEntityKind);
         }
         if (!procedureStatuses.isEmpty()) {
             return tenderRepository.findTenderIdByProcedureStatus(date, procedureStatuses,
-                    procuringEntityKind, PageRequest.of(page, size));
+                    procuringEntityKind);
         }
         return tenderRepository.findTenderIdByProcedureType(date, procedureTypes,
-                procuringEntityKind, PageRequest.of(page, size));
+                procuringEntityKind);
     }
 
-    Indicator getActiveIndicator(String indicatorId) {
-        Optional<Indicator> indicatorOptional = indicatorRepository.findFirstByIdAndAndIsActive(indicatorId, true);
-        return indicatorOptional.orElse(null);
+    List<Tender> findTenders(ZonedDateTime dateTime, Indicator indicator) {
+        return tenderRepository.findTenders(dateTime,
+                Arrays.asList(indicator.getProcedureStatuses()),
+                Arrays.asList(indicator.getProcedureTypes()),
+                Arrays.asList(indicator.getProcuringEntityKind()));
     }
 
-    void uploadIndicator(TenderIndicator tenderIndicator) {
+    public Indicator getIndicator(String indicatorId) {
+        return indicatorRepository.findById(indicatorId)
+                .orElseThrow(() -> new RuntimeException("Can't find indicator with id " + indicatorId));
+    }
+
+    public void uploadIndicator(TenderIndicator tenderIndicator) {
         DruidTenderIndicator druidIndicator = druidIndicatorMapper.transformToDruidTenderIndicator(tenderIndicator);
         Long lastIterationForIndicatorValue = extractDataService.findLastIterationForTenderIndicatorsData(Collections.singletonList(druidIndicator));
 
@@ -362,16 +400,16 @@ public class BaseExtractor {
         return result;
     }
 
-    Map<String, TenderDimensions> getTenderDimensionsWithIndicatorLastIteration(List<Tender> tenders, String indicatorId) {
+    public Map<String, TenderDimensions> getTenderDimensionsWithIndicatorLastIteration(List<Tender> tenders, String indicatorId) {
         Map<String, TenderDimensions> tenderDimensions = getTenderDimensionsMap(tenders);
 
-        Set<String> tenderIds = tenders.stream().map(Tender::getOuterId).collect(Collectors.toSet());
+        Set<String> tenderIds = tenders.stream().map(Tender::getOuterId).collect(toSet());
         Map<String, Long> maxTenderIndicatorIteration = extractDataService.getMaxTenderIndicatorIteration(tenderIds, indicatorId);
         tenderDimensions.forEach((key, value) -> value.setDruidCheckIteration(maxTenderIndicatorIteration.get(key)));
         return tenderDimensions;
     }
 
-    private Map<String, TenderDimensions> getTenderDimensionsMap(List<Tender> tenders) {
+    protected Map<String, TenderDimensions> getTenderDimensionsMap(List<Tender> tenders) {
 
         Map<String, TenderDimensions> result = new HashMap<>();
         tenders.forEach(tender -> {
@@ -392,11 +430,11 @@ public class BaseExtractor {
     }
 
 
-    Map<String, ContractDimensions> getContractDimensionsWithIndicatorLastIteration(Set<String> contractIds, String indicatorId) {
+    public Map<String, ContractDimensions> getContractDimensionsWithIndicatorLastIteration(Set<String> contractIds, String indicatorId) {
         Map<String, ContractDimensions> contractDimensions = getContractDimensionsMap(contractIds);
-        contractDimensions.entrySet().stream().forEach(item -> {
-            Long maxIteration = extractContractDataService.getMaxIndicatorIteration(item.getKey(), indicatorId);
-            item.getValue().setDruidCheckIteration(maxIteration);
+        contractDimensions.forEach((key, value) -> {
+            Long maxIteration = extractContractDataService.getMaxIndicatorIteration(key, indicatorId);
+            value.setDruidCheckIteration(maxIteration);
         });
         return contractDimensions;
     }
@@ -426,10 +464,43 @@ public class BaseExtractor {
                 .max(Comparator.comparing(item -> item)).orElse(defaultDateTime);
     }
 
-    ZonedDateTime getMaxContractDateCreated(Map<String, ContractDimensions> dimensionsMap, ZonedDateTime defaultDateTime) {
+    public ZonedDateTime getMaxTenderDateCreated(List<TenderIndicator> tenderIndicators, ZonedDateTime defaultDateTime) {
+        return tenderIndicators
+                .stream()
+                .map(TenderIndicator::getTenderDimensions)
+                .map(TenderDimensions::getDateCreated)
+                .max(Comparator.comparing(item -> item)).orElse(defaultDateTime);
+    }
+
+    public ZonedDateTime getMaxContractDateCreated(Map<String, ContractDimensions> dimensionsMap, ZonedDateTime defaultDateTime) {
         return dimensionsMap.values()
                 .stream().map(ContractDimensions::getDateCreated)
                 .max(Comparator.comparing(item -> item)).orElse(defaultDateTime);
     }
 
+    public ZonedDateTime getMaxContractDateCreated(List<ContractIndicator> contractIndicators, ZonedDateTime defaultDateTime) {
+        return contractIndicators
+                .stream()
+                .map(ContractIndicator::getContractDimensions)
+                .map(ContractDimensions::getDateCreated)
+                .max(Comparator.comparing(item -> item)).orElse(defaultDateTime);
+    }
+
+    List<LocalDate> dateBetween(LocalDate start, LocalDate end) {
+        return LongStream.range(start.toEpochDay(), end.toEpochDay()).mapToObj(LocalDate::ofEpochDay).collect(toList());
+    }
+
+    ZonedDateTime toUaMidnight(ZonedDateTime dateTime) {
+        return dateTime.withZoneSameInstant(UA_ZONE).with(LocalTime.MIDNIGHT);
+    }
+
+    public ZonedDateTime getIndicatorLastCheckedDate(Indicator indicator) {
+        return isNull(indicator.getLastCheckedDateCreated())
+                ? ZonedDateTime.now().minus(Period.ofYears(1)).withHour(0)
+                : indicator.getLastCheckedDateCreated();
+    }
+
+    public Set<String> getOuterIds(List<Tender> tenders) {
+        return tenders.stream().map(Tender::getOuterId).collect(toSet());
+    }
 }

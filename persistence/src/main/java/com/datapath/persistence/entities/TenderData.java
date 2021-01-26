@@ -21,7 +21,7 @@ public class TenderData {
     @Type(type = "org.hibernate.type.TextType")
     private String data;
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tender_id")
     private Tender tender;
 }

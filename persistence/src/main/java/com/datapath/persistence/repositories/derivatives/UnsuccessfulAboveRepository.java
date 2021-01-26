@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface UnsuccessfulAboveRepository extends JpaRepository<UnsuccessfulAbove, Integer> {
 
-    @Query(value = "select ua.unsuccessfulAboveProceduresCount from UnsuccessfulAbove ua where ua.procuringEntity=?1 and ua.tenderCpv in ?2")
-    List<Integer> getUnsuccessfulAboveCountByProcuringEntityAndTenderCpv(String procuringEntity, List<String> tenderCpv);
+    @Query(value = "select lotsCount from UnsuccessfulAbove where procuringEntity=?1 and cpv in ?2")
+    List<Integer> getUnsuccessfulAboveCountByProcuringEntityAndCpv(String procuringEntity, List<String> cpv);
 
 }

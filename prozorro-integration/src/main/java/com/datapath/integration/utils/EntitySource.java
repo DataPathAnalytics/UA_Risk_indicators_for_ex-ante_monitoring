@@ -3,7 +3,8 @@ package com.datapath.integration.utils;
 public enum EntitySource {
 
     TENDERING("tendering"),
-    CONTRACTING("contracting");
+    CONTRACTING("contracting"),
+    AGREEMENT("agreement");
 
     private String sourceName;
 

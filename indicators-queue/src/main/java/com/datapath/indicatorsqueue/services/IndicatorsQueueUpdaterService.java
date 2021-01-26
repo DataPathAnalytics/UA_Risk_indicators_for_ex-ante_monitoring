@@ -2,15 +2,14 @@ package com.datapath.indicatorsqueue.services;
 
 import com.datapath.druidintegration.service.TenderRateService;
 import com.datapath.indicatorsqueue.comparators.IndicatorsMapByMaterialityScoreComparator;
-import com.datapath.indicatorsqueue.domain.audit.Monitoring;
 import com.datapath.indicatorsqueue.mappers.TenderScoreMapper;
-import com.datapath.indicatorsqueue.services.audit.ProzorroAuditService;
+import com.datapath.persistence.entities.MonitoringEntity;
 import com.datapath.persistence.entities.queue.IndicatorsQueueHistory;
 import com.datapath.persistence.entities.queue.IndicatorsQueueItem;
+import com.datapath.persistence.repositories.MonitoringRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
@@ -26,19 +25,18 @@ public class IndicatorsQueueUpdaterService {
     private IndicatorsQueueHistoryService indicatorsQueueHistoryService;
     private IndicatorsQueueItemService indicatorsQueueItemService;
     private IndicatorsQueueConfigurationProvider configProvider;
-    private ProzorroAuditService auditService;
+    private MonitoringRepository monitoringRepository;
 
     public IndicatorsQueueUpdaterService(IndicatorsQueueHistoryService indicatorsQueueHistoryService,
                                          TenderRateService tenderRateService,
                                          IndicatorsQueueItemService indicatorsQueueItemService,
                                          IndicatorsQueueConfigurationProvider configProvider,
-                                         ProzorroAuditService auditService) {
-
+                                         MonitoringRepository monitoringRepository) {
         this.indicatorsQueueHistoryService = indicatorsQueueHistoryService;
         this.tenderRateService = tenderRateService;
         this.indicatorsQueueItemService = indicatorsQueueItemService;
         this.configProvider = configProvider;
-        this.auditService = auditService;
+        this.monitoringRepository = monitoringRepository;
     }
 
     public ZonedDateTime getDateCreated() {
@@ -198,8 +196,8 @@ public class IndicatorsQueueUpdaterService {
 
     private void disableTendersOnMonitoring(List<IndicatorsQueueItem> items) {
         try {
-            List<String> activeMonitorings = auditService.getActiveMonitorings().stream()
-                    .map(Monitoring::getId)
+            List<String> activeMonitorings = monitoringRepository.findAllByActiveStatus().stream()
+                    .map(MonitoringEntity::getTenderId)
                     .collect(Collectors.toList());
             items.forEach(item -> {
                 if (activeMonitorings.contains(item.getTenderOuterId())) {
@@ -211,9 +209,6 @@ public class IndicatorsQueueUpdaterService {
                     item.setMonitoring(false);
                 }
             });
-        } catch (IOException e) {
-            e.printStackTrace();
-            log.error("Audit api response can not be parsed.");
         } catch (Exception e) {
             e.printStackTrace();
             log.error("Monitorings loading failed.");

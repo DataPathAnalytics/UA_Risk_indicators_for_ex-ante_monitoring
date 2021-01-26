@@ -83,9 +83,6 @@ public class DruidIndicatorMapper {
         druidIndicator.setIterationId(indicator.getContractDimensions().getDruidCheckIteration() + 1);
         druidIndicator.setStatus(indicator.getContractDimensions().getStatus());
         druidIndicator.setProcedureType(indicator.getContractDimensions().getProcedureType());
-        if (!isNull(indicator.getLots())) {
-            druidIndicator.setLotIds(indicator.getLots());
-        }
         return druidIndicator;
     }
 

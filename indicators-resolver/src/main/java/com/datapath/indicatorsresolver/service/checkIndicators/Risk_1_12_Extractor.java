@@ -12,6 +12,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
 
+import static com.datapath.indicatorsresolver.IndicatorConstants.UA_ZONE;
 import static com.datapath.persistence.utils.DateUtils.toZonedDateTime;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -38,8 +39,8 @@ public class Risk_1_12_Extractor extends BaseExtractor {
     public void checkIndicator(ZonedDateTime dateTime) {
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 checkRisk1_12Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
@@ -56,8 +57,8 @@ public class Risk_1_12_Extractor extends BaseExtractor {
         }
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 ZonedDateTime dateTime = isNull(indicator.getLastCheckedDateCreated())
                         ? ZonedDateTime.now(ZoneId.of("UTC")).minus(Period.ofYears(1)).withHour(0)
                         : indicator.getLastCheckedDateCreated();
@@ -72,16 +73,14 @@ public class Risk_1_12_Extractor extends BaseExtractor {
 
 
     private void checkRisk1_12Indicator(Indicator indicator, ZonedDateTime dateTime) {
-        int size = 100;
-        int page = 0;
+        log.info("{} indicator started", INDICATOR_CODE);
         while (true) {
 
             List<String> tenders = findTenders(
                     dateTime,
                     Arrays.asList(indicator.getProcedureStatuses()),
                     Arrays.asList(indicator.getProcedureTypes()),
-                    Arrays.asList(indicator.getProcuringEntityKind()),
-                    page, size
+                    Arrays.asList(indicator.getProcuringEntityKind())
             );
 
             if (tenders.isEmpty()) {
@@ -106,6 +105,7 @@ public class Risk_1_12_Extractor extends BaseExtractor {
         indicator.setDateChecked(now);
         indicatorRepository.save(indicator);
 
+        log.info("{} indicator finished", INDICATOR_CODE);
     }
 
     private Map<String, TenderIndicator> checkIndicator(List<String> tenderIds, Indicator indicator) {
@@ -137,6 +137,8 @@ public class Risk_1_12_Extractor extends BaseExtractor {
 
         Map<String, TenderIndicator> indicatorsMap = new HashMap<>();
         for (String tenderId : tendersMap.keySet()) {
+            log.info("Process tender {}", tenderId);
+
             TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
 
             Integer indicatorValue = null;
@@ -156,7 +158,7 @@ public class Risk_1_12_Extractor extends BaseExtractor {
                     Integer days = answerInfo[5] == null ? null : ((Double) Double.parseDouble(answerInfo[5].toString())).intValue();
 
                     if (null == questionId || null == days || days < 10) {
-                        questionIndicator = -2;
+                        questionIndicator = CONDITIONS_NOT_MET;
                     } else {
 
                         Timestamp timestampDateAnswered = (Timestamp) answerInfo[2];
@@ -165,7 +167,7 @@ public class Risk_1_12_Extractor extends BaseExtractor {
 
                         if (isNull(timestampDateAnswered) && isNull(answerText)) {
                             ZonedDateTime dateOfCurrentDateMinusNWorkingDays = getDateOfCurrentDateMinusNWorkingDays(4);
-                            questionIndicator = toZonedDateTime(timestampQuestionDate).withZoneSameInstant(ZoneId.of("Europe/Kiev"))
+                            questionIndicator = toZonedDateTime(timestampQuestionDate).withZoneSameInstant(UA_ZONE)
                                     .withHour(0)
                                     .withMinute(0)
                                     .withSecond(0)
@@ -175,7 +177,7 @@ public class Risk_1_12_Extractor extends BaseExtractor {
                                     : NOT_RISK;
                         } else if (nonNull(timestampDateAnswered) && nonNull(answerText)) {
                             ZonedDateTime dateOfCurrentDateMinusNWorkingDays = getDateOfDateMinusNWorkingDays(toZonedDateTime(timestampDateAnswered), 4);
-                            questionIndicator = toZonedDateTime(timestampQuestionDate).withZoneSameInstant(ZoneId.of("Europe/Kiev"))
+                            questionIndicator = toZonedDateTime(timestampQuestionDate).withZoneSameInstant(UA_ZONE)
                                     .withHour(0)
                                     .withMinute(0)
                                     .withSecond(0)
@@ -184,14 +186,14 @@ public class Risk_1_12_Extractor extends BaseExtractor {
                                     ? RISK
                                     : NOT_RISK;
                         } else {
-                            questionIndicator = -2;
+                            questionIndicator = CONDITIONS_NOT_MET;
                         }
                     }
                     if (questionIndicator.equals(RISK)) {
                         indicatorValue = RISK;
                         break;
                     } else {
-                        if (isNull(indicatorValue) || indicatorValue.equals(-2)) {
+                        if (isNull(indicatorValue) || indicatorValue.equals(CONDITIONS_NOT_MET)) {
                             indicatorValue = questionIndicator;
                         }
                     }

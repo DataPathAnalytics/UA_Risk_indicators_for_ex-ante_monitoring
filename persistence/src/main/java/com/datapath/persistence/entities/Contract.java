@@ -8,6 +8,8 @@ import javax.persistence.*;
 import java.time.ZonedDateTime;
 import java.util.List;
 
+import static javax.persistence.FetchType.LAZY;
+
 @Data
 @Entity
 @Table(name = "contract",
@@ -51,9 +53,13 @@ public class Contract {
     @Convert(converter = ZonedDateTimeConverter.class)
     private ZonedDateTime dateSigned;
 
-    @OneToOne(cascade = CascadeType.ALL)
+    @OneToOne(cascade = CascadeType.ALL, fetch = LAZY)
     @JoinColumn(name = "tender_contract_id")
     private TenderContract tenderContract;
+
+    @ManyToOne(fetch = LAZY)
+    @JoinColumn(name = "tender_id")
+    private Tender tender;
 
     @OneToMany(mappedBy = "contract", cascade = CascadeType.ALL)
     private List<ContractChange> changes;
@@ -61,4 +67,38 @@ public class Contract {
     @OneToMany(mappedBy = "contract", cascade = CascadeType.ALL)
     private List<ContractDocument> documents;
 
+    @Column(name = "currency")
+    private String currency;
+
+    @Column(name = "amount_net")
+    private Double amountNet;
+
+    @Column(name = "value_added_tax_included")
+    private Boolean valueAddedTaxIncluded;
+
+    @Column(name = "paid_amount")
+    private Double paidAmount;
+
+    @Column(name = "paid_currency")
+    private String paidCurrency;
+
+    @Column(name = "paid_amount_net")
+    private Double paidAmountNet;
+
+    @Column(name = "paid_value_added_tax_included")
+    private Boolean paidValueAddedTaxIncluded;
+
+    @Column(name = "period_start_date")
+    @Convert(converter = ZonedDateTimeConverter.class)
+    private ZonedDateTime periodStartDate;
+
+    @Column(name = "period_end_date")
+    @Convert(converter = ZonedDateTimeConverter.class)
+    private ZonedDateTime periodEndDate;
+
+    @Column(name = "contract_number", columnDefinition = "text")
+    private String contractNumber;
+
+    @Column(columnDefinition = "text")
+    private String terminationDetails;
 }

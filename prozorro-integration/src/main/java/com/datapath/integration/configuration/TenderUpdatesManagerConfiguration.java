@@ -9,6 +9,7 @@ import java.util.concurrent.Executor;
 @Configuration
 public class TenderUpdatesManagerConfiguration {
 
+    //fixme review because it is not used by async methods
     @Bean
     public Executor asyncMethodExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();

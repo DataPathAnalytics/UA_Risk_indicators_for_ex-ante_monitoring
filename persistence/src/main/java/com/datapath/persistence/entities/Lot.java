@@ -55,4 +55,10 @@ public class Lot {
 
     @OneToMany(mappedBy = "lot")
     private List<Qualification> qualifications;
+
+    @Column(name = "auction_url")
+    private String auctionUrl;
+
+    @OneToMany(mappedBy = "id.lot", cascade = CascadeType.ALL)
+    private List<BidLotAmount> bidLotAmounts;
 }

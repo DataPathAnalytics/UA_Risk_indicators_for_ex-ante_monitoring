@@ -6,7 +6,6 @@ import com.datapath.persistence.repositories.derivatives.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -14,9 +13,6 @@ import java.util.List;
 @Component
 @Slf4j
 public class AnalyticTableService implements InitializingBean {
-
-    @Value("${com.datapath.scheduling.enabled}")
-    private boolean schedulingEnabled;
 
     private MutualParticipationRepository participationRepository;
     private SuppliersSingleBuyerRepository suppliersSingleBuyerRepository;
@@ -29,6 +25,10 @@ public class AnalyticTableService implements InitializingBean {
     private NearThresholdOneSupplierRepository nearThresholdOneSupplierRepository;
     private EDRPOURepository edrpouRepository;
     private SupplierForPEWith3CPVRepository supplierForPEWith3CPVRepository;
+    private Contracts3YearsRepository contracts3YearsRepository;
+    private WinsCountRepository winsCountRepository;
+    private NoNeedRepository noNeedRepository;
+    private NoMoneyRepository noMoneyRepository;
 
     private MutualParticipationProvider participationProvider;
     private SuppliersSingleBuyerProvider suppliersSingleBuyerProvider;
@@ -41,6 +41,50 @@ public class AnalyticTableService implements InitializingBean {
     private NearThresholdOneSupplierProvider nearThresholdOneSupplierProvider;
     private EDRPOUProvider edrpouProvider;
     private SupplierForPEWith3CPVProvider supplierForPEWith3CPVProvider;
+    private Contracts3YearsProvider contracts3YearsProvider;
+    private WinsCountProvider winsCountProvider;
+    private NoNeedProvider noNeedProvider;
+    private NoMoneyProvider noMoneyProvider;
+
+    @Autowired
+    public void setNoMoneyRepository(NoMoneyRepository noMoneyRepository) {
+        this.noMoneyRepository = noMoneyRepository;
+    }
+
+    @Autowired
+    public void setNoMoneyProvider(NoMoneyProvider noMoneyProvider) {
+        this.noMoneyProvider = noMoneyProvider;
+    }
+
+    @Autowired
+    public void setNoNeedRepository(NoNeedRepository noNeedRepository) {
+        this.noNeedRepository = noNeedRepository;
+    }
+
+    @Autowired
+    public void setNoNeedProvider(NoNeedProvider noNeedProvider) {
+        this.noNeedProvider = noNeedProvider;
+    }
+
+    @Autowired
+    public void setContracts3YearsRepository(Contracts3YearsRepository contracts3YearsRepository) {
+        this.contracts3YearsRepository = contracts3YearsRepository;
+    }
+
+    @Autowired
+    public void setWinsCountRepository(WinsCountRepository winsCountRepository) {
+        this.winsCountRepository = winsCountRepository;
+    }
+
+    @Autowired
+    public void setWinsCountProvider(WinsCountProvider winsCountProvider) {
+        this.winsCountProvider = winsCountProvider;
+    }
+
+    @Autowired
+    public void setContracts3YearsProvider(Contracts3YearsProvider contracts3YearsProvider) {
+        this.contracts3YearsProvider = contracts3YearsProvider;
+    }
 
     @Autowired
     public void setParticipationRepository(MutualParticipationRepository participationRepository) {
@@ -155,9 +199,7 @@ public class AnalyticTableService implements InitializingBean {
 
     @Override
     public void afterPropertiesSet() {
-        if (schedulingEnabled) {
-            recalculate();
-        }
+        recalculate();
     }
 
     public void recalculate() {
@@ -226,5 +268,30 @@ public class AnalyticTableService implements InitializingBean {
         supplierForPEWith3CPVRepository.deleteAllInBatch();
         supplierForPEWith3CPVRepository.saveAll(supplierForPEWith3CPVS);
         log.info("SupplierForPEWith3CPV recalculations finish");
+
+        log.info("Contracts3Years recalculations start");
+        List<Contracts3Years> contracts3Years = contracts3YearsProvider.provide();
+        contracts3YearsRepository.deleteAllInBatch();
+        contracts3YearsRepository.saveAll(contracts3Years);
+        log.info("Contracts3Years recalculations finish");
+
+        log.info("WinsCount recalculations start");
+        List<WinsCount> winsCounts = winsCountProvider.provide();
+        winsCounts.forEach(w -> w.setCpvCount(w.getCpvList().split(",").length));
+        winsCountRepository.deleteAllInBatch();
+        winsCountRepository.saveAll(winsCounts);
+        log.info("WinsCount recalculations finish");
+
+        log.info("NoNeed recalculations start");
+        List<NoNeed> noNeeds = noNeedProvider.provide();
+        noNeedRepository.deleteAllInBatch();
+        noNeedRepository.saveAll(noNeeds);
+        log.info("NoNeed recalculations finish");
+
+        log.info("NoMoney recalculations start");
+        List<NoMoney> noMoneyList = noMoneyProvider.provide();
+        noMoneyRepository.deleteAllInBatch();
+        noMoneyRepository.saveAll(noMoneyList);
+        log.info("NoMoney recalculations finish");
     }
 }

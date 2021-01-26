@@ -27,6 +27,7 @@ public class ExchangeRateLoader {
 
     @Value("${nbu.exchange.url}")
     private String apiUrl;
+
     private RestTemplate restTemplate;
 
     public ExchangeRateLoader(RestTemplate restTemplate) {
@@ -41,14 +42,14 @@ public class ExchangeRateLoader {
         builder.queryParam("json");
         URI requestURI = builder.build();
 
-        log.info("Load exchange rate for date {}", date);
+        log.debug("Load exchange rate for date {}", date);
 
         String exchangeRateResponse = restTemplate.getForObject(
                 requestURI, String.class);
 
         List<ExchangeRate> exchangeRates = parseExchangeRateResponse(exchangeRateResponse);
 
-        log.info("Exchange rates size - {}", exchangeRates.size());
+        log.debug("Exchange rates size - {}", exchangeRates.size());
 
         return exchangeRates;
     }

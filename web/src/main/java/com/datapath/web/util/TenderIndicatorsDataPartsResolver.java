@@ -13,6 +13,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.datapath.web.common.IndicatorValue.*;
+import static org.springframework.util.CollectionUtils.isEmpty;
 
 @Data
 public class TenderIndicatorsDataPartsResolver {
@@ -166,7 +167,7 @@ public class TenderIndicatorsDataPartsResolver {
 
             DruidIndicator indicator = filtered.get(0);
 
-            Set<String> lots = new HashSet<>(indicator.getLotIds());
+            Set<String> lots = indicator.getLotIds() == null ? new HashSet<>() : new HashSet<>(indicator.getLotIds());
 
             List<LotIndicatorHistory> history = lotIndicatorHistories.get(key).stream()
                     .filter(lotIndicatorHistory -> lots.contains(lotIndicatorHistory.getLotOuterId()))
@@ -279,17 +280,20 @@ public class TenderIndicatorsDataPartsResolver {
                             .equals(lotIndicatorId))
                     .map(druidIndicator -> {
                         List<LotIndicatorHistory> lotIndicatorHistory = new ArrayList<>();
-                        druidIndicator.getLotIds().forEach(lotId -> {
-                            LotIndicatorHistory history = new LotIndicatorHistory();
-                            history.setIndicatorImpact(druidIndicator.getIndicatorImpact());
-                            history.setLotOuterId(lotId);
-                            history.setStatus(druidIndicator.getTenderStatus());
-                            history.setValue(druidIndicator.getIndicatorValue());
-                            history.setDate(druidIndicator.getDate());
-                            lotIndicatorHistory.add(history);
-                        });
-                        lotIndicatorHistory.sort((o1, o2) ->
-                                o1.getDate().isBefore(o2.getDate()) ? 1 : -1);
+
+                        if (!isEmpty(druidIndicator.getLotIds())) {
+                            druidIndicator.getLotIds().forEach(lotId -> {
+                                LotIndicatorHistory history = new LotIndicatorHistory();
+                                history.setIndicatorImpact(druidIndicator.getIndicatorImpact());
+                                history.setLotOuterId(lotId);
+                                history.setStatus(druidIndicator.getTenderStatus());
+                                history.setValue(druidIndicator.getIndicatorValue());
+                                history.setDate(druidIndicator.getDate());
+                                lotIndicatorHistory.add(history);
+                            });
+                            lotIndicatorHistory.sort((o1, o2) ->
+                                    o1.getDate().isBefore(o2.getDate()) ? 1 : -1);
+                        }
                         return lotIndicatorHistory;
                     }).forEach(historicalIndicators::addAll);
 

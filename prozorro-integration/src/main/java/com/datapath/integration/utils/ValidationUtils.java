@@ -9,7 +9,7 @@ public class ValidationUtils {
     private static final int IDENTIFIER_SCHEME_MAX_LENGTH = 255;
     private static final int IDENTIFIER_LEGAL_NAME_MAX_LENGTH = 2000;
     private static final int EMAIL_MAX_LENGTH = 255;
-    private static final int TELEPHONE_MAX_LENGTH = 255;
+    private static final int TELEPHONE_MAX_LENGTH = 2500;
 
     public static boolean validateIdentifierId(String identifierId) {
         return validateLength(identifierId, IDENTIFIER_ID_MAX_LENGTH);

@@ -16,7 +16,7 @@ import java.util.List;
 @Repository
 public interface TenderRepository extends PagingAndSortingRepository<Tender, Long>, JpaRepository<Tender, Long> {
 
-    Tender findFirstBySourceOrderByDateModifiedDesc(String source);
+    Tender findFirstBySourceAndDateModifiedIsNotNullOrderByDateModifiedDesc(String source);
 
     Tender findFirstByOuterId(String outerId);
 
@@ -27,13 +27,14 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
     @Query(value = "select max(t.dateModified) from Tender t")
     ZonedDateTime findMaxDateModified();
 
+    @Query(value = "select max(t.dateCreated) from Tender t")
+    ZonedDateTime findMaxDateCreated();
+
     void deleteAllByDateBefore(ZonedDateTime date);
 
     @Modifying
     @Transactional
     long deleteAllByOuterId(String outerId);
-
-    boolean existsByOuterIdAndDateModifiedAfter(String outerId, ZonedDateTime dateModified);
 
     @Query(value = "SELECT outer_id, tender_id, date, date_modified, procurement_method_type, status, date_created  FROM tender WHERE outer_id = ANY (SELECT regexp_split_to_table(?1, ','))", nativeQuery = true)
     List<Object[]> findAllByOuterIdIn(String outerIds);
@@ -162,12 +163,11 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "      AND tender.procurement_method_type IN ?3\n" +
             "      AND tender.procuring_entity_kind IN ?4\n" +
             "GROUP BY tender.outer_id, tender.date_created \n" +
-            "ORDER BY tender.date_created", nativeQuery = true)
+            "ORDER BY tender.date_created LIMIT 100", nativeQuery = true)
     List<Object[]> findTendersWithUnuniqueTenderersCount(ZonedDateTime date,
                                                          List<String> procedureStatus,
                                                          List<String> procedureType,
-                                                         List<String> procuringEntityKind,
-                                                         Pageable pageable);
+                                                         List<String> procuringEntityKind);
 
 
     @Query(value = "" +
@@ -183,12 +183,11 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "      AND tender.procurement_method_type IN ?3\n" +
             "      AND tender.procuring_entity_kind IN ?4\n" +
             "GROUP BY tender.outer_id, tender.date_created, tender.tv_tender_cpv_list " +
-            "ORDER BY tender.date_created ", nativeQuery = true)
+            "ORDER BY tender.date_created LIMIT 100", nativeQuery = true)
     List<Object[]> findTendersWithCPVAndPendingContractsCount(ZonedDateTime date,
                                                               List<String> procedureStatus,
                                                               List<String> procedureType,
-                                                              List<String> procuringEntityKind,
-                                                              Pageable pageable);
+                                                              List<String> procuringEntityKind);
 
     @Query(value = "SELECT tender.outer_id, tender.date_created, string_agg(document.format, ',') FROM tender " +
             "LEFT JOIN document ON tender.id = document.tender_id " +
@@ -196,35 +195,71 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "AND tender.procurement_method_type IN ?2 " +
             "AND tender.procuring_entity_kind IN ?3  AND tender.status <> 'cancelled' " +
             "GROUP BY tender.outer_id, tender.date_created " +
-            "ORDER BY tender.date_created", nativeQuery = true)
+            "ORDER BY tender.date_created LIMIT 100", nativeQuery = true)
     List<Object[]> getTendersWithDocumentTypes(ZonedDateTime datetime,
                                                List<String> procedureType,
-                                               List<String> procuringEntityKind,
-                                               Pageable pageable);
+                                               List<String> procuringEntityKind);
 
     @Query(value = "SELECT t.outer_id FROM tender t " +
             "WHERE t.date_created > ?1 AND t.date > now() - INTERVAL '1 year' " +
             "AND t.status IN ?2 " +
             "AND t.procurement_method_type IN ?3 " +
             "AND t.procuring_entity_kind IN ?4 " +
-            "ORDER BY t.date_created", nativeQuery = true)
+            "ORDER BY t.date_created LIMIT 100", nativeQuery = true)
     List<String> findTenderIdByProcedureStatusAndProcedureType(ZonedDateTime date,
                                                                List<String> procedureStatus,
                                                                List<String> procedureType,
-                                                               List<String> procuringEntityKind,
-                                                               Pageable pageable);
+                                                               List<String> procuringEntityKind);
 
     @Query(value = "SELECT t.outer_id FROM tender t " +
             "WHERE t.procurement_method_type IN ?3 " +
             "AND t.status IN ?2 AND t.date_created > ?1 AND t.date > now() - INTERVAL '1 year' " +
             "AND t.procuring_entity_kind IN ?4 " +
             "AND t.tv_subject_of_procurement NOT LIKE '45%'" +
-            "ORDER BY t.date_created", nativeQuery = true)
+            "ORDER BY t.date_created LIMIT 100", nativeQuery = true)
     List<String> findGoodsServicesTenderIdByProcedureStatusAndProcedureType(ZonedDateTime date,
                                                                             List<String> procedureStatus,
                                                                             List<String> procedureType,
-                                                                            List<String> procuringEntityKind,
-                                                                            Pageable pageable);
+                                                                            List<String> procuringEntityKind);
+
+    @Query(value = "SELECT t.outer_id FROM tender t " +
+            "WHERE t.procurement_method_type IN ?3 " +
+            "AND t.status IN ?2 AND t.date_created > ?1 AND t.date > now() - INTERVAL '1 year' " +
+            "AND t.procuring_entity_kind IN ?4 " +
+            "AND t.main_procurement_category IN ('goods','services') " +
+            "AND t.tv_subject_of_procurement NOT LIKE '45%'" +
+            "ORDER BY t.date_created LIMIT 100", nativeQuery = true)
+    List<String> getIndicator2_10TenderData(ZonedDateTime date,
+                                            List<String> procedureStatus,
+                                            List<String> procedureType,
+                                            List<String> procuringEntityKind);
+
+
+    @Query(value = "SELECT t.outer_id FROM tender t " +
+            "WHERE t.procurement_method_type IN ?3 " +
+            "AND t.status IN ?2 " +
+            "AND t.date_created > ?1 " +
+            "AND t.date > now() - INTERVAL '1 year' " +
+            "AND t.procuring_entity_kind IN ?4 " +
+            "AND t.tv_subject_of_procurement NOT LIKE '45%'" +
+            "AND t.main_procurement_category IN ('goods', 'services')" +
+            "ORDER BY t.date_created LIMIT 100", nativeQuery = true)
+    List<String> getIndicator2_4TenderData(ZonedDateTime date,
+                                           List<String> procedureStatus,
+                                           List<String> procedureType,
+                                           List<String> procuringEntityKind);
+
+    @Query(value = "SELECT t.outer_id FROM tender t " +
+            "WHERE t.procurement_method_type IN ?3 " +
+            "AND t.status IN ?2 AND t.date_created > ?1 AND t.date > now() - INTERVAL '1 year' " +
+            "AND t.procuring_entity_kind IN ?4 " +
+            "AND t.tv_subject_of_procurement NOT LIKE '45%'" +
+            "AND t.main_procurement_category IN('goods','services') " +
+            "ORDER BY t.date_created LIMIT 100", nativeQuery = true)
+    List<String> getIndicator1_8TenderData(ZonedDateTime date,
+                                           List<String> procedureStatus,
+                                           List<String> procedureType,
+                                           List<String> procuringEntityKind);
 
     @Query(value = "SELECT t.outer_id FROM tender t " +
             "WHERE t.procurement_method_type IN ?3 " +
@@ -232,12 +267,54 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "AND t.date_created > ?1 AND t.date > now() - INTERVAL '1 year' " +
             "AND t.procuring_entity_kind IN ?4 " +
             "AND t.tv_subject_of_procurement LIKE '45%' " +
-            "ORDER BY t.date_created", nativeQuery = true)
+            "ORDER BY t.date_created LIMIT 100", nativeQuery = true)
     List<String> findWorksTenderIdByProcedureStatusAndProcedureType(ZonedDateTime date,
                                                                     List<String> procedureStatus,
                                                                     List<String> procedureType,
-                                                                    List<String> procuringEntityKind,
-                                                                    Pageable pageable);
+                                                                    List<String> procuringEntityKind);
+
+    @Query(value = "SELECT t.outer_id FROM tender t " +
+            "WHERE t.procurement_method_type IN ?3 " +
+            "AND t.status IN ?2 " +
+            "AND t.date_created > ?1 AND t.date > now() - INTERVAL '1 year' " +
+            "AND t.procuring_entity_kind IN ?4 " +
+            "AND t.tv_subject_of_procurement LIKE '45%' " +
+            "AND t.main_procurement_category IN ('works') " +
+            "ORDER BY t.date_created LIMIT 100", nativeQuery = true)
+    List<String> getIndicator_2_10_1TenderData(ZonedDateTime date,
+                                               List<String> procedureStatus,
+                                               List<String> procedureType,
+                                               List<String> procuringEntityKind);
+
+
+    @Query(value = "SELECT t.outer_id FROM tender t " +
+            "WHERE t.procurement_method_type IN ?3 " +
+            "AND t.status IN ?2 " +
+            "AND t.date_created > ?1 " +
+            "AND t.date > now() - INTERVAL '1 year' " +
+            "AND t.procuring_entity_kind IN ?4 " +
+            "AND t.tv_subject_of_procurement LIKE '45%' " +
+            "AND t.main_procurement_category IN ('works') " +
+            "ORDER BY t.date_created LIMIT 100", nativeQuery = true)
+    List<String> getIndicator2_4_1TenderData(ZonedDateTime date,
+                                             List<String> procedureStatus,
+                                             List<String> procedureType,
+                                             List<String> procuringEntityKind);
+
+
+    @Query(value = "SELECT t.outer_id FROM tender t " +
+            "WHERE t.procurement_method_type IN ?3 " +
+            "AND t.status IN ?2 " +
+            "AND t.date_created > ?1 AND t.date > now() - INTERVAL '1 year' " +
+            "AND t.procuring_entity_kind IN ?4 " +
+            "AND t.tv_subject_of_procurement LIKE '45%' " +
+            "AND t.main_procurement_category IN('works') " +
+            "ORDER BY t.date_created LIMIT 100", nativeQuery = true)
+    List<String> getIndicator1_8_1TenderData(ZonedDateTime date,
+                                             List<String> procedureStatus,
+                                             List<String> procedureType,
+                                             List<String> procuringEntityKind);
+
 
     @Query(value = "" +
             "SELECT\n" +
@@ -278,12 +355,11 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "      AND tender.procuring_entity_kind IN ?4 \n" +
             "GROUP BY tender.outer_id, tv_tender_cpv_list, tender.amount, procuring_entity_kind, tv_tender_cpv, general_special.id,\n" +
             "  procured_cpv.id, date_created, nature_monopoly_procuring_entity.id, general_special.id, tender.cause\n" +
-            "ORDER BY date_created", nativeQuery = true)
+            "ORDER BY date_created LIMIT 100", nativeQuery = true)
     List<Object[]> findTenderIdsWithCPVListWithPendingContractsAndNotMonopolySupplier(ZonedDateTime date,
                                                                                       List<String> procedureStatus,
                                                                                       List<String> procedureType,
-                                                                                      List<String> procuringEntityKind,
-                                                                                      Pageable pageable);
+                                                                                      List<String> procuringEntityKind);
 
     @Query(value = "SELECT\n" +
             "  tenderid,\n" +
@@ -372,7 +448,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             ") a", nativeQuery = true)
     List<Object[]> getTenderBiddersWithPendingContracts(String tenderIds);
 
-    @Query(value = "SELECT outer_id, COALESCE(start_date,date), procuring_entity_kind, currency, amount,date \n" +
+    @Query(value = "SELECT outer_id, start_date, procuring_entity_kind, currency, amount, date\n" +
             "FROM tender t\n" +
             "WHERE tv_tender_cpv NOT LIKE '45%' AND \n" +
             "      tv_tender_cpv NOT LIKE  '6611%' AND \n" +
@@ -382,12 +458,29 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "      t.date_created > ?1 AND t.date > now() - INTERVAL '1 year' AND \n" +
             "      procurement_method_type IN ?3 AND\n" +
             "      t.procuring_entity_kind IN ?4 AND status IN ?2 " +
-            "ORDER BY t.date_created", nativeQuery = true)
+            "ORDER BY t.date_created LIMIT 100", nativeQuery = true)
     List<Object[]> findGoodsServicesTenderIdPAKindAndAmountExceptFinances(ZonedDateTime date,
                                                                           List<String> procedureStatus,
                                                                           List<String> procedureType,
-                                                                          List<String> procuringEntityKind,
-                                                                          Pageable pageable);
+                                                                          List<String> procuringEntityKind);
+
+    @Query(value = "SELECT outer_id, start_date, procuring_entity_kind, currency, amount, date\n" +
+            "FROM tender t\n" +
+            "WHERE tv_tender_cpv NOT LIKE '45%' AND \n" +
+            "      tv_tender_cpv NOT LIKE  '6611%' AND \n" +
+            "      title NOT LIKE  '%кредит%' AND \n" +
+            "      title NOT LIKE '%гарант%' AND \n" +
+            "      title NOT LIKE '%лізинг%' AND \n" +
+            "      t.date_created > ?1 AND t.date > now() - INTERVAL '1 year' AND \n" +
+            "      procurement_method_type IN ?3 AND\n" +
+            "      t.procuring_entity_kind IN ?4 AND status IN ?2 AND" +
+            "      t.main_procurement_category IN('services','goods') " +
+            "ORDER BY t.date_created LIMIT 100", nativeQuery = true)
+    List<Object[]> getIndicator1_9TenderData(ZonedDateTime date,
+                                             List<String> procedureStatus,
+                                             List<String> procedureType,
+                                             List<String> procuringEntityKind);
+
 
     @Query(value = "SELECT outer_id, tv_procuring_entity, procuring_entity_kind,  \n" +
             "  CASE WHEN currency = 'UAH'\n" +
@@ -397,7 +490,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "    (SELECT rate\n" +
             "     FROM exchange_rate\n" +
             "     WHERE currency = exchange_rate.code AND\n" +
-            "           concat(substr(to_char(COALESCE(t.start_date,t.date), 'YYYY-MM-DD HH:mm:ss.zzzzzz'), 0, 11),' 00:00:00.000000')\n" +
+            "           concat(substr(to_char(t.start_date, 'YYYY-MM-DD HH:mm:ss.zzzzzz'), 0, 11),' 00:00:00.000000')\n" +
             "           :::: DATE = exchange_rate.date)\n" +
             "    END amount, tv_subject_of_procurement \n" +
             "FROM tender t\n" +
@@ -414,65 +507,39 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "      AND t.date > now() - INTERVAL '1 year'\n" +
             "      AND procurement_method_type IN ?3\n" +
             "      AND t.procuring_entity_kind IN ?4\n" +
-            "      AND status IN ?2\n" +
-            "ORDER BY t.date_created", nativeQuery = true)
+            "      AND status IN ?2\n " +
+            "ORDER BY t.date_created LIMIT 100", nativeQuery = true)
     List<Object[]> findGoodsServicesProcuringEntityKindAmount(ZonedDateTime date,
                                                               List<String> procedureStatus,
                                                               List<String> procedureType,
-                                                              List<String> procuringEntityKind,
-                                                              Pageable pageable);
+                                                              List<String> procuringEntityKind);
 
-    @Query(value = "" +
-            "SELECT" +
-            " outer_id,\n" +
-            "       tv_procuring_entity,\n" +
-            "       procuring_entity_kind,\n" +
-            "       suppliers,\n" +
-            "       CASE\n" +
-            "           WHEN currency = 'UAH'\n" +
-            "               THEN amount\n" +
-            "           ELSE CASE\n" +
-            "                    WHEN rate IS NOT NULL\n" +
-            "                        THEN amount * rate\n" +
-            "                    ELSE NULL END END\n" +
-            "FROM (\n" +
-            "         SELECT" +
-            " tender.outer_id,\n" +
-            "                string_agg(DISTINCT CASE\n" +
-            "                                        WHEN award.status = 'active' THEN concat(award.supplier_identifier_scheme, '-',\n" +
-            "                                                                                 award.supplier_identifier_id) END,\n" +
-            "                           ',')                                                                                                        suppliers,\n" +
-            "                tender.currency,\n" +
-            "                tender.amount,\n" +
-            "                tv_procuring_entity,\n" +
-            "                procuring_entity_kind,\n" +
-            "                CASE\n" +
-            "                    WHEN tender.currency <> 'UAH' THEN (SELECT rate\n" +
-            "                                                        FROM exchange_rate\n" +
-            "                                                        WHERE tender.currency = exchange_rate.code\n" +
-            "                                                          AND" +
-            " COALESCE(tender.start_date, tender.date)::::DATE = exchange_rate.date) END rate,\n" +
-            "                " +
-            "tender.date_created\n" +
-            "\n" +
-            "         FROM tender\n" +
-            "                  LEFT JOIN award ON tender.id = award.tender_id\n" +
-            "         WHERE tv_tender_cpv NOT LIKE '45%'\n" +
-            "           AND tender.date_created > ?1\n" +
-            "           AND tender.date > now() - INTERVAL '2 day'\n" +
-            "           AND procurement_method_type IN ?3\n" +
-            "           AND tender.procuring_entity_kind IN ?4\n" +
-            "           AND tender.status IN ?2\n" +
-            "         GROUP BY tender.outer_id, tender.currency,\n" +
-            "                  tender.amount,\n" +
-            "                  tv_procuring_entity, procuring_entity_kind, tender.tender_id, tender.date_created,tender.start_date,tender.date\n" +
-            "     ) a\n" +
-            "ORDER BY date_created", nativeQuery = true)
-    List<Object[]> findGoodsServicesProcuringEntityKindAndSupplierAmount(ZonedDateTime date,
-                                                                         List<String> procedureStatus,
-                                                                         List<String> procedureType,
-                                                                         List<String> procuringEntityKind,
-                                                                         Pageable pageable);
+    @Query(value = "SELECT outer_id, tv_procuring_entity, procuring_entity_kind,  \n" +
+            "  CASE WHEN currency = 'UAH'\n" +
+            "    THEN amount\n" +
+            "  ELSE\n" +
+            "    amount *\n" +
+            "    (SELECT rate\n" +
+            "     FROM exchange_rate\n" +
+            "     WHERE currency = exchange_rate.code AND\n" +
+            "           concat(substr(to_char(coalesce(t.start_date, t.date), 'YYYY-MM-DD HH:mm:ss.zzzzzz'), 0, 11),' 00:00:00.000000')\n" +
+            "           :::: DATE = exchange_rate.date)\n" +
+            "    END amount, tv_subject_of_procurement \n" +
+            "FROM tender t\n" +
+            "WHERE tv_tender_cpv NOT LIKE '45%'\n" +
+            "      AND tv_tender_cpv NOT LIKE  '6611%'\n" +
+            "      AND title NOT LIKE ANY ('{\"%кредит%\", \"%гарант%\", \"%лізинг%\"}')\n" +
+            "      AND t.date_created > ?1\n" +
+            "      AND t.date > now() - INTERVAL '1 year'\n" +
+            "      AND procurement_method_type IN ?3\n" +
+            "      AND t.procuring_entity_kind IN ?4\n" +
+            "      AND status IN ?2\n " +
+            "       AND t.main_procurement_category IN ('goods','services') \n" +
+            "ORDER BY t.date_created LIMIT 100", nativeQuery = true)
+    List<Object[]> getIndicator2_5_1TenderData(ZonedDateTime date,
+                                               List<String> procedureStatus,
+                                               List<String> procedureType,
+                                               List<String> procuringEntityKind);
 
     @Query(value = "" +
             "SELECT\n" +
@@ -495,7 +562,51 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "         CASE WHEN  tender.currency <> 'UAH' THEN (SELECT rate\n" +
             "                                                   FROM exchange_rate\n" +
             "                                                   WHERE tender.currency = exchange_rate.code AND\n" +
-            "                                                         COALESCE(tender.start_date, tender.date):::: DATE = exchange_rate.date) ELSE NULL END rate,\n" +
+            "                                                         concat(substr(tender.tender_id, 4, 10), ' 00:00:00.000000')\n" +
+            "           :::: DATE = exchange_rate.date) ELSE NULL END rate,\n" +
+            "         tender.date_created\n" +
+            "\n" +
+            "       FROM tender\n" +
+            "         LEFT JOIN award ON tender.id = award.tender_id\n" +
+            "       WHERE  tv_tender_cpv NOT LIKE '45%'\n" +
+            "             AND tender.date_created > ?1\n" +
+            "             AND tender.date > now() - INTERVAL '2 day'\n" +
+            "             AND procurement_method_type IN ?3\n" +
+            "             AND tender.procuring_entity_kind IN ?4\n" +
+            "             AND tender.status IN ?2\n" +
+            "       GROUP BY tender.outer_id, tender.currency,\n" +
+            "         tender.amount,\n" +
+            "         tv_procuring_entity, procuring_entity_kind,tender.tender_id,tender.date_created\n" +
+            "     ) a\n" +
+            "ORDER BY date_created LIMIT 100", nativeQuery = true)
+    List<Object[]> findGoodsServicesProcuringEntityKindAndSupplierAmount(ZonedDateTime date,
+                                                                         List<String> procedureStatus,
+                                                                         List<String> procedureType,
+                                                                         List<String> procuringEntityKind);
+
+    @Query(value = "" +
+            "SELECT\n" +
+            "  outer_id,\n" +
+            "  tv_procuring_entity,\n" +
+            "  procuring_entity_kind,\n" +
+            "  suppliers,\n" +
+            "  CASE WHEN currency = 'UAH'\n" +
+            "    THEN amount\n" +
+            "  ELSE CASE WHEN rate IS NOT NULL\n" +
+            "    THEN amount * rate\n" +
+            "       ELSE NULL END END\n" +
+            "FROM (\n" +
+            "       SELECT\n" +
+            "         tender.outer_id,\n" +
+            "         string_agg(DISTINCT CASE WHEN award.status = 'active' THEN concat(award.supplier_identifier_scheme, '-', award.supplier_identifier_id) END, ',') suppliers,\n" +
+            "         tender.currency,\n" +
+            "         tender.amount,\n" +
+            "         tv_procuring_entity, procuring_entity_kind ,\n" +
+            "         CASE WHEN  tender.currency <> 'UAH' THEN (SELECT rate\n" +
+            "                                                   FROM exchange_rate\n" +
+            "                                                   WHERE tender.currency = exchange_rate.code AND\n" +
+            "                                                         concat(substr(tender.tender_id, 4, 10), ' 00:00:00.000000')\n" +
+            "           :::: DATE = exchange_rate.date) ELSE NULL END rate,\n" +
             "         tender.date_created\n" +
             "\n" +
             "       FROM tender\n" +
@@ -508,14 +619,13 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "             AND tender.status IN ?2\n" +
             "       GROUP BY tender.outer_id, tender.currency,\n" +
             "         tender.amount,\n" +
-            "         tv_procuring_entity, procuring_entity_kind,tender.tender_id,tender.date_created,tender.start_date,tender.date\n" +
+            "         tv_procuring_entity, procuring_entity_kind,tender.tender_id,tender.date_created\n" +
             "     ) a\n" +
-            "ORDER BY date_created", nativeQuery = true)
+            "ORDER BY date_created LIMIT 100", nativeQuery = true)
     List<Object[]> findWorksProcuringEntityKindAndSupplierAmount(ZonedDateTime date,
                                                                  List<String> procedureStatus,
                                                                  List<String> procedureType,
-                                                                 List<String> procuringEntityKind,
-                                                                 Pageable pageable);
+                                                                 List<String> procuringEntityKind);
 
     @Query(value = "" +
             "SELECT\n" +
@@ -587,7 +697,8 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "         CASE WHEN  tender.currency <> 'UAH' THEN (SELECT rate\n" +
             "          FROM exchange_rate\n" +
             "          WHERE tender.currency = exchange_rate.code AND\n" +
-            "                COALESCE(tender.start_date, tender.date)::::DATE = exchange_rate.date) END rate,\n" +
+            "                concat(substr(to_char(tender.start_date, 'YYYY-MM-DD HH:mm:ss.zzzzzz'), 0, 11), ' 00:00:00.000000')\n" +
+            "                :::: DATE = exchange_rate.date) ELSE NULL END rate,\n" +
             "         tender.date_created\n" +
             "\n" +
             "       FROM tender\n" +
@@ -599,14 +710,13 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "             AND procurement_method_type IN ?3\n" +
             "             AND tender.procuring_entity_kind IN ?4\n" +
             "             AND tender.status IN ?2\n" +
-            "       GROUP BY tender.outer_id, tender.date_created, tender.currency, tender.amount, tender.start_date, tv_procuring_entity, procuring_entity_kind,start_date,tender.date \n" +
+            "       GROUP BY tender.outer_id, tender.date_created, tender.currency, tender.amount, tender.start_date, tv_procuring_entity, procuring_entity_kind \n" +
             "     ) a\n" +
-            "ORDER BY date_created", nativeQuery = true)
+            "ORDER BY date_created LIMIT 100", nativeQuery = true)
     List<Object[]> findWorksPendingContractsCountProcuringEntityKindAndSupplierAmount(ZonedDateTime date,
                                                                                       List<String> procedureStatus,
                                                                                       List<String> procedureType,
-                                                                                      List<String> procuringEntityKind,
-                                                                                      Pageable pageable);
+                                                                                      List<String> procuringEntityKind);
 
     @Query(value = "SELECT\n" +
             "  outer_id,\n" +
@@ -631,7 +741,8 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "         (SELECT rate\n" +
             "          FROM exchange_rate\n" +
             "          WHERE currency = exchange_rate.code\n" +
-            "                AND COALESCE(t.start_date,t.date)::::DATE = exchange_rate.date) rate \n" +
+            "                AND concat(substr(to_char(t.start_date, 'YYYY-MM-DD HH:mm:ss.zzzzzz'), 0, 11),\n" +
+            "                           ' 00:00:00.000000') :::: DATE = exchange_rate.date) rate \n" +
             "       FROM tender t \n" +
             "       WHERE tv_tender_cpv LIKE '45%'\n" +
             "                  AND t.date_created > ?1\n" +
@@ -640,12 +751,11 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "                  AND t.procuring_entity_kind IN ?4\n" +
             "                  AND status IN ?2\n" +
             "     ) a\n" +
-            "ORDER BY date_created", nativeQuery = true)
+            "ORDER BY date_created LIMIT 100", nativeQuery = true)
     List<Object[]> findWorksProcuringEntityKindAmount(ZonedDateTime date,
                                                       List<String> procedureStatus,
                                                       List<String> procedureType,
-                                                      List<String> procuringEntityKind,
-                                                      Pageable pageable);
+                                                      List<String> procuringEntityKind);
 
 
     @Query(value = "" +
@@ -662,46 +772,55 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "      AND tender.procuring_entity_kind IN ?4\n" +
             "      AND tender.status IN ?2\n" +
             "GROUP BY tender.outer_id, contract.outer_id, contract.date_signed, contract.date_created\n" +
-            "ORDER BY contract.date_created", nativeQuery = true)
+            "ORDER BY contract.date_created LIMIT 100", nativeQuery = true)
     List<Object[]> findTenderWithContractDateSignedAndMinChangeDateSigned(ZonedDateTime date,
                                                                           List<String> procedureStatus,
                                                                           List<String> procedureType,
-                                                                          List<String> procuringEntityKind,
-                                                                          Pageable pageable);
+                                                                          List<String> procuringEntityKind);
 
-    @Query(value = "SELECT outer_id, COALESCE(start_date,date), procuring_entity_kind, currency, amount\n" +
+    @Query(value = "SELECT outer_id, start_date, procuring_entity_kind, currency, amount\n" +
             "FROM tender t\n " +
             "WHERE tv_tender_cpv LIKE '45%' AND \n" +
             "      t.date_created > ?1 AND t.date > now() - INTERVAL '1 year' AND \n" +
             "      procurement_method_type IN ?3 AND\n" +
             "      t.procuring_entity_kind IN ?4 AND status IN ?2 " +
-            "ORDER BY t.date_created", nativeQuery = true)
+            "ORDER BY t.date_created LIMIT 100", nativeQuery = true)
     List<Object[]> findWorkTenderIdPAKindAndAmount(ZonedDateTime date,
                                                    List<String> procedureStatus,
                                                    List<String> procedureType,
-                                                   List<String> procuringEntityKind,
-                                                   Pageable pageable);
+                                                   List<String> procuringEntityKind);
+
+    @Query(value = "SELECT outer_id, start_date, procuring_entity_kind, currency, amount, date\n" +
+            "FROM tender t\n " +
+            "WHERE tv_tender_cpv LIKE '45%' AND \n" +
+            "      t.date_created > ?1 AND t.date > now() - INTERVAL '1 year' AND \n" +
+            "      procurement_method_type IN ?3 AND\n" +
+            "      t.main_procurement_category IN ('works') AND " +
+            "      t.procuring_entity_kind IN ?4 AND status IN ?2 " +
+            "ORDER BY t.date_created LIMIT 100", nativeQuery = true)
+    List<Object[]> getIndicator1_9_1TenderData(ZonedDateTime date,
+                                               List<String> procedureStatus,
+                                               List<String> procedureType,
+                                               List<String> procuringEntityKind);
 
 
     @Transactional
     @Query(value = "SELECT t.outer_id FROM tender t  " +
             "WHERE t.status IN ?2 " +
             "   AND t.date_created > ?1 AND t.date > now() - INTERVAL '1 year' " +
-            "   AND t.procuring_entity_kind IN ?3 ", nativeQuery = true)
+            "   AND t.procuring_entity_kind IN ?3 LIMIT 100", nativeQuery = true)
     List<String> findTenderIdByProcedureStatus(ZonedDateTime date,
                                                List<String> procedureStatus,
-                                               List<String> procuringEntityKind,
-                                               Pageable pageable);
+                                               List<String> procuringEntityKind);
 
     @Transactional
     @Query(value = "SELECT t.outer_id FROM tender t " +
             "WHERE t.procurement_method_type IN ?2 " +
             "AND t.date_created >  ?1 AND t.date > now() - INTERVAL '1 year' " +
-            "AND t.procuring_entity_kind IN ?3 ", nativeQuery = true)
+            "AND t.procuring_entity_kind IN ?3 LIMIT 100", nativeQuery = true)
     List<String> findTenderIdByProcedureType(ZonedDateTime date,
                                              List<String> procedureType,
-                                             List<String> procuringEntityKind,
-                                             Pageable pageable);
+                                             List<String> procuringEntityKind);
 
     @Transactional
     @Query(value = "" +
@@ -757,12 +876,11 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "  AND unsuccessful_above.unsuccessful_above_procedures_count = 2\n" +
             "GROUP BY tender.outer_id, tender.date_created, tender_item.classification_id, " +
             " tender.tv_procuring_entity, tender.amount\n" +
-            "ORDER BY tender.date_created", nativeQuery = true)
+            "ORDER BY tender.date_created LIMIT 100", nativeQuery = true)
     List<Object[]> findTenderIdPWithPendingContractAndTwiceUnsuccessful(ZonedDateTime date,
                                                                         List<String> procedureStatus,
                                                                         List<String> procedureType,
-                                                                        List<String> procuringEntityKind,
-                                                                        Pageable pageable);
+                                                                        List<String> procuringEntityKind);
 
     @Query(value = "" +
             "SELECT tender.outer_id, \n" +
@@ -792,7 +910,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
     @Query(value = "SELECT t.outer_id, " +
             "t.currency, " +
             "t.amount, " +
-            "COALESCE(t.start_date, t.date), " +
+            "CASE WHEN t.start_date < t.enquiry_start_date THEN t.start_date ELSE t.enquiry_start_date END,  " +
             "t.date_created " +
             "FROM tender t " +
             "WHERE t.date_created > ?1 AND t.date > now() - INTERVAL '1 year' " +
@@ -801,17 +919,37 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "AND t.procuring_entity_kind IN ?4 " +
             "AND t.tv_subject_of_procurement LIKE '45%'" +
             "AND (t.start_date <= current_date OR t.enquiry_start_date <= current_date) " +
-            "ORDER BY t.date_created", nativeQuery = true)
+            "ORDER BY t.date_created LIMIT 100", nativeQuery = true)
     List<Object[]> findWorkTenderIdCurrencyAmountByProcedureStatusAndProcedureType(ZonedDateTime date,
                                                                                    List<String> procedureStatus,
                                                                                    List<String> procedureType,
-                                                                                   List<String> procuringEntityKind,
-                                                                                   Pageable pageable);
+                                                                                   List<String> procuringEntityKind);
+
 
     @Query(value = "SELECT t.outer_id, " +
             "t.currency, " +
             "t.amount, " +
-            "COALESCE(t.start_date, t.date), " +
+            "CASE WHEN t.start_date IS NOT NULL THEN t.start_date ELSE t.date END,  " +
+            "t.date_created " +
+            "FROM tender t " +
+            "WHERE t.date_created > ?1 AND t.date > now() - INTERVAL '1 year' " +
+            "AND t.status IN ?2 " +
+            "AND t.procurement_method_type IN ?3 " +
+            "AND t.procuring_entity_kind IN ?4 " +
+            "AND t.main_procurement_category = 'works' " +
+            "AND t.tv_subject_of_procurement LIKE '45%'" +
+            "AND (t.start_date <= current_date OR t.enquiry_start_date <= current_date) " +
+            "ORDER BY t.date_created LIMIT 100", nativeQuery = true)
+    List<Object[]> getIndicator1_4_1TenderData(ZonedDateTime date,
+                                               List<String> procedureStatus,
+                                               List<String> procedureType,
+                                               List<String> procuringEntityKind);
+
+
+    @Query(value = "SELECT t.outer_id, " +
+            "t.currency, " +
+            "t.amount, " +
+            "CASE WHEN t.start_date < t.enquiry_start_date THEN t.start_date ELSE t.enquiry_start_date END, " +
             "t.date_created " +
             "FROM tender t " +
             "WHERE t.date_created > ?1 AND t.date > now() - INTERVAL '1 year' " +
@@ -820,11 +958,30 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "AND t.procuring_entity_kind IN ?4 " +
             "AND t.tv_subject_of_procurement NOT LIKE '45%' " +
             "AND (t.start_date::::TIMESTAMP::::date <= CURRENT_DATE OR t.enquiry_start_date::::TIMESTAMP::::date <= CURRENT_DATE) " +
-            "ORDER BY t.date_created", nativeQuery = true)
+            "ORDER BY t.date_created LIMIT 100", nativeQuery = true)
     List<Object[]> findGoodsServicesTenderIdCurrencyAmountByProcedureStatusAndProcedureType(ZonedDateTime date,
                                                                                             List<String> procedureStatus,
                                                                                             List<String> procedureType,
-                                                                                            List<String> procuringEntityKind, Pageable pageable);
+                                                                                            List<String> procuringEntityKind);
+
+    @Query(value = "SELECT t.outer_id, " +
+            "t.currency, " +
+            "t.amount, " +
+            "CASE WHEN t.start_date IS NOT NULL THEN t.start_date ELSE t.date END, " +
+            "t.date_created " +
+            "FROM tender t " +
+            "WHERE t.date_created > ?1 AND t.date > now() - INTERVAL '1 year' " +
+            "AND t.status IN ?2 " +
+            "AND t.procurement_method_type IN ?3 " +
+            "AND t.procuring_entity_kind IN ?4 " +
+            "AND t.tv_subject_of_procurement NOT LIKE '45%' " +
+            "AND t.main_procurement_category IN ('goods','services') " +
+            "AND (t.start_date::::TIMESTAMP::::date <= CURRENT_DATE OR t.enquiry_start_date::::TIMESTAMP::::date <= CURRENT_DATE) " +
+            "ORDER BY t.date_created LIMIT 100", nativeQuery = true)
+    List<Object[]> getIndicator1_4TenderData(ZonedDateTime date,
+                                             List<String> procedureStatus,
+                                             List<String> procedureType,
+                                             List<String> procuringEntityKind);
 
     @Query(value =
             "SELECT" +
@@ -1056,6 +1213,19 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
     List<Object[]> getTenderWithStartAwardDateAndMinDocDatePublished(String tenderIds);
 
     @Query(value = "SELECT\n" +
+            "    tender.outer_id,\n" +
+            "    tender.end_date,\n" +
+            "    min(CASE WHEN ( document.author IS NULL OR document.author <> 'auction')\n" +
+            "        AND (document.author IS NULL OR document.format <> 'application/pkcs7-signature')\n" +
+            "                 THEN document.date_published\n" +
+            "        END)\n" +
+            "FROM tender\n" +
+            "         LEFT JOIN document ON tender.id = document.tender_id\n" +
+            "WHERE tender.outer_id =  ANY (SELECT regexp_split_to_table(?1, ','))\n" +
+            "GROUP BY tender.outer_id, tender.end_date", nativeQuery = true)
+    List<Object[]> getTenderWithEndDateAndMinDocDatePublished(String tenderIds);
+
+    @Query(value = "SELECT\n" +
             "  tender.outer_id tender_outer_id, lot.outer_id, sum( CASE  WHEN qualification.status ='unsuccessful' THEN 1 ELSE 0 END )\n" +
             "FROM lot\n" +
             "  LEFT JOIN qualification ON lot.id = qualification.lot_id\n" +
@@ -1079,7 +1249,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "    (SELECT rate\n" +
             "     FROM exchange_rate\n" +
             "     WHERE tender.currency = exchange_rate.code AND\n" +
-            "           concat(substr(to_char( COALESCE(tender.start_date,tender.date), 'YYYY-MM-DD HH:mm:ss.zzzzzz'), 0, 11), ' 00:00:00.000000')::::DATE =\n" +
+            "           concat(substr(to_char(coalesce(tender.start_date, tender.date), 'YYYY-MM-DD HH:mm:ss.zzzzzz'), 0, 11), ' 00:00:00.000000') :::: DATE =\n" +
             "           exchange_rate.date)\n" +
             "  END result_amount,\n" +
             "  tender.tv_procuring_entity,\n" +
@@ -1088,9 +1258,10 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "  LEFT JOIN tender_contract ON tender.id = tender_contract.tender_id\n" +
             "  LEFT JOIN award ON tender.id = award.tender_id\n" +
             "WHERE tender.outer_id = ANY (SELECT regexp_split_to_table(?1, ','))\n" +
-            "GROUP BY tender.outer_id, tender.currency, tender.amount, tender.start_date,tender.date," +
+            "GROUP BY tender.outer_id, tender.currency, tender.amount, tender.start_date,\n" +
             "tender.tv_procuring_entity,\n" +
-            "tender.procuring_entity_kind\n", nativeQuery = true)
+            "tender.procuring_entity_kind,\n" +
+            "tender.date", nativeQuery = true)
     List<Object[]> getTenderIdPendingContractsCountProcuringEnrityIdKindSupplierAndAmount(String tenderIds);
 
 
@@ -1124,23 +1295,42 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "       tender.currency,\n" +
             "       tender.tv_tender_cpv,\n" +
             "       cpv.name,\n" +
-            "       cpv2.cpv  cpv2,\n" +
-            "       cpv2.name cpv2_name,\n" +
+            "       cpv2.cpv                                                                                             cpv2,\n" +
+            "       cpv2.name                                                                                            cpv2_name,\n" +
             "       tender.tv_procuring_entity,\n" +
             "       tender.procuring_entity_kind,\n" +
             "       procuring_entity.identifier_legal_name,\n" +
             "       indicators_queue_region.correct_name,\n" +
             "       (SELECT count(*) > 0\n" +
-            "        FROM (SELECT * FROM award\n" +
-            "                              JOIN complaint c2 ON award.id = c2.award_id WHERE award.tender_id = tender.id AND c2.complaint_type = 'complaint') a), \n" +
+            "        FROM (SELECT *\n" +
+            "              FROM award\n" +
+            "                       JOIN complaint c2 ON award.id = c2.award_id\n" +
+            "              WHERE award.tender_id = tender.id\n" +
+            "                AND c2.complaint_type = 'complaint'\n" +
+            "                AND c2.status IN ('accepted', 'declined', 'satisfied', 'stopping')) a),\n" +
             "       tender.title,\n" +
-            "       (SELECT COUNT(*) > 0 FROM complaint WHERE tender_id = tender.id AND complaint_type = 'complaint') has_tender_complaints,\n" +
-            "       tender.procurement_method_rationale\n" +
+            "       (SELECT COUNT(*) > 0\n" +
+            "        FROM complaint\n" +
+            "        WHERE tender_id = tender.id\n" +
+            "          AND complaint_type = 'complaint'\n" +
+            "          AND status IN ('accepted', 'declined', 'satisfied', 'stopping'))                                  has_tender_complaints,\n" +
+            "       region_indicators_queue_item.materiality_score,\n" +
+            "       tender.procurement_method_rationale,\n" +
+            "       (SELECT COUNT(d.id) FROM document d WHERE d.tender_id = tender.id)                                   doc_count,\n" +
+            "       (SELECT COUNT(l.id) FROM lot l WHERE l.tender_id = tender.id and l.status in ('active', 'complete')) lot_count,\n" +
+            "       (SELECT COUNT(b.id) FROM bid b WHERE b.tender_id = tender.id and b.status = 'active')                bid_count,\n" +
+            "       tender.main_procurement_category,\n" +
+            "       (EXISTS (SELECT * FROM feedback_monitoring_info WHERE tender_outer_id = tender.outer_id)) exists_monitoring_info,\n" +
+            "       (EXISTS (SELECT * FROM feedback_result WHERE tender_outer_id = tender.outer_id)) exists_result,\n" +
+            "       (EXISTS (SELECT * FROM feedback_summary WHERE tender_outer_id = tender.outer_id)) exists_summary,\n" +
+            "       (EXISTS (SELECT * FROM feedback_violation WHERE tender_outer_id = tender.outer_id)) exists_violation\n" +
             "FROM tender\n" +
-            "       LEFT JOIN procuring_entity ON tender.procuring_entity_id = procuring_entity.id\n" +
-            "       LEFT JOIN cpv_catalogue cpv ON tender.tv_tender_cpv = cpv.cpv\n" +
-            "       LEFT JOIN cpv_catalogue cpv2 ON cpv.cpv2 = cpv2.cpv\n" +
-            "       LEFT JOIN indicators_queue_region ON procuring_entity.region = indicators_queue_region.original_name WHERE tender.outer_id = ANY (SELECT regexp_split_to_table(?1, ','))", nativeQuery = true)
+            "         LEFT JOIN procuring_entity ON tender.procuring_entity_id = procuring_entity.id\n" +
+            "         LEFT JOIN cpv_catalogue cpv ON tender.tv_tender_cpv = cpv.cpv\n" +
+            "         LEFT JOIN cpv_catalogue cpv2 ON cpv.cpv2 = cpv2.cpv\n" +
+            "         LEFT JOIN region_indicators_queue_item ON tender.outer_id = region_indicators_queue_item.tender_outer_id\n" +
+            "         LEFT JOIN indicators_queue_region ON procuring_entity.region = indicators_queue_region.original_name\n" +
+            "WHERE tender.outer_id = ANY (SELECT regexp_split_to_table(?1, ','))", nativeQuery = true)
     List<Object[]> getTendersCommonInfo(String tenderIds);
 
     @Query(value = "SELECT t.*\n" +
@@ -1153,6 +1343,147 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "ORDER BY t.date_created ", nativeQuery = true)
     Page<Tender> getRisk1_8_2Tenders(ZonedDateTime date, Pageable pageable);
 
-    @Query(value = "SELECT outer_id FROM tender WHERE date_modified > ?1 ORDER BY date_modified", nativeQuery = true)
-    Page<String> findAllAfterDateModified(ZonedDateTime since, Pageable pageRequest);
+    @Query(value = "SELECT\n" +
+            "  outer_id,\n" +
+            "  tv_procuring_entity,\n" +
+            "  (CASE WHEN currency = 'UAH'\n" +
+            "    THEN amount\n" +
+            "   ELSE CASE WHEN rate IS NOT NULL\n" +
+            "     THEN amount * rate\n" +
+            "        ELSE NULL END END), " +
+            "  tv_subject_of_procurement\n" +
+            "FROM (\n" +
+            "       SELECT\n" +
+            "         date_created,\n" +
+            "         outer_id,\n" +
+            "         tv_procuring_entity,\n" +
+            "         procuring_entity_kind,\n" +
+            "         currency,\n" +
+            "         amount,\n" +
+            "         start_date," +
+            "         tv_subject_of_procurement,\n" +
+            "         (SELECT rate\n" +
+            "          FROM exchange_rate\n" +
+            "          WHERE currency = exchange_rate.code\n" +
+            "                AND concat(substr(to_char(coalesce(t.start_date, t.date), 'YYYY-MM-DD HH:mm:ss.zzzzzz'), 0, 11),\n" +
+            "                           ' 00:00:00.000000') :::: DATE = exchange_rate.date) rate \n" +
+            "       FROM tender t \n" +
+            "       WHERE main_procurement_category IN ?5\n" +
+            "                  AND t.date_created > ?1\n" +
+            "                  AND t.date > now() - INTERVAL '1 year'\n" +
+            "                  AND procurement_method_type IN ?3\n" +
+            "                  AND t.procuring_entity_kind IN ?4\n" +
+            "                  AND status IN ?2\n" +
+            "     ) a\n" +
+            "ORDER BY date_created LIMIT 100", nativeQuery = true)
+    List<Object[]> findWorksProcuringEntityKindAmountByMainProcurementCategory(ZonedDateTime date,
+                                                                               List<String> procedureStatus,
+                                                                               List<String> procedureType,
+                                                                               List<String> procuringEntityKind,
+                                                                               List<String> categories);
+
+    @Query(value = "SELECT t.outer_id FROM tender t " +
+            "WHERE t.procurement_method_type IN ?3 " +
+            "AND t.status IN ?2 AND t.date_created > ?1 AND t.date > now() - INTERVAL '1 year' " +
+            "AND t.procuring_entity_kind IN ?4 " +
+            "AND t.main_procurement_category IN ?5 " +
+            "ORDER BY t.date_created LIMIT 100", nativeQuery = true)
+    List<String> findGoodsServicesTenderIdByProcedureStatusAndProcedureTypeByMainProcurementCategory(ZonedDateTime date,
+                                                                                                     List<String> procedureStatus,
+                                                                                                     List<String> procedureType,
+                                                                                                     List<String> procuringEntityKind,
+                                                                                                     List<String> categories);
+
+    @Query(value = "" +
+            "SELECT\n" +
+            "  outer_id,\n" +
+            "  pending_contracts_count, " +
+            "  tv_procuring_entity, " +
+            "  suppliers,\n" +
+            "  CASE WHEN currency = 'UAH'\n" +
+            "    THEN amount\n" +
+            "  ELSE CASE WHEN rate IS NOT NULL\n" +
+            "    THEN amount * rate\n" +
+            "       ELSE NULL END END\n" +
+            "FROM (\n" +
+            "       SELECT\n" +
+            "         tender.outer_id,\n" +
+            "         count(DISTINCT (CASE WHEN tender_contract.status = 'pending'\n" +
+            "           THEN tender_contract.outer_id END)) pending_contracts_count,\n" +
+            "         string_agg(DISTINCT CASE WHEN award.status = 'active' THEN concat(award.supplier_identifier_scheme, '-', award.supplier_identifier_id) END, ',') suppliers,\n" +
+            "         tender.currency,\n" +
+            "         tender.amount,\n" +
+            "         tv_procuring_entity, procuring_entity_kind ,  " +
+            "         CASE WHEN  tender.currency <> 'UAH' THEN (SELECT rate\n" +
+            "          FROM exchange_rate\n" +
+            "          WHERE tender.currency = exchange_rate.code AND\n" +
+            "                concat(substr(to_char(coalesce(tender.start_date, tender.date), 'YYYY-MM-DD HH:mm:ss.zzzzzz'), 0, 11), ' 00:00:00.000000')\n" +
+            "                :::: DATE = exchange_rate.date) ELSE NULL END rate,\n" +
+            "         tender.date_created\n" +
+            "\n" +
+            "       FROM tender\n" +
+            "         LEFT JOIN tender_contract ON tender.id = tender_contract.tender_id\n" +
+            "         LEFT JOIN award ON tender.id = award.tender_id\n" +
+            "       WHERE  tender.main_procurement_category IN ?5 \n" +
+            "             AND tender.date_created > ?1\n" +
+            "             AND tender.date > now() - INTERVAL '1 year'\n" +
+            "             AND procurement_method_type IN ?3\n" +
+            "             AND tender.procuring_entity_kind IN ?4\n" +
+            "             AND tender.status IN ?2\n" +
+            "       GROUP BY tender.outer_id, tender.date_created, tender.currency, tender.amount, tender.start_date, tv_procuring_entity, procuring_entity_kind, tender.date \n" +
+            "     ) a\n" +
+            "ORDER BY date_created LIMIT 100", nativeQuery = true)
+    List<Object[]> findWorksPendingContractsCountProcuringEntityKindAndSupplierAmountByMainProcurementCategory(ZonedDateTime date,
+                                                                                                               List<String> procedureStatus,
+                                                                                                               List<String> procedureType,
+                                                                                                               List<String> procuringEntityKind,
+                                                                                                               List<String> categories);
+
+    @Query(nativeQuery = true, value = "SELECT * FROM tender " +
+            "WHERE date_created > ?1\n" +
+            "AND date > now() - INTERVAL '1 year'\n" +
+            "AND procurement_method_type IN ?3\n" +
+            "AND procuring_entity_kind IN ?4\n" +
+            "AND status IN ?2\n" +
+            "ORDER BY date_created LIMIT 100")
+    List<Tender> findTenders(ZonedDateTime date,
+                             List<String> procedureStatus,
+                             List<String> procedureType,
+                             List<String> procuringEntityKind);
+
+    @Query(nativeQuery = true, value = "SELECT id FROM tender " +
+            "WHERE date_created > ?1\n" +
+            "AND date > now() - INTERVAL '1 year'\n" +
+            "AND procurement_method_type IN ?3\n" +
+            "AND procuring_entity_kind IN ?4\n" +
+            "AND status IN ?2\n" +
+            "ORDER BY date_created LIMIT 100")
+    List<Long> findTenderIds(ZonedDateTime date,
+                             List<String> procedureStatus,
+                             List<String> procedureType,
+                             List<String> procuringEntityKind);
+
+    @Query(value = "select * from tender where id in ?1", nativeQuery = true)
+    List<Tender> findByIdIn(List<Long> ids);
+
+    @Query(nativeQuery = true, value = "SELECT * FROM tender " +
+            "WHERE date_created > ?1\n" +
+            "AND date > now() - INTERVAL '1 year'\n" +
+            "AND procurement_method_type IN ?3\n" +
+            "AND procuring_entity_kind IN ?4\n" +
+            "AND main_procurement_category IN ?5\n" +
+            "AND status IN ?2\n" +
+            "ORDER BY date_created LIMIT 100")
+    List<Tender> findTendersByMainProcurementCategory(ZonedDateTime date,
+                                                      List<String> procedureStatus,
+                                                      List<String> procedureType,
+                                                      List<String> procuringEntityKind,
+                                                      List<String> categories);
+
+    @Query(nativeQuery = true, value = "select * from tender " +
+            "where date_created > ?1\n" +
+            "AND date > now() - INTERVAL '1 year'\n" +
+            "AND procuring_entity_kind IN ?2\n" +
+            "ORDER BY date_created LIMIT 100")
+    List<Tender> findTendersForContract(ZonedDateTime date, List<String> procuringEntityKind);
 }

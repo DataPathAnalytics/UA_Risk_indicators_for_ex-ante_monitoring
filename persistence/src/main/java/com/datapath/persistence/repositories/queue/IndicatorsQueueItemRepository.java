@@ -65,10 +65,10 @@ public interface IndicatorsQueueItemRepository extends JpaRepository<IndicatorsQ
     @Query("SELECT DISTINCT i.region FROM IndicatorsQueueItem i WHERE i.tenderScore < ?1")
     List<String> findDistinctRegionsByTenderScoreLessThan(Double maxImpact);
 
-    @Query("SELECT DISTINCT i.region FROM IndicatorsQueueItem i WHERE i.tenderScore >= ?1")
-    List<String> findDistinctRegionsByTenderScoreGreaterThanEqual(Double minImpact);
+    @Query("SELECT DISTINCT i.region FROM IndicatorsQueueItem i WHERE i.tenderScore > ?1")
+    List<String> findDistinctRegionsByTenderScoreGreaterThan(Double minImpact);
 
-    @Query("SELECT DISTINCT i.region FROM IndicatorsQueueItem i WHERE i.tenderScore >= ?1 AND i.tenderScore < ?2")
-    List<String> findDistinctRegionsByTenderScoreGreaterThanEqualAndTenderScoreLessThan(Double minImpact, Double maxImpact);
+    @Query("SELECT DISTINCT i.region FROM IndicatorsQueueItem i WHERE i.tenderScore >= ?1 AND i.tenderScore <= ?2")
+    List<String> findDistinctRegionsByTenderScoreGreaterThanEqualAndTenderScoreLessThanEqual(Double minImpact, Double maxImpact);
 
 }

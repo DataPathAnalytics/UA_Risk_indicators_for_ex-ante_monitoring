@@ -5,8 +5,6 @@ import com.datapath.persistence.repositories.queue.IndicatorsQueueConfigurationR
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-
 @Slf4j
 @Service
 public class IndicatorsQueueConfigurationService {
@@ -15,10 +13,6 @@ public class IndicatorsQueueConfigurationService {
 
     public IndicatorsQueueConfigurationService(IndicatorsQueueConfigurationRepository repository) {
         this.repository = repository;
-    }
-
-    public List<IndicatorsQueueConfiguration> getConfigurstions() {
-        return repository.findAll();
     }
 
     public IndicatorsQueueConfiguration getConfigurationById(Integer id) {

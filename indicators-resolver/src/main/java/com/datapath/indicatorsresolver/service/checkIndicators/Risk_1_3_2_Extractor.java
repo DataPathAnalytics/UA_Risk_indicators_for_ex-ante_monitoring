@@ -35,8 +35,8 @@ public class Risk_1_3_2_Extractor extends BaseExtractor {
     public void checkIndicator(ZonedDateTime dateTime) {
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 checkRisk_1_3_2_Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
@@ -53,8 +53,8 @@ public class Risk_1_3_2_Extractor extends BaseExtractor {
         }
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 ZonedDateTime dateTime = isNull(indicator.getLastCheckedDateCreated())
                         ? ZonedDateTime.now().minus(Period.ofYears(1)).withHour(0)
                         : indicator.getLastCheckedDateCreated();
@@ -68,16 +68,13 @@ public class Risk_1_3_2_Extractor extends BaseExtractor {
     }
 
     private void checkRisk_1_3_2_Indicator(Indicator indicator, ZonedDateTime dateTime) {
-        int size = 100;
-        int page = 0;
-
+        log.info("{} indicator started", INDICATOR_CODE);
         while (true) {
 
             List<String> tenderIds = findTenders(dateTime,
                     Arrays.asList(indicator.getProcedureStatuses()),
                     Arrays.asList(indicator.getProcedureTypes()),
-                    Arrays.asList(indicator.getProcuringEntityKind()),
-                    page, size);
+                    Arrays.asList(indicator.getProcuringEntityKind()));
 
             if (tenderIds.isEmpty()) {
                 break;
@@ -92,6 +89,9 @@ public class Risk_1_3_2_Extractor extends BaseExtractor {
 
             awardWithDocumentTypesByTenderId.forEach(award -> {
                 String tenderId = award[0].toString();
+
+                log.info("Process tender {}", tenderId);
+
                 String lotId = award[1].toString();
                 List<String> documentFormats = isNull(award[2])
                         ? null
@@ -100,7 +100,7 @@ public class Risk_1_3_2_Extractor extends BaseExtractor {
                 if (nonNull(documentFormats)) {
                     indicatorValue = documentFormats.contains(PKCS7_SIGNATURE_FORMAT) ? NOT_RISK : RISK;
                 } else {
-                    indicatorValue = -2;
+                    indicatorValue = CONDITIONS_NOT_MET;
                 }
                 if (!resultMap.containsKey(tenderId)) {
                     resultMap.put(tenderId, new HashMap<>());
@@ -137,5 +137,7 @@ public class Risk_1_3_2_Extractor extends BaseExtractor {
         ZonedDateTime now = ZonedDateTime.now();
         indicator.setDateChecked(now);
         indicatorRepository.save(indicator);
+
+        log.info("{} indicator finished", INDICATOR_CODE);
     }
 }

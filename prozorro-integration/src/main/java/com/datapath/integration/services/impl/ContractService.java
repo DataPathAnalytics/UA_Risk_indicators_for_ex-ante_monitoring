@@ -45,7 +45,7 @@ public class ContractService implements EntityService<Contract> {
     }
 
     public Contract findLastModifiedEntry() {
-        return repository.findFirstBySourceOrderByDateModifiedDesc(EntitySource.CONTRACTING.toString());
+        return repository.findFirstBySourceAndDateModifiedIsNotNullOrderByDateModifiedDesc(EntitySource.CONTRACTING.toString());
     }
 
     public Contract findByOuterId(String outerId) {

@@ -32,9 +32,8 @@ public class Risk_1_8_2ExtractorUpdated extends BaseExtractor {
 
     @Transactional
     public void extract() {
-        Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-        //TODO Indicator not active. Old logic need to rewrite and receive indicator then check active field instead of checking on null
-        if (indicator == null) return;
+        Indicator indicator = getIndicator(INDICATOR_CODE);
+        if (!indicator.isActive()) return;
 
         ZonedDateTime dateTime = isNull(indicator.getLastCheckedDateCreated())
                 ? ZonedDateTime.now().minusYears(1).withHour(0)
@@ -73,12 +72,12 @@ public class Risk_1_8_2ExtractorUpdated extends BaseExtractor {
             TenderDimensions tenderDimensions = new TenderDimensions(tender.getOuterId());
 
             for (Lot lot : tender.getLots()) {
-                int indicatorValue = 0;
+                int indicatorValue = NOT_RISK;
 
                 if (maxTendersLotIterationData.get(tender.getOuterId()).containsKey(lot.getOuterId()) && maxTendersLotIterationData.get(tender.getOuterId()).get(lot.getOuterId()).equals(1)) {
-                    indicatorValue = 1;
+                    indicatorValue = RISK;
                 } else if (Arrays.asList("cancelled", "unsuccessful").contains(lot.getStatus())) {
-                    indicatorValue = -2;
+                    indicatorValue = CONDITIONS_NOT_MET;
                 } else {
                     boolean hasActiveContractsWithoutFormat = lot.getAwards()
                             .stream()
@@ -106,7 +105,7 @@ public class Risk_1_8_2ExtractorUpdated extends BaseExtractor {
                     if (!hasActiveContractsWithoutFormat
                             && (isEmpty(contractDocuments) || hasAnotherFormat)
                             && expiredAwardDate) {
-                        indicatorValue = 1;
+                        indicatorValue = RISK;
                     }
                 }
 

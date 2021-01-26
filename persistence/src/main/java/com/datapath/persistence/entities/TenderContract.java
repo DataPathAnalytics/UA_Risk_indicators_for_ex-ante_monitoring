@@ -67,7 +67,7 @@ public class TenderContract {
     @Type(type = "array")
     private String[] contractCpvList;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tender_id")
     private Tender tender;
 

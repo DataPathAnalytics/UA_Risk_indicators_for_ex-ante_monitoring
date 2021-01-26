@@ -34,6 +34,7 @@ public class ExchangeRateProcessor {
     }
 
     public void processExchangeRateForAllTime() {
+        log.info("Process exchange rate for all time...");
         ZonedDateTime endDate = getCurrentDate();
         ZonedDateTime startDate = getCurrentDate().minusYears(8);
 
@@ -43,12 +44,13 @@ public class ExchangeRateProcessor {
         }
 
         while (startDate.isBefore(endDate) || startDate.equals(endDate)) {
-            log.info("Process exchange rate for current date...");
+            log.debug("Process exchange rate for current date...");
             List<ExchangeRate> exchangeRates = exchangeRateLoader.loadExchangeRatesByDate(startDate);
             exchangeRateService.save(exchangeRates);
-            log.info("Exchange rates for date {} successfully saved", startDate);
+            log.debug("Exchange rates for date {} successfully saved", startDate);
             startDate = startDate.plusDays(1);
         }
+        log.info("Process exchange rate for all time finished");
     }
 
     private ZonedDateTime getCurrentDate() {

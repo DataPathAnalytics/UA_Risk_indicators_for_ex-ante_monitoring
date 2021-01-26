@@ -76,6 +76,9 @@ public class Bid {
     @OneToMany(mappedBy = "bid", cascade = CascadeType.ALL)
     private List<Award> awards;
 
+    @OneToMany(mappedBy = "id.bid", cascade = CascadeType.ALL)
+    private List<BidLotAmount> bidLotAmounts;
+
     @Transient
     private List<String> relatedLots;
 }

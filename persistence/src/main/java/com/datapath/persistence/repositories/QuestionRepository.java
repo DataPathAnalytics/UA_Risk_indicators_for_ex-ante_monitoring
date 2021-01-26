@@ -23,4 +23,15 @@ public interface QuestionRepository extends JpaRepository<Lot, Long> {
             "WHERE  tender.outer_id = ANY (SELECT regexp_split_to_table(?1, ','))", nativeQuery = true)
     List<Object> getQuestionDateDateAnswerAndAnswerOrderByTenderIdIn(String tenderIds);
 
+    @Query(value = "SELECT\n" +
+            "    tender.outer_id,\n" +
+            "    q.id,\n" +
+            "    q.date_answered,\n" +
+            "    q.answer,\n" +
+            "    q.date,\n" +
+            "    (tender.end_date at time zone 'Europe/Kiev')::::DATE - (q.date at time zone 'Europe/Kiev' + interval '1' day)::::DATE\n" +
+            "FROM tender\n" +
+            "         LEFT JOIN question q ON tender.id = q.tender_id\n" +
+            "WHERE  tender.outer_id = ANY (SELECT regexp_split_to_table(?1, ','))", nativeQuery = true)
+    List<Object> getQuestionDateDateAnswerAndAnswerOrderByTenderIdInWithZoned(String tenderIds);
 }

@@ -11,7 +11,7 @@ public class JsonUtils {
     public static String getString(JsonNode node, String path) {
         JsonNode targetNode = node.at(path);
         return targetNode.isMissingNode() || targetNode.isNull() ?
-                null : targetNode.asText();
+                null : targetNode.asText().replaceAll("\\u0000", "");
     }
 
     @Nullable

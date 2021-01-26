@@ -1,11 +1,10 @@
 package com.datapath.integration.validation;
 
 import com.datapath.integration.domain.TenderUpdateInfo;
-import com.datapath.integration.domain.TendersPageResponseEntity;
+import com.datapath.integration.domain.TendersPageResponse;
 import com.datapath.integration.services.TenderLoaderService;
 import com.datapath.integration.services.TenderUpdatesManager;
 import com.datapath.integration.services.impl.TenderService;
-import com.datapath.integration.utils.DateUtils;
 import com.datapath.integration.utils.ProzorroRequestUrlCreator;
 import com.datapath.persistence.entities.Tender;
 import lombok.extern.slf4j.Slf4j;
@@ -41,16 +40,15 @@ public class TenderUpdatesValidator {
         this.tenderUpdatesManager = tenderUpdatesManager;
     }
 
-    public void validate() {
-        ZonedDateTime yearEarlier = DateUtils.yearEarlierFromNow();
+    public void validate(ZonedDateTime startDate) {
         Tender lastModifiedTender = tenderService.findLastModifiedEntry();
         //Database is empty no need to validate smt
-        if (lastModifiedTender == null) return;
+        if (lastModifiedTender == null || lastModifiedTender.getDateModified() == null) return;
 
-        ZonedDateTime lastDateModified = lastModifiedTender.getDateModified().minusDays(1);
-        log.trace("Start tender update validation. StartDate: {}, EndDate: {}", yearEarlier, lastDateModified);
+        ZonedDateTime lastDateModified = lastModifiedTender.getDateModified();
+        log.trace("Start tender update validation. StartDate: {}, EndDate: {}", startDate, lastDateModified);
 
-        ZonedDateTime dateOffset = yearEarlier.withZoneSameInstant(ZoneId.of("Europe/Kiev"));
+        ZonedDateTime dateOffset = startDate.withZoneSameInstant(ZoneId.of("Europe/Kiev"));
 
         String url = ProzorroRequestUrlCreator.createTendersUrl(
                 tendersApiUrl, dateOffset, TENDERS_LIMIT);
@@ -60,8 +58,8 @@ public class TenderUpdatesValidator {
         while (true) {
             try {
                 log.trace("Fetching tenders list for {}", url);
-                TendersPageResponseEntity tendersPageResponseEntity = tenderLoaderService.loadTendersPage(url);
-                List<TenderUpdateInfo> items = tendersPageResponseEntity.getItems()
+                TendersPageResponse tendersPageResponse = tenderLoaderService.loadTendersPage(url);
+                List<TenderUpdateInfo> items = tendersPageResponse.getItems()
                         .stream().filter(item -> item.getDateModified().isBefore(lastDateModified))
                         .collect(Collectors.toList());
 
@@ -71,7 +69,7 @@ public class TenderUpdatesValidator {
                     break;
                 }
 
-                url = URLDecoder.decode(tendersPageResponseEntity.getNextPage().getUri(), StandardCharsets.UTF_8.name());
+                url = URLDecoder.decode(tendersPageResponse.getNextPage().getUri(), StandardCharsets.UTF_8.name());
 
             } catch (Exception e) {
                 log.error(e.getMessage(), e);
@@ -90,11 +88,17 @@ public class TenderUpdatesValidator {
 
         List<TenderUpdateInfo> infos = new ArrayList<>();
         tenderUpdateInfos.forEach(tenderUpdateInfo -> {
+            log.info("Processing tender {}", tenderUpdateInfo.getId());
+
             ZonedDateTime dateModified = existingTendersOuterIds.get(tenderUpdateInfo.getId());
             if (dateModified != null && !dateModified.isEqual(tenderUpdateInfo.getDateModified())) {
                 log.warn("Tender is not up to date: {} Expected date: {} Actual date: {}",
                         tenderUpdateInfo.getId(), tenderUpdateInfo.getDateModified(), dateModified);
 
+                infos.add(tenderUpdateInfo);
+            }
+            if (!existingTendersOuterIds.containsKey(tenderUpdateInfo.getId())) {
+                log.info("Tender not present in DB. Added to updatable list.");
                 infos.add(tenderUpdateInfo);
             }
         });

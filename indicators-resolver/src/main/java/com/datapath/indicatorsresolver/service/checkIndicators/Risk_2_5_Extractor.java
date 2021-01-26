@@ -6,7 +6,6 @@ import com.datapath.persistence.entities.Indicator;
 import com.datapath.persistence.entities.derivatives.NearThreshold;
 import com.datapath.persistence.repositories.derivatives.NearThresholdRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.Period;
@@ -16,7 +15,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
 
 
 @Service
@@ -27,15 +25,6 @@ public class Risk_2_5_Extractor extends BaseExtractor {
     Повторювана закупівля коли замовником вже було здійснено допорогову закупівлю (тендер або звіт)
      з однаковим кодом предмета закупівлі (cpv), загальна сума яких дорівнює або перевищує 200 тис грн
     */
-
-    private final static List<String> GENERAL_ENTITY_KINDS = Arrays.asList(
-            "general",
-            "authority",
-            "central",
-            "social"
-    );
-
-    private final static String SPECIAL_ENTITY_KIND = "special";
 
     private final String INDICATOR_CODE = "RISK2-5";
     private boolean indicatorsResolverAvailable;
@@ -50,8 +39,8 @@ public class Risk_2_5_Extractor extends BaseExtractor {
     public void checkIndicator(ZonedDateTime dateTime) {
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 checkRisk2_5Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
@@ -68,8 +57,8 @@ public class Risk_2_5_Extractor extends BaseExtractor {
         }
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 ZonedDateTime dateTime = isNull(indicator.getLastCheckedDateCreated())
                         ? ZonedDateTime.now(ZoneId.of("UTC")).minus(Period.ofYears(1)).withHour(0)
                         : indicator.getLastCheckedDateCreated();
@@ -83,15 +72,14 @@ public class Risk_2_5_Extractor extends BaseExtractor {
     }
 
     private void checkRisk2_5Indicator(Indicator indicator, ZonedDateTime dateTime) {
-        int size = 100;
-        int page = 0;
+        log.info("{} indicator started", INDICATOR_CODE);
         while (true) {
 
             List<Object[]> tenders = tenderRepository.findGoodsServicesProcuringEntityKindAmount(
                     dateTime,
                     Arrays.asList(indicator.getProcedureStatuses()),
                     Arrays.asList(indicator.getProcedureTypes()),
-                    Arrays.asList(indicator.getProcuringEntityKind()), PageRequest.of(page, size));
+                    Arrays.asList(indicator.getProcuringEntityKind()));
 
             if (tenders.isEmpty()) {
                 break;
@@ -100,6 +88,9 @@ public class Risk_2_5_Extractor extends BaseExtractor {
 
             List<TenderIndicator> tenderIndicators = tenders.stream().map(tenderInfo -> {
                 String tenderId = tenderInfo[0].toString();
+
+                log.info("Process tender {}", tenderId);
+
                 tenderIds.add(tenderId);
                 String procuringEntity = tenderInfo[1].toString();
                 String procuringEntityKind = tenderInfo[2].toString();
@@ -107,24 +98,24 @@ public class Risk_2_5_Extractor extends BaseExtractor {
                 String cpv = tenderInfo[4].toString();
 
                 TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
-                int indicatorValue = 0;
+                int indicatorValue = NOT_RISK;
                 if (isNull(amount)) {
-                    indicatorValue = -1;
+                    indicatorValue = IMPOSSIBLE_TO_DETECT;
                 } else {
                     Optional<NearThreshold> nearThreshold = nearThresholdRepository.findFirstByProcuringEntityAndCpv(procuringEntity, cpv);
-                    if (!nearThreshold.isPresent()) {
-                        indicatorValue = NOT_RISK;
-                    } else {
+                    if (nearThreshold.isPresent()) {
                         amount += nearThreshold.get().getAmount();
-
-                        if (GENERAL_ENTITY_KINDS.contains(procuringEntityKind)) {
-                            if (amount >= 200000) {
-                                indicatorValue = 1;
-                            }
-                        } else if (SPECIAL_ENTITY_KIND.equals(procuringEntityKind)) {
-                            if (amount >= 1000000) {
-                                indicatorValue = 1;
-                            }
+                        switch (procuringEntityKind) {
+                            case "general":
+                                if (amount >= 200000) {
+                                    indicatorValue = RISK;
+                                }
+                                break;
+                            case "special":
+                                if (amount >= 1000000) {
+                                    indicatorValue = RISK;
+                                }
+                                break;
                         }
                     }
                 }
@@ -149,5 +140,7 @@ public class Risk_2_5_Extractor extends BaseExtractor {
         ZonedDateTime now = ZonedDateTime.now();
         indicator.setDateChecked(now);
         indicatorRepository.save(indicator);
+
+        log.info("{} indicator finished", INDICATOR_CODE);
     }
 }

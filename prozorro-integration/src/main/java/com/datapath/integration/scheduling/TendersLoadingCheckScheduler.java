@@ -20,7 +20,7 @@ public class TendersLoadingCheckScheduler {
         try {
             boolean alive = tendersLoadingChecker.isAlive();
             if (!alive) {
-                log.error("Tenders loading FAILED!!!");
+                log.error("Tenders loading FAILED");
             }
         } catch (Exception ex) {
             log.error("TendersLoadingCheckScheduler failed {}", ex.getMessage());

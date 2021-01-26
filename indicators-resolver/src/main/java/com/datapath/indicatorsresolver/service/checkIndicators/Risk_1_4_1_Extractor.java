@@ -8,13 +8,12 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.time.Period;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
 
+import static com.datapath.indicatorsresolver.IndicatorConstants.UA_ZONE;
 import static com.datapath.persistence.utils.DateUtils.toZonedDateTime;
 import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.joining;
 
 
@@ -39,8 +38,8 @@ public class Risk_1_4_1_Extractor extends BaseExtractor {
     public void checkIndicator(ZonedDateTime dateTime) {
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 checkRisk_1_4_1_Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
@@ -57,8 +56,8 @@ public class Risk_1_4_1_Extractor extends BaseExtractor {
         }
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 ZonedDateTime dateTime = isNull(indicator.getLastCheckedDateCreated())
                         ? ZonedDateTime.now().minus(Period.ofYears(1)).withHour(0)
                         : indicator.getLastCheckedDateCreated();
@@ -73,16 +72,14 @@ public class Risk_1_4_1_Extractor extends BaseExtractor {
 
 
     private void checkRisk_1_4_1_Indicator(Indicator indicator, ZonedDateTime dateTime) {
-        int size = 100;
-        int page = 0;
+        log.info("{} indicator started", INDICATOR_CODE);
         while (true) {
             log.info("Start finding tenders after [{}]", dateTime.toString());
             List<String> tenders = findTenders(
                     dateTime,
                     Arrays.asList(indicator.getProcedureStatuses()),
                     Arrays.asList(indicator.getProcedureTypes()),
-                    Arrays.asList(indicator.getProcuringEntityKind()),
-                    page, size);
+                    Arrays.asList(indicator.getProcuringEntityKind()));
 
             log.info("Finish finding tenders. Found [{}] tenders", tenders.size());
             if (tenders.isEmpty()) {
@@ -107,6 +104,7 @@ public class Risk_1_4_1_Extractor extends BaseExtractor {
         indicator.setDateChecked(now);
         indicatorRepository.save(indicator);
 
+        log.info("{} indicator finished", INDICATOR_CODE);
     }
 
 
@@ -130,6 +128,8 @@ public class Risk_1_4_1_Extractor extends BaseExtractor {
         tenderLotdateDocComplaintCount.forEach(tenderLotData -> {
             String tenderId = tenderLotData[0].toString();
 
+            log.info("Process tender {}", tenderId);
+
             String lotId = tenderLotData[1].toString();
             Object awardIdObj = tenderLotData[2];
             Timestamp awardDateTimestamp = (Timestamp) tenderLotData[3];
@@ -139,20 +139,20 @@ public class Risk_1_4_1_Extractor extends BaseExtractor {
             int indicatorValue;
 
             if (maxTendersLotIterationData.get(tenderId).containsKey(lotId) && maxTendersLotIterationData.get(tenderId).get(lotId).equals(1)) {
-                indicatorValue = 1;
+                indicatorValue = RISK;
             } else {
                 if (isNull(awardIdObj)) {
-                    indicatorValue = 0;
+                    indicatorValue = NOT_RISK;
                 } else {
-                    ZonedDateTime awardDate = toZonedDateTime(awardDateTimestamp).withZoneSameInstant(ZoneId.of("Europe/Kiev"))
+                    ZonedDateTime awardDate = toZonedDateTime(awardDateTimestamp).withZoneSameInstant(UA_ZONE)
                             .withHour(0)
                             .withMinute(0)
                             .withSecond(0)
                             .withNano(0);
                     indicatorValue = (!awardDate.isBefore(dateOfCurrentDateMinusNWorkingDays)
                             || docCount > 0 || complaintsCount > 0)
-                            ? -2
-                            : 1;
+                            ? CONDITIONS_NOT_MET
+                            : RISK;
                 }
             }
 

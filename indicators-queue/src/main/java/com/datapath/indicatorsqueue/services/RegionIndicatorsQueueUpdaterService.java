@@ -2,25 +2,24 @@ package com.datapath.indicatorsqueue.services;
 
 import com.datapath.druidintegration.service.TenderRateService;
 import com.datapath.indicatorsqueue.comparators.RegionIndicatorsMapByMaterialityScoreComparator;
-import com.datapath.indicatorsqueue.domain.audit.Monitoring;
 import com.datapath.indicatorsqueue.mappers.TenderScoreMapper;
-import com.datapath.indicatorsqueue.services.audit.ProzorroAuditService;
 import com.datapath.persistence.entities.Contract;
+import com.datapath.persistence.entities.MonitoringEntity;
 import com.datapath.persistence.entities.Tender;
 import com.datapath.persistence.entities.TenderContract;
 import com.datapath.persistence.entities.queue.IndicatorsQueueHistory;
 import com.datapath.persistence.entities.queue.RegionIndicatorsQueueItem;
+import com.datapath.persistence.entities.queue.RegionIndicatorsQueueItemHistory;
+import com.datapath.persistence.repositories.MonitoringRepository;
 import com.datapath.persistence.repositories.TenderRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -41,8 +40,8 @@ public class RegionIndicatorsQueueUpdaterService {
     private RegionIndicatorsQueueItemService regionIndicatorsQueueItemService;
     private IndicatorsQueueRegionProvider indicatorsQueueRegionProvider;
     private IndicatorsQueueConfigurationProvider configProvider;
-    private ProzorroAuditService auditService;
     private TenderRepository tenderRepository;
+    private MonitoringRepository monitoringRepository;
 
     private List<String> unresolvedRegions;
 
@@ -53,15 +52,15 @@ public class RegionIndicatorsQueueUpdaterService {
                                                RegionIndicatorsQueueItemService regionIndicatorsQueueItemService,
                                                IndicatorsQueueRegionProvider indicatorsQueueRegionProvider,
                                                IndicatorsQueueConfigurationProvider configProvider,
-                                               ProzorroAuditService auditService,
-                                               TenderRepository tenderRepository) {
+                                               TenderRepository tenderRepository,
+                                               MonitoringRepository monitoringRepository) {
         this.indicatorsQueueHistoryService = indicatorsQueueHistoryService;
         this.tenderRateService = tenderRateService;
         this.regionIndicatorsQueueItemService = regionIndicatorsQueueItemService;
         this.indicatorsQueueRegionProvider = indicatorsQueueRegionProvider;
         this.configProvider = configProvider;
-        this.auditService = auditService;
         this.tenderRepository = tenderRepository;
+        this.monitoringRepository = monitoringRepository;
         this.unresolvedRegions = new ArrayList<>();
         this.ignoredMethodTypes = Arrays.asList(ignoreMethodTypes.split(","));
         this.ignoredContractStatuses = Arrays.asList(ignoreContractStatuses.split(","));
@@ -121,14 +120,20 @@ public class RegionIndicatorsQueueUpdaterService {
 
         List<RegionIndicatorsQueueItem> queueWithoutMonitoringTenders = disableTendersOnMonitoring(allIndicatorsQueue);
 
+        updateLeftDateForPreviousQueueItems();
         clearQueue();
+
         List<RegionIndicatorsQueueItem> indicatorsQueueItems = saveQueue(queueWithoutMonitoringTenders);
+
+        ZonedDateTime saveNewQueueDate = ZonedDateTime.now(ZoneId.of("UTC"));
+
+        saveQueueHistory(indicatorsQueueItems, saveNewQueueDate);
 
         log.info("Updating region queue items finished. Saved {} items.", indicatorsQueueItems.size());
 
         IndicatorsQueueHistory history = new IndicatorsQueueHistory();
         history.setId(indicatorsQueueHistoryService.getMaxId() + 1);
-        history.setDateCreated(ZonedDateTime.now(ZoneId.of("UTC")));
+        history.setDateCreated(saveNewQueueDate);
 
         IndicatorsQueueHistory savedHistory = indicatorsQueueHistoryService.save(history);
         queueId = savedHistory.getId();
@@ -156,15 +161,43 @@ public class RegionIndicatorsQueueUpdaterService {
                 .anyMatch(c -> !ignoredContractStatuses.contains(c.getStatus()));
     }
 
+    private void updateLeftDateForPreviousQueueItems() {
+        List<RegionIndicatorsQueueItem> previousQueue = getPreviousQueue();
+
+        List<RegionIndicatorsQueueItemHistory> queueHistoryItemByTenderIds = regionIndicatorsQueueItemService.findQueueHistoryItemByTenderIds(
+                previousQueue.stream()
+                        .map(RegionIndicatorsQueueItem::getTenderId)
+                        .collect(toList())
+        );
+
+        ZonedDateTime leftQueueDate = ZonedDateTime.now(ZoneId.of("UTC"));
+        queueHistoryItemByTenderIds.forEach(i -> i.setLeftQueueDate(leftQueueDate));
+        updateQueueHistory(queueHistoryItemByTenderIds);
+    }
+
     private List<RegionIndicatorsQueueItem> getIndicatorsQueue() {
         return tenderRateService.getResult().stream()
                 .map(TenderScoreMapper::mapToRegionIndicatorsQueueItem)
-                .collect(Collectors.toList());
+                .collect(toList());
+    }
+
+    private List<RegionIndicatorsQueueItem> getPreviousQueue() {
+        return regionIndicatorsQueueItemService.getAll();
     }
 
     private List<RegionIndicatorsQueueItem> saveQueue(List<RegionIndicatorsQueueItem> indicatorsQueueItems) {
         log.info("Save {} region indicators queue items...", indicatorsQueueItems.size());
         return regionIndicatorsQueueItemService.saveAll(indicatorsQueueItems);
+    }
+
+    private void updateQueueHistory(List<RegionIndicatorsQueueItemHistory> queueHistoryItems) {
+        log.info("Updating {} elements in queue history", queueHistoryItems.size());
+        regionIndicatorsQueueItemService.updateRegionIndicatorQueueItemHistoryWithLeftQueueDate(queueHistoryItems);
+    }
+
+    private void saveQueueHistory(List<RegionIndicatorsQueueItem> indicatorsQueueItems, ZonedDateTime saveNewQueueDate) {
+        log.info("Saving {} elements to queue history", indicatorsQueueItems.size());
+        regionIndicatorsQueueItemService.saveRegionIndicatorQueueItemHistory(indicatorsQueueItems, saveNewQueueDate);
     }
 
     private void clearQueue() {
@@ -191,18 +224,18 @@ public class RegionIndicatorsQueueUpdaterService {
                 .filter(item -> item.getTenderScore() >= configProvider.getLowIndicatorImpactRange().getMin())
                 .filter(item -> item.getTenderScore() < configProvider.getLowIndicatorImpactRange().getMax())
                 .sorted(scoreComparator)
-                .collect(Collectors.toList());
+                .collect(toList());
 
         List<RegionIndicatorsQueueItem> medium = items.stream()
                 .filter(item -> item.getTenderScore() >= configProvider.getMediumIndicatorImpactRange().getMin()
                         && item.getTenderScore() < configProvider.getMediumIndicatorImpactRange().getMax())
                 .sorted(scoreComparator)
-                .collect(Collectors.toList());
+                .collect(toList());
 
         List<RegionIndicatorsQueueItem> high = items.stream()
                 .filter(item -> item.getTenderScore() >= configProvider.getHighIndicatorImpactRange().getMin())
                 .sorted(scoreComparator)
-                .collect(Collectors.toList());
+                .collect(toList());
 
         Collections.reverse(low);
         Collections.reverse(medium);
@@ -311,9 +344,9 @@ public class RegionIndicatorsQueueUpdaterService {
     private List<RegionIndicatorsQueueItem> disableTendersOnMonitoring(List<RegionIndicatorsQueueItem> items) {
         try {
 
-            List<String> activeMonitorings = auditService.getActiveMonitorings().stream()
-                    .map(Monitoring::getId)
-                    .collect(Collectors.toList());
+            List<String> activeMonitorings = monitoringRepository.findAllByActiveStatus().stream()
+                    .map(MonitoringEntity::getTenderId)
+                    .collect(toList());
             List<RegionIndicatorsQueueItem> resultQueue = new ArrayList<>();
             items.forEach(item -> {
                 if (activeMonitorings.contains(item.getTenderOuterId())) {
@@ -327,8 +360,6 @@ public class RegionIndicatorsQueueUpdaterService {
                 }
             });
             return resultQueue;
-        } catch (IOException e) {
-            log.error("Audit api response can not be parsed.", e);
         } catch (Exception e) {
             log.error("Monitorings loading failed.", e);
         }
@@ -338,7 +369,7 @@ public class RegionIndicatorsQueueUpdaterService {
     private Map<String, List<RegionIndicatorsQueueItem>> groupIndicatorsByRegion(List<RegionIndicatorsQueueItem> items) {
         List<String> regions = items.stream()
                 .map(RegionIndicatorsQueueItem::getRegion)
-                .collect(Collectors.toList());
+                .collect(toList());
 
         Map<String, List<RegionIndicatorsQueueItem>> regionsMap = new HashMap<>();
 

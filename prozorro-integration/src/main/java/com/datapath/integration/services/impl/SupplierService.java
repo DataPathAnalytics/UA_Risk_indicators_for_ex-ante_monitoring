@@ -1,7 +1,9 @@
 package com.datapath.integration.services.impl;
 
 import com.datapath.integration.services.EntityService;
+import com.datapath.persistence.entities.AgreementSupplier;
 import com.datapath.persistence.entities.Supplier;
+import com.datapath.persistence.repositories.AgreementSupplierRepository;
 import com.datapath.persistence.repositories.SupplierRepository;
 import org.springframework.stereotype.Service;
 
@@ -12,9 +14,12 @@ import java.util.Optional;
 public class SupplierService implements EntityService<Supplier> {
 
     private SupplierRepository repository;
+    private AgreementSupplierRepository agreementRepository;
 
-    public SupplierService(SupplierRepository repository) {
+    public SupplierService(SupplierRepository repository,
+                           AgreementSupplierRepository agreementRepository) {
         this.repository = repository;
+        this.agreementRepository = agreementRepository;
     }
 
     @Override
@@ -45,5 +50,9 @@ public class SupplierService implements EntityService<Supplier> {
 
     public Supplier findByIdentifierIdAndScheme(String identifierId, String identifierScheme) {
         return repository.findFirstByIdentifierIdAndIdentifierScheme(identifierId, identifierScheme);
+    }
+
+    public AgreementSupplier findAgreementSupplierByIdentifierIdAndScheme(String identifierId, String identifierScheme) {
+        return agreementRepository.findFirstByIdentifierIdAndIdentifierScheme(identifierId, identifierScheme);
     }
 }

@@ -16,6 +16,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static org.springframework.util.CollectionUtils.isEmpty;
+
 abstract class ExtractorService {
 
     static final String UTC_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
@@ -55,7 +57,7 @@ abstract class ExtractorService {
         filters.add(new StringFilter("selector", INDICATOR_ID, druidIndicator.getIndicatorId()));
         filters.add(new IntFilter("selector", INDICATOR_VALUE, druidIndicator.getIndicatorValue()));
 
-        if (!druidIndicator.getLotIds().isEmpty()) {
+        if (!isEmpty(druidIndicator.getLotIds())) {
             ListStringFilter lotsFilter = new ListStringFilter();
             lotsFilter.setType("and");
             lotsFilter.setFields(druidIndicator.getLotIds().stream().map(item -> new StringFilter("selector", LOT_IDS, item)).collect(Collectors.toList()));

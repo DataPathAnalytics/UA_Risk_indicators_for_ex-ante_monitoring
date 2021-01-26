@@ -6,6 +6,8 @@ import com.datapath.indicatorsqueue.domain.PageableResource;
 import com.datapath.indicatorsqueue.services.IndicatorsQueueConfigurationProvider;
 import com.datapath.indicatorsqueue.services.IndicatorsQueueItemService;
 import com.datapath.indicatorsqueue.services.IndicatorsQueueUpdaterService;
+import com.datapath.persistence.domain.ConfigurationDomain;
+import com.datapath.persistence.service.ConfigurationDaoService;
 import com.datapath.web.domain.common.ImpactCategory;
 import com.datapath.web.domain.queue.IndicatorsQueueDataPage;
 import com.datapath.web.domain.queue.IndicatorsQueueInfo;
@@ -24,14 +26,16 @@ public class IndicatorsQueueService {
     private IndicatorsQueueItemService indicatorsQueueItemService;
     private IndicatorsQueueUpdaterService indicatorsQueueUpdaterService;
     private IndicatorsQueueConfigurationProvider queueConfigProvider;
+    private ConfigurationDaoService configurationService;
 
     public IndicatorsQueueService(IndicatorsQueueItemService indicatorsQueueItemService,
                                   IndicatorsQueueUpdaterService indicatorsQueueUpdaterService,
-                                  IndicatorsQueueConfigurationProvider queueConfigProvider) {
-
+                                  IndicatorsQueueConfigurationProvider queueConfigProvider,
+                                  ConfigurationDaoService configurationService) {
         this.indicatorsQueueItemService = indicatorsQueueItemService;
         this.indicatorsQueueUpdaterService = indicatorsQueueUpdaterService;
         this.queueConfigProvider = queueConfigProvider;
+        this.configurationService = configurationService;
     }
 
     public IndicatorsQueueDataPage getIndicatorsQueue(String path,
@@ -55,12 +59,14 @@ public class IndicatorsQueueService {
                 page, limit, path, totalPages, totalElements, regions
         );
 
+        ConfigurationDomain configuration = configurationService.getConfiguration();
+
         IndicatorsQueueInfo info = new IndicatorsQueueInfo();
         info.setDateCreated(indicatorsQueueUpdaterService.getDateCreated());
         info.setQueueId(indicatorsQueueUpdaterService.getQueueId());
         info.setImpactCategory(ImpactCategory.MIXED.categoryName());
-        info.setExpectedValueImportanceCoefficient(0.5d);
-        info.setTenderScoreImportanceCoefficient(0.5d);
+        info.setExpectedValueImportanceCoefficient(configuration.getExpectedValueCoefficient());
+        info.setTenderScoreImportanceCoefficient(configuration.getTenderScoreCoefficient());
         info.setNumberOfTopRiskedTenders(indicatorsQueuePage.getNumberOfTopRiskedTenders());
         info.setTopRiskPercentage(queueConfigProvider.getMixedTopRiskPercentage());
         info.setTenderScoreRange(queueConfigProvider.getMixedIndicatorImpactRange());
@@ -98,12 +104,14 @@ public class IndicatorsQueueService {
                 page, limit, path, totalPages, totalElements, regions
         );
 
+        ConfigurationDomain configuration = configurationService.getConfiguration();
+
         IndicatorsQueueInfo info = new IndicatorsQueueInfo();
         info.setDateCreated(indicatorsQueueUpdaterService.getDateCreated());
         info.setQueueId(indicatorsQueueUpdaterService.getQueueId());
         info.setImpactCategory(ImpactCategory.LOW.categoryName());
-        info.setExpectedValueImportanceCoefficient(0.5d);
-        info.setTenderScoreImportanceCoefficient(0.5d);
+        info.setExpectedValueImportanceCoefficient(configuration.getExpectedValueCoefficient());
+        info.setTenderScoreImportanceCoefficient(configuration.getTenderScoreCoefficient());
         info.setNumberOfTopRiskedTenders(indicatorsQueuePage.getNumberOfTopRiskedTenders());
         info.setTopRiskPercentage(queueConfigProvider.getLowTopRiskPercentage());
         info.setTenderScoreRange(impactRange);
@@ -141,13 +149,15 @@ public class IndicatorsQueueService {
                 page, limit, path, totalPages, totalElements, regions
         );
 
+        ConfigurationDomain configuration = configurationService.getConfiguration();
+
         IndicatorsQueueInfo info = new IndicatorsQueueInfo();
         info.setDateCreated(indicatorsQueueUpdaterService.getDateCreated());
         info.setQueueId(indicatorsQueueUpdaterService.getQueueId());
         info.setImpactCategory(ImpactCategory.MEDIUM.categoryName());
 
-        info.setExpectedValueImportanceCoefficient(0.5d);
-        info.setTenderScoreImportanceCoefficient(0.5d);
+        info.setExpectedValueImportanceCoefficient(configuration.getExpectedValueCoefficient());
+        info.setTenderScoreImportanceCoefficient(configuration.getTenderScoreCoefficient());
         info.setNumberOfTopRiskedTenders(indicatorsQueuePage.getNumberOfTopRiskedTenders());
         info.setTopRiskPercentage(queueConfigProvider.getMediumTopRiskPercentage());
         info.setTenderScoreRange(impactRange);
@@ -185,13 +195,15 @@ public class IndicatorsQueueService {
                 page, limit, path, totalPages, totalElements, regions
         );
 
+        ConfigurationDomain configuration = configurationService.getConfiguration();
+
         IndicatorsQueueInfo info = new IndicatorsQueueInfo();
         info.setDateCreated(indicatorsQueueUpdaterService.getDateCreated());
         info.setQueueId(indicatorsQueueUpdaterService.getQueueId());
         info.setImpactCategory(ImpactCategory.HIGH.categoryName());
 
-        info.setExpectedValueImportanceCoefficient(0.5d);
-        info.setTenderScoreImportanceCoefficient(0.5d);
+        info.setExpectedValueImportanceCoefficient(configuration.getExpectedValueCoefficient());
+        info.setTenderScoreImportanceCoefficient(configuration.getTenderScoreCoefficient());
         info.setNumberOfTopRiskedTenders(indicatorsQueuePage.getNumberOfTopRiskedTenders());
         info.setTopRiskPercentage(queueConfigProvider.getHighTopRiskPercentage());
         info.setTenderScoreRange(impactRange);

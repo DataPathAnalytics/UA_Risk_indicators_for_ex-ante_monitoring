@@ -56,7 +56,7 @@ public class Award {
     @Column(name = "supplier_telephone")
     private String supplierTelephone;
 
-    @OneToOne(mappedBy = "award")
+    @OneToOne(mappedBy = "award", cascade = CascadeType.ALL)
     private TenderContract tenderContract;
 
     @OneToMany(mappedBy = "award", cascade = CascadeType.ALL)

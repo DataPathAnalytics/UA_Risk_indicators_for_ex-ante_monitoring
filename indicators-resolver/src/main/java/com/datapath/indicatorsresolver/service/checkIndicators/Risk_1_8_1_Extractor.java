@@ -12,7 +12,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
 
 
 @Service
@@ -35,8 +34,8 @@ public class Risk_1_8_1_Extractor extends BaseExtractor {
     public void checkIndicator(ZonedDateTime dateTime) {
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 checkRisk_1_8_1Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
@@ -53,8 +52,8 @@ public class Risk_1_8_1_Extractor extends BaseExtractor {
         }
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 ZonedDateTime dateTime = isNull(indicator.getLastCheckedDateCreated())
                         ? ZonedDateTime.now().minus(Period.ofYears(1)).withHour(0)
                         : indicator.getLastCheckedDateCreated();
@@ -69,17 +68,14 @@ public class Risk_1_8_1_Extractor extends BaseExtractor {
 
 
     private void checkRisk_1_8_1Indicator(Indicator indicator, ZonedDateTime dateTime) {
-        int size = 100;
-        int page = 0;
-
+        log.info("{} indicator started", INDICATOR_CODE);
         while (true) {
 
             List<String> tenders = findTenders(
                     dateTime,
                     Arrays.asList(indicator.getProcedureStatuses()),
                     Arrays.asList(indicator.getProcedureTypes()),
-                    Arrays.asList(indicator.getProcuringEntityKind()),
-                    page, size);
+                    Arrays.asList(indicator.getProcuringEntityKind()));
 
             if (tenders.isEmpty()) {
                 break;
@@ -116,13 +112,11 @@ public class Risk_1_8_1_Extractor extends BaseExtractor {
             dateTime = maxTenderDateCreated;
         }
 
-        log.info("{} Finish indicator processing.", INDICATOR_CODE);
-
         ZonedDateTime now = ZonedDateTime.now();
         indicator.setDateChecked(now);
         indicatorRepository.save(indicator);
 
-        log.info("{} Updated indicator {}", INDICATOR_CODE, indicator);
+        log.info("{} indicator finished", INDICATOR_CODE);
     }
 
     private Map<String, List<TenderIndicator>> checkIndicator(List<String> tenderIds, Indicator indicator) {
@@ -149,6 +143,7 @@ public class Risk_1_8_1_Extractor extends BaseExtractor {
 
         Map<String, List<TenderIndicator>> indicatorsMap = new HashMap<>();
         for (String tenderId : tendersMap.keySet()) {
+            log.info("Process tender {}", tenderId);
 
             TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
 
@@ -158,12 +153,12 @@ public class Risk_1_8_1_Extractor extends BaseExtractor {
                 Object[] lotInfo = (Object[]) lotInfoObj;
                 String lotId = lotInfo[1].toString();
                 if (null == lotInfo[2]) {
-                    lotIndicators.put(lotId, -2);
+                    lotIndicators.put(lotId, CONDITIONS_NOT_MET);
                     continue;
                 }
 
                 int days = Integer.parseInt(lotInfo[2].toString());
-                lotIndicators.put(lotId, days < DAYS_LIMIT ? 1 : 0);
+                lotIndicators.put(lotId, days < DAYS_LIMIT ? RISK : NOT_RISK);
             }
 
             List<TenderIndicator> tenderIndicators = new ArrayList<>();

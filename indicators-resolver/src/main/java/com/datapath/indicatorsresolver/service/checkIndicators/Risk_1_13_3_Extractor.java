@@ -14,9 +14,9 @@ import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.datapath.indicatorsresolver.IndicatorConstants.UA_ZONE;
 import static com.datapath.persistence.utils.DateUtils.toZonedDateTime;
 import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
 
 
 @Service
@@ -39,8 +39,8 @@ public class Risk_1_13_3_Extractor extends BaseExtractor {
     public void checkIndicator(ZonedDateTime dateTime) {
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 checkDasu13_3Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
@@ -57,8 +57,8 @@ public class Risk_1_13_3_Extractor extends BaseExtractor {
         }
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 ZonedDateTime dateTime = isNull(indicator.getDateChecked())
                         ? ZonedDateTime.now(ZoneId.of("UTC")).minus(Period.ofYears(1)).withHour(0)
                         : indicator.getLastCheckedDateCreated();
@@ -73,17 +73,14 @@ public class Risk_1_13_3_Extractor extends BaseExtractor {
 
 
     private void checkDasu13_3Indicator(Indicator indicator, ZonedDateTime dateTime) {
-        int size = 100;
-        int page = 0;
-
+        log.info("{} indicator started", INDICATOR_CODE);
         while (true) {
 
             List<String> tenders = findTenders(
                     dateTime,
                     Arrays.asList(indicator.getProcedureStatuses()),
                     Arrays.asList(indicator.getProcedureTypes()),
-                    Arrays.asList(indicator.getProcuringEntityKind()),
-                    page, size);
+                    Arrays.asList(indicator.getProcuringEntityKind()));
 
             if (tenders.isEmpty()) {
                 break;
@@ -107,16 +104,18 @@ public class Risk_1_13_3_Extractor extends BaseExtractor {
                     tenders.stream().collect(Collectors.joining(","))).stream().map(tenderInfo -> {
                 String tenderId = tenderInfo[0].toString();
 
+                log.info("Process tender {}", tenderId);
+
                 ZonedDateTime awardStartDate = isNull(tenderInfo[1])
                         ? null
-                        : toZonedDateTime((Timestamp) tenderInfo[1]).withZoneSameInstant(ZoneId.of("Europe/Kiev"))
+                        : toZonedDateTime((Timestamp) tenderInfo[1]).withZoneSameInstant(UA_ZONE)
                         .withHour(0)
                         .withMinute(0)
                         .withSecond(0)
                         .withNano(0);
                 ZonedDateTime minDocDatePublishDate = isNull(tenderInfo[2])
                         ? null
-                        : toZonedDateTime((Timestamp) tenderInfo[2]).withZoneSameInstant(ZoneId.of("Europe/Kiev"))
+                        : toZonedDateTime((Timestamp) tenderInfo[2]).withZoneSameInstant(UA_ZONE)
                         .withHour(0)
                         .withMinute(0)
                         .withSecond(0)
@@ -125,7 +124,7 @@ public class Risk_1_13_3_Extractor extends BaseExtractor {
                 int indicatorValue;
 
                 if (isNull(awardStartDate)) {
-                    indicatorValue = -2;
+                    indicatorValue = CONDITIONS_NOT_MET;
                 } else {
                     indicatorValue = (isNull(minDocDatePublishDate)) ||
                             Duration.between(minDocDatePublishDate, awardStartDate).toDays() < DAYS_LIMIT
@@ -151,6 +150,7 @@ public class Risk_1_13_3_Extractor extends BaseExtractor {
         indicator.setDateChecked(now);
         indicatorRepository.save(indicator);
 
+        log.info("{} indicator finished", INDICATOR_CODE);
     }
 
 }

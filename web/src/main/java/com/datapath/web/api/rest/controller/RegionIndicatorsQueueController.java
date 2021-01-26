@@ -84,7 +84,6 @@ public class RegionIndicatorsQueueController {
     @ApiVersion({0.1})
     @RequestMapping(value = "/region-indicators-queue/configuration", method = RequestMethod.POST)
     public IndicatorsQueueConfiguration updateConfiguration(@RequestBody IndicatorsQueueConfiguration indicatorsQueueConfiguration) {
-        log.info(indicatorsQueueConfiguration.toString());
         return indicatorsQueueConfigurationService.save(indicatorsQueueConfiguration);
     }
 }

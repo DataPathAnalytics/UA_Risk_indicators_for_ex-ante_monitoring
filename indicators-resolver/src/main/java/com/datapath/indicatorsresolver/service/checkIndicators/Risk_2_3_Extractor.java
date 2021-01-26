@@ -14,7 +14,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
 
 
 @Service
@@ -37,8 +36,8 @@ public class Risk_2_3_Extractor extends BaseExtractor {
     public void checkIndicator(ZonedDateTime dateTime) {
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 checkRisk2_3Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
@@ -55,8 +54,8 @@ public class Risk_2_3_Extractor extends BaseExtractor {
         }
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 ZonedDateTime dateTime = isNull(indicator.getLastCheckedDateCreated())
                         ? ZonedDateTime.now(ZoneId.of("UTC")).minus(Period.ofYears(1)).withHour(0)
                         : indicator.getLastCheckedDateCreated();
@@ -70,15 +69,14 @@ public class Risk_2_3_Extractor extends BaseExtractor {
     }
 
     private void checkRisk2_3Indicator(Indicator indicator, ZonedDateTime dateTime) {
-        int size = 100;
-        int page = 0;
+        log.info("{} indicator started", INDICATOR_CODE);
         while (true) {
 
             List<String> tenders = findTenders(
                     dateTime,
                     Arrays.asList(indicator.getProcedureStatuses()),
                     Arrays.asList(indicator.getProcedureTypes()),
-                    Arrays.asList(indicator.getProcuringEntityKind()), page, size);
+                    Arrays.asList(indicator.getProcuringEntityKind()));
 
             if (tenders.isEmpty()) {
                 break;
@@ -89,14 +87,17 @@ public class Risk_2_3_Extractor extends BaseExtractor {
             String tenderIdsStr = tenders.stream().collect(Collectors.joining(","));
             for (Object[] tenderInfo : tenderRepository.getDistinctLotAndSupplierCount(tenderIdsStr)) {
                 String tenderId = tenderInfo[0].toString();
+
+                log.info("Process tender {}", tenderId);
+
                 try {
                     Integer activeLotCount = Integer.parseInt(tenderInfo[1].toString());
                     Integer supplierCount = Integer.parseInt(tenderInfo[2].toString());
                     Integer indicatorValue;
                     if (activeLotCount < 5) {
-                        indicatorValue = -2;
+                        indicatorValue = CONDITIONS_NOT_MET;
                     } else {
-                        indicatorValue = supplierCount == 1 ? 1 : 0;
+                        indicatorValue = supplierCount == 1 ? RISK : NOT_RISK;
                     }
                     TenderDimensions tenderDimensions = dimensionsMap.get(tenderId);
                     TenderIndicator tenderIndicator = new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>());
@@ -117,5 +118,7 @@ public class Risk_2_3_Extractor extends BaseExtractor {
         ZonedDateTime now = ZonedDateTime.now();
         indicator.setDateChecked(now);
         indicatorRepository.save(indicator);
+
+        log.info("{} indicator finished", INDICATOR_CODE);
     }
 }

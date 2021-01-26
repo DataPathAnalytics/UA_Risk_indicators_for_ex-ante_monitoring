@@ -1,6 +1,5 @@
 package com.datapath.integration.parsers.impl;
 
-import com.datapath.integration.parsers.EntityParser;
 import com.datapath.integration.utils.DateUtils;
 import com.datapath.integration.utils.JsonUtils;
 import com.datapath.persistence.entities.Contract;
@@ -12,10 +11,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+
+import static java.util.stream.Collectors.groupingBy;
+import static org.springframework.util.CollectionUtils.isEmpty;
 
 
-public class ContractParser implements EntityParser {
+public class ContractParser {
 
     private JsonNode dataNode;
     private Contract contract;
@@ -52,9 +56,22 @@ public class ContractParser implements EntityParser {
         String status = dataNode.at("/status").asText();
         String tenderId = dataNode.at("/tender_id").asText();
         String contractId = dataNode.at("/contractID").asText();
-        Double amount = dataNode.at("/value/amount").asDouble();
+        String contractNumber = JsonUtils.getString(dataNode, "/contractNumber");
         ZonedDateTime dateModified = DateUtils.parseZonedDateTime(dateModifiedStr);
         ZonedDateTime dateSigned = JsonUtils.getDate(dataNode, "/dateSigned");
+
+        Double amount = dataNode.at("/value/amount").asDouble();
+        String currency = JsonUtils.getString(dataNode, "/value/currency");
+        Double amountNet = JsonUtils.getDouble(dataNode, "/value/amountNet");
+        Boolean valueAddedTaxIncluded = dataNode.at("/value/valueAddedTaxIncluded").asBoolean();
+        Double paidAmount = JsonUtils.getDouble(dataNode, "/amountPaid/amount");
+        String paidCurrency = JsonUtils.getString(dataNode, "/amountPaid/currency");
+        Double paidAmountNet = JsonUtils.getDouble(dataNode, "/amountPaid/amountNet");
+        Boolean paidValueAddedTaxIncluded = dataNode.at("/amountPaid/valueAddedTaxIncluded").asBoolean();
+
+        ZonedDateTime periodStartDate = JsonUtils.getDate(dataNode, "/period/startDate");
+        ZonedDateTime periodEndDate = JsonUtils.getDate(dataNode, "/period/endDate");
+        String terminationDetails = JsonUtils.getString(dataNode, "/terminationDetails");
 
         Contract contract = new Contract();
         contract.setOuterId(outerId);
@@ -62,8 +79,22 @@ public class ContractParser implements EntityParser {
         contract.setTenderOuterId(tenderId);
         contract.setContractId(contractId);
         contract.setDateModified(dateModified);
-        contract.setAmount(amount);
         contract.setDateSigned(dateSigned);
+        contract.setContractNumber(contractNumber);
+
+        contract.setAmount(amount);
+        contract.setCurrency(currency);
+        contract.setAmountNet(amountNet);
+        contract.setValueAddedTaxIncluded(valueAddedTaxIncluded);
+
+        contract.setPaidAmount(paidAmount);
+        contract.setPaidCurrency(paidCurrency);
+        contract.setPaidAmountNet(paidAmountNet);
+        contract.setPaidValueAddedTaxIncluded(paidValueAddedTaxIncluded);
+
+        contract.setPeriodStartDate(periodStartDate);
+        contract.setPeriodEndDate(periodEndDate);
+        contract.setTerminationDetails(terminationDetails);
 
         this.contract = contract;
     }
@@ -74,6 +105,7 @@ public class ContractParser implements EntityParser {
             String outerId = node.at("/id").asText();
             String status = node.at("/status").asText();
             ZonedDateTime dateSigned = JsonUtils.getDate(node, "/dateSigned");
+            ZonedDateTime date = JsonUtils.getDate(node, "/date");
             List<String> rationaleTypes = new ArrayList<>();
             for (JsonNode rationaleType : node.at("/rationaleTypes")) {
                 rationaleTypes.add(rationaleType.asText());
@@ -82,6 +114,7 @@ public class ContractParser implements EntityParser {
             ContractChange contractChange = new ContractChange();
             contractChange.setOuterId(outerId);
             contractChange.setStatus(status);
+            contractChange.setDate(date);
             contractChange.setDateSigned(dateSigned);
             contractChange.setRationaleTypes(rationaleTypes.toArray(new String[0]));
             contractChanges.add(contractChange);
@@ -90,6 +123,7 @@ public class ContractParser implements EntityParser {
 
     private void parseContractDocuments() {
         contractDocuments = new ArrayList<>();
+        List<ContractDocument> documents = new ArrayList<>();
         for (JsonNode node : dataNode.at("/documents")) {
             String outerId = node.at("/id").asText();
             String format = JsonUtils.getString(node, "/format");
@@ -107,8 +141,39 @@ public class ContractParser implements EntityParser {
             document.setDocumentType(documentType);
             document.setDatePublished(datePublished);
             document.setDateModified(dateModified);
-            contractDocuments.add(document);
+
+            String relatedItem = JsonUtils.getString(node, "/relatedItem");
+
+            if (relatedItem != null) {
+                connectDocumentWithChange(document, relatedItem);
+            }
+
+            documents.add(document);
         }
+
+        Map<String, List<ContractDocument>> groupDocumentByOuterId = documents
+                .stream()
+                .collect(groupingBy(ContractDocument::getOuterId));
+
+        for (Map.Entry<String, List<ContractDocument>> entry : groupDocumentByOuterId.entrySet()) {
+            entry.getValue()
+                    .stream()
+                    .max(Comparator.comparing(ContractDocument::getDateModified))
+                    .ifPresent(contractDocuments::add);
+        }
+    }
+
+    private void connectDocumentWithChange(ContractDocument document, String relatedItem) {
+        contractChanges.stream()
+                .filter(change -> relatedItem.equalsIgnoreCase(change.getOuterId()))
+                .findFirst()
+                .ifPresent(change -> {
+                    if (isEmpty(change.getDocuments())) {
+                        change.setDocuments(new ArrayList<>());
+                    }
+                    document.setChange(change);
+                    change.getDocuments().add(document);
+                });
     }
 
 }

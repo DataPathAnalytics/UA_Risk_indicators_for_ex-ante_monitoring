@@ -5,8 +5,10 @@ import com.datapath.indicatorsqueue.domain.IndicatorsQueueItemDTO;
 import com.datapath.indicatorsqueue.domain.PageableResource;
 import com.datapath.indicatorsqueue.exceptions.InvalidIndicatorsImpactRangeException;
 import com.datapath.indicatorsqueue.mappers.GeneralBeanMapper;
+import com.datapath.persistence.domain.ConfigurationDomain;
 import com.datapath.persistence.entities.queue.IndicatorsQueueItem;
 import com.datapath.persistence.repositories.queue.IndicatorsQueueItemRepository;
+import com.datapath.persistence.service.ConfigurationDaoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -20,9 +22,12 @@ import java.util.stream.Collectors;
 public class IndicatorsQueueItemService {
 
     private IndicatorsQueueItemRepository indicatorsQueueItemRepository;
+    private ConfigurationDaoService configurationService;
 
-    public IndicatorsQueueItemService(IndicatorsQueueItemRepository indicatorsQueueItemRepository) {
+    public IndicatorsQueueItemService(IndicatorsQueueItemRepository indicatorsQueueItemRepository,
+                                      ConfigurationDaoService configurationService) {
         this.indicatorsQueueItemRepository = indicatorsQueueItemRepository;
+        this.configurationService = configurationService;
     }
 
     public PageableResource<IndicatorsQueueItemDTO> getAllIndicatorsQueueItems(Integer page,
@@ -120,15 +125,24 @@ public class IndicatorsQueueItemService {
 
     public List<String> getRegions(String impactCategory) {
         if (null != impactCategory) {
+            ConfigurationDomain configuration = configurationService.getConfiguration();
+
             switch (impactCategory) {
                 case "low": {
-                    return indicatorsQueueItemRepository.findDistinctRegionsByTenderScoreLessThan(0.5);
+                    return indicatorsQueueItemRepository.findDistinctRegionsByTenderScoreLessThan(
+                            configuration.getBucketRiskGroupMediumLeft()
+                    );
                 }
                 case "medium": {
-                    return indicatorsQueueItemRepository.findDistinctRegionsByTenderScoreGreaterThanEqualAndTenderScoreLessThan(0.5, 1.2);
+                    return indicatorsQueueItemRepository.findDistinctRegionsByTenderScoreGreaterThanEqualAndTenderScoreLessThanEqual(
+                            configuration.getBucketRiskGroupMediumLeft(),
+                            configuration.getBucketRiskGroupMediumRight()
+                    );
                 }
                 case "high": {
-                    return indicatorsQueueItemRepository.findDistinctRegionsByTenderScoreGreaterThanEqual(1.2);
+                    return indicatorsQueueItemRepository.findDistinctRegionsByTenderScoreGreaterThan(
+                            configuration.getBucketRiskGroupMediumRight()
+                    );
                 }
             }
         }
@@ -153,10 +167,12 @@ public class IndicatorsQueueItemService {
     }
 
     private String resolveImpactCategory(Double tenderScore) {
-        if (tenderScore < 0.5) {
+        ConfigurationDomain configuration = configurationService.getConfiguration();
+
+        if (tenderScore < configuration.getBucketRiskGroupMediumLeft()) {
             return "low";
-        }
-        if (tenderScore <= 1.2) {
+    }
+        if (tenderScore <= configuration.getBucketRiskGroupMediumRight()) {
             return "medium";
         }
 

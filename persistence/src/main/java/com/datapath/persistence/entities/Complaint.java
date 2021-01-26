@@ -10,8 +10,7 @@ import java.time.ZonedDateTime;
 @Entity
 @Table(name = "complaint",
         indexes = {
-                @Index(columnList = "award_id", name = "complaint_award_id_idx"),
-                @Index(columnList = "tender_id", name = "complaint_tender_id_idx")
+                @Index(columnList = "award_id", name = "complaint_award_id_idx")
         })
 public class Complaint {
 
@@ -42,4 +41,25 @@ public class Complaint {
     @ManyToOne(cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)
     @JoinColumn(name = "award_id")
     private Award award;
+
+    @Column(name = "date_answered")
+    @Convert(converter = ZonedDateTimeConverter.class)
+    private ZonedDateTime dateAnswered;
+
+    @Column(name = "date_accepted")
+    @Convert(converter = ZonedDateTimeConverter.class)
+    private ZonedDateTime dateAccepted;
+
+    @Column(name = "date_submitted")
+    @Convert(converter = ZonedDateTimeConverter.class)
+    private ZonedDateTime dateSubmitted;
+
+    @Column(name = "date_decision")
+    @Convert(converter = ZonedDateTimeConverter.class)
+    private ZonedDateTime dateDecision;
+
+    private String authorId;
+    private String authorScheme;
+    @Column(columnDefinition = "text")
+    private String authorLegalName;
 }

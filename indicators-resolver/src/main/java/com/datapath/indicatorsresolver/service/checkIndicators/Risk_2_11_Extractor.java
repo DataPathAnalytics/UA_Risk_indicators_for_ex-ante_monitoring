@@ -5,7 +5,6 @@ import com.datapath.indicatorsresolver.model.ContractDimensions;
 import com.datapath.indicatorsresolver.model.ContractIndicator;
 import com.datapath.persistence.entities.Indicator;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.Period;
@@ -15,7 +14,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
 
 
 @Service
@@ -37,8 +35,8 @@ public class Risk_2_11_Extractor extends BaseExtractor {
     public void checkIndicator(ZonedDateTime dateTime) {
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 checkRisk2_11Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
@@ -55,8 +53,8 @@ public class Risk_2_11_Extractor extends BaseExtractor {
         }
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 ZonedDateTime dateTime = isNull(indicator.getLastCheckedDateCreated())
                         ? ZonedDateTime.now(ZoneId.of("UTC")).minus(Period.ofYears(1)).withHour(0)
                         : indicator.getLastCheckedDateCreated();
@@ -70,17 +68,14 @@ public class Risk_2_11_Extractor extends BaseExtractor {
     }
 
     private void checkRisk2_11Indicator(Indicator indicator, ZonedDateTime dateTime) {
-
-        int size = 100;
-        int page = 0;
+        log.info("{} indicator started", INDICATOR_CODE);
         while (true) {
 
             List<String> contracts = contractRepository.getContarctIdByTenderSratusAndProcedureTypeAndProcuringEntityType(
                     dateTime,
                     Arrays.asList(indicator.getProcedureStatuses()),
                     Arrays.asList(indicator.getProcedureTypes()),
-                    Arrays.asList(indicator.getProcuringEntityKind()),
-                    PageRequest.of(page, size));
+                    Arrays.asList(indicator.getProcuringEntityKind()));
 
             if (contracts.isEmpty()) {
                 break;
@@ -93,18 +88,21 @@ public class Risk_2_11_Extractor extends BaseExtractor {
 
             activeChangesWithItemPriceVariationByTenderId.forEach(contractInfo -> {
                 String contractId = contractInfo[0].toString();
+
+                log.info("Process contract {}", contractId);
+
                 try {
                     Integer changes = Integer.parseInt(contractInfo[1].toString());
 
                     Integer indicatorValue;
 
                     if (changes == 0) {
-                        indicatorValue = -2;
+                        indicatorValue = CONDITIONS_NOT_MET;
                     } else {
                         indicatorValue = changes >= 3 ? RISK : NOT_RISK;
                     }
                     ContractDimensions contractDimensions = contractDimensionsMap.get(contractId);
-                    ContractIndicator contractIndicator = new ContractIndicator(contractDimensions, indicator, indicatorValue, new ArrayList<>());
+                    ContractIndicator contractIndicator = new ContractIndicator(contractDimensions, indicator, indicatorValue);
                     DruidContractIndicator druidIndicator = druidIndicatorMapper.transformToDruidContractIndicator(contractIndicator);
 
                     if (!extractContractDataService.theLastContractEquals(contractId, INDICATOR_CODE, Collections.singletonList(druidIndicator))) {
@@ -130,5 +128,7 @@ public class Risk_2_11_Extractor extends BaseExtractor {
         ZonedDateTime now = ZonedDateTime.now();
         indicator.setDateChecked(now);
         indicatorRepository.save(indicator);
+
+        log.info("{} indicator finished", INDICATOR_CODE);
     }
 }

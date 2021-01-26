@@ -4,7 +4,6 @@ import com.datapath.indicatorsresolver.model.TenderDimensions;
 import com.datapath.indicatorsresolver.model.TenderIndicator;
 import com.datapath.persistence.entities.Indicator;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.Period;
@@ -36,8 +35,8 @@ public class Risk_1_5_1_Extractor extends BaseExtractor {
     public void checkIndicator(ZonedDateTime dateTime) {
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 checkRisk1_5_1Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
@@ -54,8 +53,8 @@ public class Risk_1_5_1_Extractor extends BaseExtractor {
         }
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 ZonedDateTime dateTime = isNull(indicator.getLastCheckedDateCreated())
                         ? ZonedDateTime.now().minus(Period.ofYears(1)).withHour(0)
                         : indicator.getLastCheckedDateCreated();
@@ -70,16 +69,14 @@ public class Risk_1_5_1_Extractor extends BaseExtractor {
 
 
     private void checkRisk1_5_1Indicator(Indicator indicator, ZonedDateTime dateTime) {
-        int size = 100;
-        int page = 0;
+        log.info("{} indicator started", INDICATOR_CODE);
         while (true) {
 
             List<String> tenders = tenderRepository.findGoodsServicesTenderIdByProcedureStatusAndProcedureType(
                     dateTime,
                     Arrays.asList(indicator.getProcedureStatuses()),
                     Arrays.asList(indicator.getProcedureTypes()),
-                    Arrays.asList(indicator.getProcuringEntityKind()),
-                    PageRequest.of(page, size));
+                    Arrays.asList(indicator.getProcuringEntityKind()));
             if (tenders.isEmpty()) {
                 break;
             }
@@ -100,6 +97,8 @@ public class Risk_1_5_1_Extractor extends BaseExtractor {
         ZonedDateTime now = ZonedDateTime.now();
         indicator.setDateChecked(now);
         indicatorRepository.save(indicator);
+
+        log.info("{} indicator finished", INDICATOR_CODE);
     }
 
     private Map<String, List<TenderIndicator>> checkIndicator(List<String> tenderIds, Indicator indicator) {
@@ -111,6 +110,9 @@ public class Risk_1_5_1_Extractor extends BaseExtractor {
 
         activeLotsAmountAndGuaranteeAmountWithCurrencies.forEach(lotInfo -> {
             String tenderId = lotInfo[0].toString();
+
+            log.info("Process tender {}", tenderId);
+
             String lotId = lotInfo[1].toString();
 
             Integer indicatorValue;
@@ -120,7 +122,7 @@ public class Risk_1_5_1_Extractor extends BaseExtractor {
                 double guaranteeShare = (guaranteeAmount / amount) * 100;
                 indicatorValue = guaranteeShare > PERCENTAGE_DIFF_LIMIT ? RISK : NOT_RISK;
             } else {
-                indicatorValue = -2;
+                indicatorValue = CONDITIONS_NOT_MET;
             }
 
             if (!resultMap.containsKey(tenderId)) {

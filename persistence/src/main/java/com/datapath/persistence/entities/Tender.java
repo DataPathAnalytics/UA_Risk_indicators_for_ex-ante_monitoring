@@ -11,6 +11,8 @@ import javax.persistence.*;
 import java.time.ZonedDateTime;
 import java.util.List;
 
+import static javax.persistence.FetchType.LAZY;
+
 @Data
 @Entity
 @Table(name = "tender",
@@ -53,6 +55,9 @@ public class Tender {
     @Column(name = "procurement_method_type")
     private String procurementMethodType;
 
+    @Column(columnDefinition = "text", name = "procurement_method_rationale")
+    private String procurementMethodRationale;
+
     @Column(name = "procurement_method")
     private String procurementMethod;
 
@@ -61,9 +66,6 @@ public class Tender {
 
     @Column(name = "tv_subject_of_procurement")
     private String tvSubjectOfProcurement;
-
-    @Column(columnDefinition = "text", name = "procurement_method_rationale")
-    private String procurementMethodRationale;
 
     @Column(name = "tv_tender_cpv")
     private String tvTenderCPV;
@@ -118,7 +120,7 @@ public class Tender {
     @Convert(converter = ZonedDateTimeConverter.class)
     private ZonedDateTime awardEndDate;
 
-    @ManyToOne(cascade = CascadeType.PERSIST)
+    @ManyToOne(cascade = CascadeType.PERSIST, optional = false, fetch = LAZY)
     @JoinColumn(name = "procuring_entity_id")
     private ProcuringEntity procuringEntity;
 
@@ -131,7 +133,7 @@ public class Tender {
     @OneToMany(mappedBy = "tender", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Award> awards;
 
-    @OneToOne(mappedBy = "tender", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(mappedBy = "tender", cascade = CascadeType.ALL, orphanRemoval = true, fetch = LAZY)
     private TenderData data;
 
     @OneToMany(mappedBy = "tender", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -158,4 +160,37 @@ public class Tender {
     @OneToMany(mappedBy = "tender", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Complaint> complaints;
 
+    @Column(name = "amount_net")
+    private Double amountNet;
+
+    @Column(name = "value_added_tax_included")
+    private Boolean valueAddedTaxIncluded;
+
+    @OneToMany(mappedBy = "tender", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Cancellation> cancellations;
+
+    @Transient
+    private String auctionUrl;
+    @Transient
+    private String mode;
+
+    @Column(columnDefinition = "text")
+    private String causeDescription;
+
+    @Column(name = "main_procurement_category")
+    private String mainProcurementCategory;
+
+    private String relatedTender;
+
+    @OneToMany(mappedBy = "tender", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TenderPlan> plans;
+
+    @OneToMany(mappedBy = "tender", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Agreement> agreements;
+
+    @Transient
+    private boolean needProcessAgreements;
+
+    @Transient
+    private List<String> agreementOuterIds;
 }

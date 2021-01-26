@@ -50,4 +50,7 @@ public class ContractDocument {
     @JoinColumn(name = "contract_id")
     private Contract contract;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "contract_change_id")
+    private ContractChange change;
 }

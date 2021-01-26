@@ -2,26 +2,34 @@ package com.datapath.integration.services.impl;
 
 import com.datapath.integration.domain.*;
 import com.datapath.integration.parsers.exceptions.TenderValidationException;
+import com.datapath.integration.parsers.impl.AgreementParser;
 import com.datapath.integration.parsers.impl.TenderParser;
 import com.datapath.integration.resolvers.TransactionVariablesResolver;
+import com.datapath.integration.services.AgreementLoaderService;
+import com.datapath.integration.services.AuctionDatabaseLoadService;
 import com.datapath.integration.services.ContractLoaderService;
 import com.datapath.integration.services.TenderLoaderService;
 import com.datapath.integration.utils.DateUtils;
 import com.datapath.integration.utils.EntitySource;
 import com.datapath.integration.utils.ProzorroRequestUrlCreator;
 import com.datapath.integration.validation.TenderDataValidator;
-import com.datapath.persistence.entities.Contract;
-import com.datapath.persistence.entities.Tender;
-import com.datapath.persistence.entities.TenderContract;
+import com.datapath.persistence.entities.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestTemplate;
 
 import javax.transaction.Transactional;
 import java.io.IOException;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Optional;
+
+import static org.springframework.util.StringUtils.isEmpty;
 
 @Service
 @Slf4j
@@ -30,28 +38,34 @@ public class ProzorroContractLoaderService implements ContractLoaderService {
     @Value("${prozorro.contracts.url}")
     private String apiUrl;
 
-    @Value("${prozorro.tenders.skip-test}")
-    private boolean skipTestTenders;
-
     private RestTemplate restTemplate;
     private ContractService contractService;
     private TenderContractService tenderContractService;
     private TenderLoaderService tenderLoaderService;
     private TransactionVariablesResolver tvResolver;
     private TenderDataValidator tenderDataValidator;
+    private BidLotAmountUploadService bidLotAmountUploadService;
+    private AuctionDatabaseLoadService auctionDatabaseLoadService;
+    private AgreementLoaderService agreementLoaderService;
 
     public ProzorroContractLoaderService(RestTemplate restTemplate,
                                          ContractService integrationContractService,
                                          TenderContractService tenderContractService,
                                          TenderLoaderService tenderLoaderService,
                                          TransactionVariablesResolver tvResolver,
-                                         TenderDataValidator tenderDataValidator) {
+                                         TenderDataValidator tenderDataValidator,
+                                         BidLotAmountUploadService bidLotAmountUploadService,
+                                         AuctionDatabaseLoadService auctionDatabaseLoadService,
+                                         AgreementLoaderService agreementLoaderService) {
         this.restTemplate = restTemplate;
         this.contractService = integrationContractService;
         this.tenderContractService = tenderContractService;
         this.tenderLoaderService = tenderLoaderService;
         this.tvResolver = tvResolver;
         this.tenderDataValidator = tenderDataValidator;
+        this.bidLotAmountUploadService = bidLotAmountUploadService;
+        this.auctionDatabaseLoadService = auctionDatabaseLoadService;
+        this.agreementLoaderService = agreementLoaderService;
     }
 
     @Override
@@ -60,6 +74,7 @@ public class ProzorroContractLoaderService implements ContractLoaderService {
     }
 
     @Override
+    @Retryable(maxAttempts = 5)
     public ContractResponseEntity loadContract(ContractUpdateInfo contractUpdateInfo) {
         final String contractUrl = ProzorroRequestUrlCreator.createContractUrl(
                 apiUrl, contractUpdateInfo.getId());
@@ -74,11 +89,9 @@ public class ProzorroContractLoaderService implements ContractLoaderService {
 
     @Override
     public ZonedDateTime resolveDateOffset() {
-        final ZonedDateTime lastModifiedDate = this.getLastModifiedDate();
-        if (lastModifiedDate != null)
-            return lastModifiedDate;
-        else
-            return getYearEarlierDate();
+        ZonedDateTime lastModifiedDate = getLastModifiedDate();
+        return lastModifiedDate != null ? lastModifiedDate.withZoneSameInstant(ZoneId.of("Europe/Kiev")) :
+                getYearEarlierDate().withZoneSameInstant(ZoneId.of("Europe/Kiev"));
     }
 
     @Override
@@ -101,31 +114,32 @@ public class ProzorroContractLoaderService implements ContractLoaderService {
 
         if (existingContract != null) {
             contract.setId(existingContract.getId());
+            updateContractChanges(contract, existingContract);
+            updateContractDocuments(contract, existingContract);
         }
 
         if (tenderContract != null) {
+            contract.setTender(tenderContract.getTender());
             contract.setTenderContract(tenderContract);
             tenderContract.setContract(contract);
         } else {
             TenderUpdateInfo tenderUpdateInfo = new TenderUpdateInfo();
             tenderUpdateInfo.setId(contract.getTenderOuterId());
             try {
-                TenderResponseEntity tenderResponseEntity = tenderLoaderService.loadTender(tenderUpdateInfo);
-
-                TenderParser tenderParser = new TenderParser();
-                tenderParser.setRawData(tenderResponseEntity.getData());
-                tenderParser.setSkipExpiredTenders(false);
-                tenderParser.setSkipTestTenders(skipTestTenders);
-                tenderParser.parseRawData();
-
-                Tender tender = tenderParser.buildTender();
+                TenderResponse tenderResponse = tenderLoaderService.loadTender(tenderUpdateInfo);
+                TenderParser tenderParser = TenderParser.create(tenderResponse.getData());
+                Tender tender = tenderParser.buildTenderEntity();
+                tender.setSource(EntitySource.CONTRACTING.toString());
 
                 if (!tenderDataValidator.isValidTender(tender)) {
-                    log.error("Tender [{}] validation failed while contract loading.", tender.getOuterId());
+                    log.error("Tender validation failed while contract loading.");
                     return null;
                 }
 
-                tender.setSource(EntitySource.CONTRACTING.toString());
+                if (!tenderDataValidator.isProcessable(tender)) {
+                    log.info("Tender [{}[ is not processable", tender.getOuterId());
+                    return null;
+                }
 
                 String subjectOfProcurement = tvResolver.getSubjectOfProcurement(tender);
                 tender.setTvSubjectOfProcurement(subjectOfProcurement);
@@ -133,12 +147,30 @@ public class ProzorroContractLoaderService implements ContractLoaderService {
                 String tenderCPV = tvResolver.getTenderCPV(tender);
                 tender.setTvTenderCPV(tenderCPV);
 
+                List<Agreement> agreements = new LinkedList<>();
+                for (String agreementOuterId : tender.getAgreementOuterIds()) {
+                    AgreementUpdateInfo updateInfo = new AgreementUpdateInfo();
+                    updateInfo.setId(agreementOuterId);
+                    try {
+                        AgreementResponseEntity responseEntity = agreementLoaderService.loadAgreement(updateInfo);
+                        Agreement agreement = AgreementParser.parse(responseEntity);
+                        agreement.setSource(EntitySource.TENDERING.toString());
+                        AgreementTenderJoinService.joinInnerElements(agreement, tender);
+                        agreements.add(agreement);
+                    } catch (Exception ex) {
+                        log.warn("Agreement with outer id {} not found. {}", agreementOuterId, ex.getMessage());
+                    }
+                }
+                tender.setAgreements(agreements);
+
                 Tender existingTender = tenderLoaderService.saveTender(tender);
+                loadBidLotAmountData(existingTender.getId());
 
                 Optional<TenderContract> optionalTenderContract = existingTender.getTenderContracts().stream()
                         .filter(tc -> tc.getOuterId().equals(contract.getOuterId())).findFirst();
 
                 optionalTenderContract.ifPresent(contract::setTenderContract);
+                contract.setTender(tender);
 
             } catch (TenderValidationException | IOException e) {
                 log.error("Contract not saved. Tender is invalid.", e);
@@ -151,5 +183,64 @@ public class ProzorroContractLoaderService implements ContractLoaderService {
         }
 
         return null;
+    }
+
+    private void updateContractDocuments(Contract contract, Contract existingContract) {
+        contract.getDocuments().forEach(doc -> existingContract.getDocuments()
+                .stream()
+                .filter(exDoc -> exDoc.getOuterId().equalsIgnoreCase(doc.getOuterId()))
+                .findFirst()
+                .ifPresent(exDoc -> doc.setId(exDoc.getId())));
+    }
+
+    private void updateContractChanges(Contract contract, Contract existingContract) {
+        contract.getChanges().forEach(change -> existingContract.getChanges()
+                .stream()
+                .filter(exChange -> exChange.getOuterId().equalsIgnoreCase(change.getOuterId()))
+                .findFirst()
+                .ifPresent(exChange -> change.setId(exChange.getId())));
+    }
+
+    private void loadBidLotAmountData(Long tenderId) {
+        List<BidLotAmount> bidLots = new LinkedList<>();
+
+        List<Bid> bids = bidLotAmountUploadService.findBidsByTenderId(tenderId);
+
+        if (!CollectionUtils.isEmpty(bids)) {
+            bids.stream()
+                    .filter(b -> "active".equalsIgnoreCase(b.getStatus()))
+                    .forEach(b -> {
+                                List<Lot> lots = bidLotAmountUploadService.findLotsByBidIdAndTenderId(b.getId(), tenderId);
+
+                                if (!CollectionUtils.isEmpty(lots)) {
+                                    lots.forEach(l -> {
+                                        if (!isEmpty(l.getAuctionUrl()) && !l.getAuctionUrl().contains("esco-tenders")) {
+
+                                            AuctionDatabaseResponseEntity auctionDatabaseResponse = auctionDatabaseLoadService
+                                                    .loadAuctionDatabaseResponse(l.getAuctionUrl());
+
+                                            BidLotAmount bidLotAmount = new BidLotAmount(b, l);
+
+                                            auctionDatabaseResponse.getInitialBids()
+                                                    .stream()
+                                                    .filter(bid -> bid.getBidderId().equalsIgnoreCase(b.getOuterId()))
+                                                    .findFirst()
+                                                    .ifPresent(bid -> bidLotAmount.setInitialAmount(bid.getAmount()));
+
+                                            auctionDatabaseResponse.getResults()
+                                                    .stream()
+                                                    .filter(bid -> bid.getBidderId().equalsIgnoreCase(b.getOuterId()))
+                                                    .findFirst()
+                                                    .ifPresent(bid -> bidLotAmount.setResultAmount(bid.getAmount()));
+
+                                            bidLots.add(bidLotAmount);
+                                        }
+                                    });
+                                }
+                            }
+                    );
+
+            bidLotAmountUploadService.save(bidLots);
+        }
     }
 }

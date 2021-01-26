@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 
 @Repository
 public interface BidRepository extends JpaRepository<Bid, Long> {
@@ -43,4 +45,6 @@ public interface BidRepository extends JpaRepository<Bid, Long> {
             "AND supplier_identifier_scheme = bid_supplier_data.supplier_sheme " +
             "AND supplier_identifier_id = bid_supplier_data.supplier_id", nativeQuery = true)
     void updateSupplierNameFromTenderData(long minTenderId, long maxTenderId);
+
+    List<Bid> findByTenderId(Long tenderId);
 }

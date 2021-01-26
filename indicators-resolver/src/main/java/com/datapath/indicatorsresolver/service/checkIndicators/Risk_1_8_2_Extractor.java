@@ -9,13 +9,12 @@ import org.springframework.stereotype.Service;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Period;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
 
+import static com.datapath.indicatorsresolver.IndicatorConstants.UA_ZONE;
 import static com.datapath.persistence.utils.DateUtils.toZonedDateTime;
 import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
 
 
 @Service
@@ -38,8 +37,8 @@ public class Risk_1_8_2_Extractor extends BaseExtractor {
     public void checkIndicator(ZonedDateTime dateTime) {
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 checkRisk_1_8_2Indicator(indicator, dateTime);
             }
         } catch (Exception ex) {
@@ -56,8 +55,8 @@ public class Risk_1_8_2_Extractor extends BaseExtractor {
         }
         try {
             indicatorsResolverAvailable = false;
-            Indicator indicator = getActiveIndicator(INDICATOR_CODE);
-            if (nonNull(indicator) && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
+            Indicator indicator = getIndicator(INDICATOR_CODE);
+            if (indicator.isActive() && tenderRepository.findMaxDateModified().isAfter(ZonedDateTime.now().minusHours(AVAILABLE_HOURS_DIFF))) {
                 ZonedDateTime dateTime = isNull(indicator.getLastCheckedDateCreated())
                         ? ZonedDateTime.now().minus(Period.ofYears(1)).withHour(0)
                         : indicator.getLastCheckedDateCreated();
@@ -72,17 +71,14 @@ public class Risk_1_8_2_Extractor extends BaseExtractor {
 
 
     private void checkRisk_1_8_2Indicator(Indicator indicator, ZonedDateTime dateTime) {
-        int size = 100;
-        int page = 0;
-
+        log.info("{} indicator started", INDICATOR_CODE);
         while (true) {
 
             List<String> tenders = findTenders(
                     dateTime,
                     Arrays.asList(indicator.getProcedureStatuses()),
                     Arrays.asList(indicator.getProcedureTypes()),
-                    Arrays.asList(indicator.getProcuringEntityKind()),
-                    page, size);
+                    Arrays.asList(indicator.getProcuringEntityKind()));
 
             if (tenders.isEmpty()) {
                 break;
@@ -105,13 +101,11 @@ public class Risk_1_8_2_Extractor extends BaseExtractor {
             dateTime = maxTenderDateCreated;
         }
 
-        log.info("{} Finish indicator processing.", INDICATOR_CODE);
-
         ZonedDateTime now = ZonedDateTime.now();
         indicator.setDateChecked(now);
         indicatorRepository.save(indicator);
 
-        log.info("{} Updated indicator {}", INDICATOR_CODE, indicator);
+        log.info("{} indicator finished", INDICATOR_CODE);
     }
 
     private Map<String, List<TenderIndicator>> checkIndicator(List<String> tenderIds, Indicator indicator) {
@@ -144,6 +138,7 @@ public class Risk_1_8_2_Extractor extends BaseExtractor {
 
         Map<String, List<TenderIndicator>> indicatorsMap = new HashMap<>();
         for (String tenderId : tendersMap.keySet()) {
+            log.info("Process tender {}", tenderId);
 
             TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
 
@@ -160,34 +155,34 @@ public class Risk_1_8_2_Extractor extends BaseExtractor {
                 String lotStatus = lotInfo[7].toString();
 
                 if (maxTendersLotIterationData.get(tenderId).containsKey(lotId) && maxTendersLotIterationData.get(tenderId).get(lotId).equals(1)) {
-                    lotIndicators.put(lotId, 1);
+                    lotIndicators.put(lotId, RISK);
                 } else {
                     if (complaintsCount > 0 || activeAwardTimestamp == null || lotStatus.equals("cancelled") || lotStatus.equals("unsuccessful")) {
                         if (!lotIndicators.containsKey(lotId)) {
-                            lotIndicators.put(lotId, -2);
+                            lotIndicators.put(lotId, CONDITIONS_NOT_MET);
                         }
                         continue;
                     }
 
                     if ((!contractStatus.equals("active") || (contractStatus.equals("active") && nonSignatureDocs == 0)) && contractDocs == 0) {
                         ZonedDateTime date = toZonedDateTime(activeAwardTimestamp)
-                                .withZoneSameInstant(ZoneId.of("Europe/Kiev"))
+                                .withZoneSameInstant(UA_ZONE)
                                 .withHour(0).withMinute(0).withSecond(0).withNano(0);
-                        ZonedDateTime now = ZonedDateTime.now().withZoneSameInstant(ZoneId.of("Europe/Kiev"))
+                        ZonedDateTime now = ZonedDateTime.now().withZoneSameInstant(UA_ZONE)
                                 .withHour(0).withMinute(0).withSecond(0).withNano(0);
                         Duration between = Duration.between(date, now);
                         long days = between.toDays();
-                        Integer indicatorValue = days > DAYS_LIMIT ? 1 : 0;
-                        if (indicatorValue == 1) {
+                        Integer indicatorValue = days > DAYS_LIMIT ? RISK : NOT_RISK;
+                        if (indicatorValue.equals(RISK)) {
                             lotIndicators.put(lotId, indicatorValue);
                         } else {
-                            if (!lotIndicators.containsKey(lotId) || lotIndicators.get(lotId) != 1) {
+                            if (!lotIndicators.containsKey(lotId) || !lotIndicators.get(lotId).equals(RISK)) {
                                 lotIndicators.put(lotId, indicatorValue);
                             }
                         }
                         continue;
                     }
-                    lotIndicators.put(lotId, 0);
+                    lotIndicators.put(lotId, NOT_RISK);
                 }
             }
 

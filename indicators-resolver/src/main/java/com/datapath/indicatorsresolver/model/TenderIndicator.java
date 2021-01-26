@@ -13,4 +13,10 @@ public class TenderIndicator {
     Indicator indicator;
     Integer value;
     List<String> lots;
+
+    public TenderIndicator(TenderDimensions tenderDimensions, Indicator indicator, Integer value) {
+        this.tenderDimensions = tenderDimensions;
+        this.indicator = indicator;
+        this.value = value;
+    }
 }

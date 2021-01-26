@@ -1,8 +1,8 @@
 package com.datapath.integration.validation;
 
-import com.datapath.integration.domain.TenderResponseEntity;
+import com.datapath.integration.domain.TenderResponse;
 import com.datapath.integration.domain.TenderUpdateInfo;
-import com.datapath.integration.domain.TendersPageResponseEntity;
+import com.datapath.integration.domain.TendersPageResponse;
 import com.datapath.integration.services.TenderLoaderService;
 import com.datapath.integration.services.impl.TenderService;
 import com.datapath.integration.utils.DateUtils;
@@ -46,23 +46,21 @@ public class TenderExistenceValidator {
     }
 
     @Async
-    public void validate() {
-        ZonedDateTime yearEarlier = DateUtils.yearEarlierFromNow();
+    public void validate(ZonedDateTime startDate) {
         ZonedDateTime lastDateModified = tenderService.findLastModifiedEntry().getDateModified();
 
-        log.trace("Start tenders existence validation. StartDate: {}, EndDate: {}", yearEarlier, lastDateModified);
+        log.trace("Start tenders existence validation. StartDate: {}, EndDate: {}", startDate, lastDateModified);
 
-        ZonedDateTime dateOffset = yearEarlier.withZoneSameInstant(ZoneId.of("Europe/Kiev"));
+        ZonedDateTime dateOffset = startDate.withZoneSameInstant(ZoneId.of("Europe/Kiev"));
 
-        String url = ProzorroRequestUrlCreator.createTendersUrl(
-                tendersApiUrl, dateOffset, TENDERS_LIMIT);
+        String url = ProzorroRequestUrlCreator.createTendersUrl(tendersApiUrl, dateOffset, TENDERS_LIMIT);
 
         List<TenderUpdateInfo> tenderUpdateInfos = new ArrayList<>();
 
         while (true) {
             try {
-                TendersPageResponseEntity tendersPageResponseEntity = tenderLoaderService.loadTendersPage(url);
-                List<TenderUpdateInfo> items = tendersPageResponseEntity.getItems()
+                TendersPageResponse tendersPageResponse = tenderLoaderService.loadTendersPage(url);
+                List<TenderUpdateInfo> items = tendersPageResponse.getItems()
                         .stream().filter(item -> item.getDateModified().isBefore(lastDateModified))
                         .collect(Collectors.toList());
 
@@ -74,7 +72,7 @@ public class TenderExistenceValidator {
                     break;
                 }
 
-                url = URLDecoder.decode(tendersPageResponseEntity.getNextPage().getUri(), "UTF-8");
+                url = URLDecoder.decode(tendersPageResponse.getNextPage().getUri(), "UTF-8");
 
             } catch (Exception e) {
                 log.error(e.getMessage(), e);
@@ -156,15 +154,15 @@ public class TenderExistenceValidator {
         notExistingTendersOuterIds.forEach(outerId -> {
             TenderUpdateInfo updateInfo = new TenderUpdateInfo();
             updateInfo.setId(outerId);
-            TenderResponseEntity tenderResponseEntity = tenderLoaderService.loadTender(updateInfo);
-            if (isTestOrExpiredTender(tenderResponseEntity)) {
-                testOrExpiredTenders.add(tenderResponseEntity.getId());
+            TenderResponse tenderResponse = tenderLoaderService.loadTender(updateInfo);
+            if (isTestOrExpiredTender(tenderResponse)) {
+                testOrExpiredTenders.add(tenderResponse.getId());
             }
         });
         return new HashSet<>(testOrExpiredTenders);
     }
 
-    private boolean isTestOrExpiredTender(TenderResponseEntity responseEntity) {
+    private boolean isTestOrExpiredTender(TenderResponse responseEntity) {
         try {
             JsonNode node = new ObjectMapper().readTree(responseEntity.getData());
             ZonedDateTime date = JsonUtils.getDate(node, "/data/date");

@@ -18,6 +18,15 @@ public class DateUtils {
                 .withNano(0);
     }
 
+    public static ZonedDateTime monthEarlierFromNow() {
+        return ZonedDateTime.now(DEFAULT_TIMEZONE)
+                .minusDays(30)
+                .withHour(0)
+                .withMinute(0)
+                .withSecond(0)
+                .withNano(0);
+    }
+
     public static ZonedDateTime now() {
         return ZonedDateTime.now(DEFAULT_TIMEZONE);
     }

@@ -1,17 +1,19 @@
 package com.datapath.integration.services;
 
-import com.datapath.integration.domain.TenderResponseEntity;
+import com.datapath.integration.domain.TenderResponse;
 import com.datapath.integration.domain.TenderUpdateInfo;
-import com.datapath.integration.domain.TendersPageResponseEntity;
+import com.datapath.integration.domain.TendersPageResponse;
 import com.datapath.persistence.entities.Tender;
+import org.springframework.retry.annotation.Retryable;
 
 import java.time.ZonedDateTime;
 
 public interface TenderLoaderService {
 
-    TendersPageResponseEntity loadTendersPage(String url);
+    TendersPageResponse loadTendersPage(String url);
 
-    TenderResponseEntity loadTender(TenderUpdateInfo tenderUpdateInfo);
+    @Retryable(maxAttempts = 5)
+    TenderResponse loadTender(TenderUpdateInfo tenderUpdateInfo);
 
     ZonedDateTime resolveDateOffset();
 
@@ -21,9 +23,5 @@ public interface TenderLoaderService {
 
     Tender saveTender(Tender tender);
 
-    void removeTendersByDate(ZonedDateTime date);
-
-    boolean newestTenderVersionExists(String outerId, ZonedDateTime dateModified);
-
-    long removeTenderByOuterId(String outerId);
+    Tender getTenderByOuterId(String outerId);
 }

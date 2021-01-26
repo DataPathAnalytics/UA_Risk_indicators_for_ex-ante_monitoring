@@ -15,11 +15,11 @@ import com.datapath.integration.utils.ServiceStatus;
 import com.datapath.persistence.entities.Contract;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 
 import java.net.URLDecoder;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
 
@@ -27,13 +27,13 @@ import java.util.List;
 @Service
 public class ProzorroContractUpdatesManager implements ContractUpdatesManager {
 
-
     @Value("${prozorro.contracts.url}")
     private String apiUrl;
 
     private ContractLoaderService contractLoaderService;
     private TenderLoaderService tenderLoaderService;
     private ServiceStatus serviceStatus;
+    private boolean updatesAvailable;
 
     public ProzorroContractUpdatesManager(ContractLoaderService contractLoaderService,
                                           TenderLoaderService tenderLoaderService) {
@@ -42,19 +42,23 @@ public class ProzorroContractUpdatesManager implements ContractUpdatesManager {
         this.serviceStatus = ServiceStatus.ENABLED;
     }
 
+    //TODO:needs check last changes of this logic after data updating
+    @Async
     @Override
     public void loadLastModifiedContracts() {
         changeServiceStatus(ServiceStatus.DISABLED);
-        ZonedDateTime dateOffset = contractLoaderService.resolveDateOffset()
-                .withZoneSameInstant(ZoneId.of("Europe/Kiev"));
+        ZonedDateTime dateOffset = contractLoaderService.resolveDateOffset();
+
         String url = ProzorroRequestUrlCreator.createTendersUrl(apiUrl, dateOffset);
         ZonedDateTime nextDateOffset = dateOffset;
         while (true) {
             ZonedDateTime tenderDateOffset = tenderLoaderService.resolveDateOffset();
-            if (nextDateOffset.isAfter(tenderDateOffset)) {
-                log.info("Contracts date offset is after tender newest tender was " +
-                        "modified. Next date offset {}, newest tender date {}", nextDateOffset, tenderDateOffset);
-                break;
+            if (nextDateOffset != null) {
+                if (nextDateOffset.isAfter(tenderDateOffset)) {
+                    log.info("Contracts date offset is after tender newest tender was " +
+                            "modified. Next date offset {}, newest tender date {}", nextDateOffset, tenderDateOffset);
+                    break;
+                }
             }
             try {
                 log.info("Fetch contracts data from Prozorro: url = {}", url);
@@ -63,6 +67,11 @@ public class ProzorroContractUpdatesManager implements ContractUpdatesManager {
                 List<ContractUpdateInfo> items = contractsPageResponseEntity.getItems();
                 log.info("Next page url {}", nextPageUrl);
                 log.info("Fetched {} contract items", items.size());
+
+                if (items.isEmpty()) {
+                    log.info("No items found on page. Contracts loading break");
+                    break;
+                }
                 for (ContractUpdateInfo contractUpdateInfo : items) {
                     try {
                         ContractResponseEntity contractResponseEntity = contractLoaderService.loadContract(contractUpdateInfo);
@@ -95,6 +104,7 @@ public class ProzorroContractUpdatesManager implements ContractUpdatesManager {
 
                     } catch (TenderValidationException ex) {
                         log.error("Contract not saved. Tender is invalid", ex);
+                        setUpdatesAvailability(true);
                     } catch (ResourceAccessException e) {
                         changeServiceStatus(ServiceStatus.ENABLED);
                         log.error("Error in loading tender {}", contractUpdateInfo.getId(), e);
@@ -107,16 +117,9 @@ public class ProzorroContractUpdatesManager implements ContractUpdatesManager {
                     }
                 }
 
-                if (items.isEmpty()) {
-                    log.info("No items found on page. Contracts loading break");
-                    break;
-                }
-
-                if (url.equalsIgnoreCase(nextPageUrl)) {
-                    break;
-                }
-
+                if (url.equalsIgnoreCase(nextPageUrl)) break;
                 url = nextPageUrl;
+
                 nextDateOffset = DateUtils.parseZonedDateTime(contractsPageResponseEntity.getNextPage().getOffset());
             } catch (ResourceAccessException e) {
                 log.error("Error in loading contracts {}", e.getMessage(), e);
@@ -131,6 +134,11 @@ public class ProzorroContractUpdatesManager implements ContractUpdatesManager {
     }
 
     @Override
+    public void removeExpiredContacts() {
+
+    }
+
+    @Override
     public void changeServiceStatus(ServiceStatus serviceStatus) {
         this.serviceStatus = serviceStatus;
     }
@@ -140,4 +148,15 @@ public class ProzorroContractUpdatesManager implements ContractUpdatesManager {
         return serviceStatus;
     }
 
+    @Override
+    public boolean isUpdatesAvailable() {
+        boolean updatesAvailable = this.updatesAvailable;
+        setUpdatesAvailability(false);
+        return updatesAvailable;
+    }
+
+    @Override
+    public void setUpdatesAvailability(boolean availability) {
+        this.updatesAvailable = availability;
+    }
 }

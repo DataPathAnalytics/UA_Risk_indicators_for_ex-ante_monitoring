@@ -1,8 +1,8 @@
 package com.datapath.integration.services.impl;
 
-import com.datapath.integration.domain.TenderResponseEntity;
+import com.datapath.integration.domain.TenderResponse;
 import com.datapath.integration.domain.TenderUpdateInfo;
-import com.datapath.integration.domain.TendersPageResponseEntity;
+import com.datapath.integration.domain.TendersPageResponse;
 import com.datapath.integration.services.TenderLoaderService;
 import com.datapath.integration.utils.DateUtils;
 import com.datapath.integration.utils.ProzorroRequestUrlCreator;
@@ -15,11 +15,11 @@ import org.springframework.web.client.RestTemplate;
 import javax.transaction.Transactional;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static org.springframework.util.CollectionUtils.isEmpty;
 
 @Slf4j
 @Service
@@ -44,17 +44,17 @@ public class ProzorroTenderLoaderService implements TenderLoaderService {
     }
 
     @Override
-    public TendersPageResponseEntity loadTendersPage(String url) {
-        return restTemplate.getForObject(url, TendersPageResponseEntity.class);
+    public TendersPageResponse loadTendersPage(String url) {
+        return restTemplate.getForObject(url, TendersPageResponse.class);
     }
 
     @Override
-    public TenderResponseEntity loadTender(TenderUpdateInfo tenderUpdateInfo) {
+    public TenderResponse loadTender(TenderUpdateInfo tenderUpdateInfo) {
         final String tenderUrl = ProzorroRequestUrlCreator.createTenderUrl(
                 apiUrl, tenderUpdateInfo.getId());
 
         final String responseData = restTemplate.getForObject(tenderUrl, String.class);
-        TenderResponseEntity tender = new TenderResponseEntity();
+        TenderResponse tender = new TenderResponse();
         tender.setData(responseData);
         tender.setId(tenderUpdateInfo.getId());
         tender.setDateModified(tenderUpdateInfo.getDateModified());
@@ -64,7 +64,13 @@ public class ProzorroTenderLoaderService implements TenderLoaderService {
     @Override
     public ZonedDateTime resolveDateOffset() {
         ZonedDateTime lastModifiedDate = getLastModifiedDate();
-        return lastModifiedDate != null ? lastModifiedDate : getYearEarlierDate();
+//       Prozorro has cyclic in 2016 year, uncomment that to avoid such situation
+//       ZonedDateTime minDate = ZonedDateTime.of(2018, 1, 1, 1, 0, 0, 0, ZoneOffset.UTC);
+//        lastModifiedDate = lastModifiedDate.isBefore(minDate) ? minDate : lastModifiedDate;
+
+        return lastModifiedDate != null ?
+                lastModifiedDate.withZoneSameInstant(ZoneId.of("Europe/Kiev")) :
+                getYearEarlierDate().withZoneSameInstant(ZoneId.of("Europe/Kiev"));
     }
 
     @Override
@@ -100,6 +106,12 @@ public class ProzorroTenderLoaderService implements TenderLoaderService {
                     .collect(Collectors.toMap(Contract::getOuterId, contract -> contract));
 
             tender.getTenderContracts().forEach(tenderContract -> {
+                existingTender.getTenderContracts()
+                        .stream()
+                        .filter(etc -> etc.getOuterId().equalsIgnoreCase(tenderContract.getOuterId()))
+                        .findFirst()
+                        .ifPresent(etc -> tenderContract.setId(etc.getId()));
+
                 Contract contract = tenderContract.getContract();
                 if (contract != null) {
                     Contract existingContract = existingContractsMap.get(contract.getOuterId());
@@ -206,22 +218,44 @@ public class ProzorroTenderLoaderService implements TenderLoaderService {
             }
         });
 
+        if (!isEmpty(tender.getAgreements())) {
+            Map<String, AgreementSupplier> existingAgreementSuppliers = tender.getAgreements()
+                    .stream()
+                    .flatMap(a -> a.getContracts().stream())
+                    .flatMap(c -> c.getSuppliers().stream())
+                    .collect(Collectors.toSet())
+                    .stream()
+                    .map(s -> supplierService.findAgreementSupplierByIdentifierIdAndScheme(s.getIdentifierId(), s.getIdentifierScheme()))
+                    .filter(Objects::nonNull)
+                    .collect(
+                            Collectors.toMap(
+                                    s -> s.getIdentifierScheme() + s.getIdentifierId(),
+                                    Function.identity()
+                            )
+                    );
+
+            tender.getAgreements()
+                    .forEach(a -> a.getContracts().forEach(c -> {
+                        List<AgreementSupplier> suppliers = new LinkedList<>();
+
+                        c.getSuppliers().forEach(s -> {
+                            if (existingAgreementSuppliers.containsKey(s.getIdentifierScheme() + s.getIdentifierId())) {
+                                existingAgreementSuppliers.get(s.getIdentifierScheme() + s.getIdentifierId()).getContracts().add(c);
+                                suppliers.add(existingAgreementSuppliers.get(s.getIdentifierScheme() + s.getIdentifierId()));
+                            } else {
+                                suppliers.add(s);
+                            }
+                        });
+
+                        c.setSuppliers(suppliers);
+                    }));
+        }
+
         return tenderService.save(tender);
     }
 
     @Override
-    public boolean newestTenderVersionExists(String outerId, ZonedDateTime dateModified) {
-        return tenderService.newestVersionExists(outerId, dateModified);
-    }
-
-    @Override
-    @Transactional
-    public void removeTendersByDate(ZonedDateTime date) {
-        tenderService.removeByDate(date);
-    }
-
-    @Override
-    public long removeTenderByOuterId(String outerId) {
-        return tenderService.removeByOuterId(outerId);
+    public Tender getTenderByOuterId(String outerId) {
+        return tenderService.findByOuterId(outerId);
     }
 }

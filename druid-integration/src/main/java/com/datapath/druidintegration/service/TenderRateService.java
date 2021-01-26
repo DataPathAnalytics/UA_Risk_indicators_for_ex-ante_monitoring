@@ -6,9 +6,11 @@ import com.datapath.druidintegration.model.druid.request.common.Filter;
 import com.datapath.druidintegration.model.druid.request.common.impl.*;
 import com.datapath.druidintegration.model.druid.response.GroupByResponse;
 import com.datapath.druidintegration.model.druid.response.common.Event;
+import com.datapath.persistence.domain.ConfigurationDomain;
 import com.datapath.persistence.entities.Indicator;
 import com.datapath.persistence.repositories.IndicatorRepository;
 import com.datapath.persistence.repositories.TenderRepository;
+import com.datapath.persistence.service.ConfigurationDaoService;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.datapath.druidintegration.DruidConstants.DEFAULT_INTERVAL;
+import static java.util.Collections.emptyList;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.toList;
@@ -32,8 +35,6 @@ import static java.util.stream.Collectors.toMap;
 @Slf4j
 public class TenderRateService {
 
-    private static final Double RISK_IMPORTANCE_SHARE = 0.5;
-    private static final Double AMOUNT_IMPORTANCE_SHARE = 0.5;
     private static final String TENDER_OUTER_ID = "tenderOuterId";
     private static final String INDICATOR_ID = "indicatorId";
     private static final String INDICATOR_VALUE = "indicatorValue";
@@ -50,14 +51,13 @@ public class TenderRateService {
             .comparing(AmountScoreData::getAmount)
             .thenComparing(AmountScoreData::getTenderId);
 
-    @Value("${tenders.completed.days:30}")
-    private Integer daysForQueue;
+    private boolean isAmountBasedTenderRiskScore;
     private String druidUrl;
     private String tenderIndex;
     private RestTemplate restTemplate;
     protected TenderRepository tenderRepository;
     protected IndicatorRepository indicatorRepository;
-    private boolean isAmountBasedTenderRiskScore;
+    protected ConfigurationDaoService configurationService;
 
     @Value("${queue.amount-based-tender-risk-score}")
     public void setAmountBasedTenderRiskScore(Boolean amountBasedTenderRiskScore) {
@@ -89,6 +89,11 @@ public class TenderRateService {
         this.indicatorRepository = indicatorRepository;
     }
 
+    @Autowired
+    public void setConfigurationService(ConfigurationDaoService configurationService) {
+        this.configurationService = configurationService;
+    }
+
     public List<TenderScore> getResult() {
 
         GroupByRequest tendersWithAtLeastOneRiskRequest = buildRequestWithLeastOneRiskTender();
@@ -97,19 +102,21 @@ public class TenderRateService {
                 tendersWithAtLeastOneRiskRequest, GroupByResponse[].class);
 
         if (isNull(tendersWithAtLeastOneRiskResponse) || tendersWithAtLeastOneRiskResponse.length == 0)
-            return Collections.emptyList();
+            return emptyList();
 
-        String tendersWithAtLeastOneRisk = getCompletedTendersForDateRange(tendersWithAtLeastOneRiskResponse);
+        ConfigurationDomain configuration = configurationService.getConfiguration();
+
+        String tendersWithAtLeastOneRisk = getCompletedTendersForDateRange(tendersWithAtLeastOneRiskResponse, configuration);
 
         List<Object> topTendersWithAmount = tenderRepository.findTendersWithAmountByTendersExcludingStatus(Arrays.asList("unsuccessful",
                 "cancelled"), tendersWithAtLeastOneRisk);
 
-        List<Indicator> allByIsActiveTrue = indicatorRepository.findAllByIsActiveTrue();
-        List<String> indicatorIds = allByIsActiveTrue.stream().map(Indicator::getId).collect(Collectors.toList());
+        List<Indicator> allByIsActiveTrue = indicatorRepository.findAllByActiveTrue();
+        List<String> indicatorIds = allByIsActiveTrue.stream().map(Indicator::getId).collect(toList());
 
         Map<String, Double> tenderAmountMap = topTendersWithAmount.stream()
                 .map(item -> (Object[]) item)
-                .collect(Collectors.toMap(i -> i[0].toString(), i -> Double.valueOf(i[1].toString()), (oldTender, newTender) -> newTender));
+                .collect(toMap(i -> i[0].toString(), i -> Double.valueOf(i[1].toString()), (oldTender, newTender) -> newTender));
 
         Map<String, String> tenderIdMap = topTendersWithAmount.stream()
                 .map(item -> (Object[]) item)
@@ -132,7 +139,7 @@ public class TenderRateService {
 
                 if (nonNull(tendersIndicatorsMaxIterationResponse) && tendersIndicatorsMaxIterationResponse.length > 0) {
 
-                    List<Event> response = Arrays.stream(tendersIndicatorsMaxIterationResponse).map(GroupByResponse::getEvent).collect(Collectors.toList());
+                    List<Event> response = Arrays.stream(tendersIndicatorsMaxIterationResponse).map(GroupByResponse::getEvent).collect(toList());
 
                     List<Filter> filterList = response.stream().map(event -> {
                         StringFilter indicatorIdFilter = new StringFilter("selector", INDICATOR_ID, event.getIndicatorId());
@@ -144,7 +151,7 @@ public class TenderRateService {
                         filter.setType("and");
                         filter.setFields(Arrays.asList(tenderIdFilter, indicatorIdFilter, iterationIdFilter, indicatorValueFilter, indicatorsFilter));
                         return filter;
-                    }).collect(Collectors.toList());
+                    }).collect(toList());
 
                     GroupByRequest filteredByTendersGroupBy = new GroupByRequest(tenderIndex);
                     filteredByTendersGroupBy.setDimensions(Arrays.asList(TENDER_OUTER_ID, INDICATOR_ID, ITERATION_ID, INDICATOR_VALUE, INDICATOR_IMPACT, STATUS));
@@ -183,13 +190,14 @@ public class TenderRateService {
             }
 
             Map<String, Double> tenderRiskScoreMap = getTenderRiskScores(
+                    configuration,
                     tenderIdScoreMap,
                     tenderAmountMap,
                     tenderIdMap
             );
 
             Map<String, Double> sortedTenderRiskScoreMap = tenderRiskScoreMap.entrySet().stream()
-                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                    .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
 
             List<String> outerIds = new ArrayList<>(sortedTenderRiskScoreMap.keySet());
 
@@ -220,7 +228,7 @@ public class TenderRateService {
                             return tenderScore;
                         })
                         .sorted(Comparator.comparing(TenderScore::getScore))
-                        .collect(Collectors.toList());
+                        .collect(toList());
                 finalTenderScores.addAll(collect);
             });
 
@@ -228,12 +236,12 @@ public class TenderRateService {
             return finalTenderScores;
         }
 
-        return Collections.emptyList();
+        return emptyList();
     }
 
-    private String getCompletedTendersForDateRange(GroupByResponse[] tendersWithAtLeastOneRiskResponse) {
+    private String getCompletedTendersForDateRange(GroupByResponse[] tendersWithAtLeastOneRiskResponse, ConfigurationDomain configuration) {
         List<String> tendersWithAtLeastOneRiskAsList = Arrays.stream(tendersWithAtLeastOneRiskResponse)
-                .map(groupByResponse -> groupByResponse.getEvent().getTenderOuterId()).collect(Collectors.toList());
+                .map(groupByResponse -> groupByResponse.getEvent().getTenderOuterId()).collect(toList());
 
         List<String> completedTendersNotOlderSpecificDaysCount = new ArrayList<>();
 
@@ -244,8 +252,8 @@ public class TenderRateService {
             List<String> chunk = tendersWithAtLeastOneRiskAsList.stream()
                     .skip(pageCount * pageSize)
                     .limit(pageSize)
-                    .collect(Collectors.toList());
-            completedTendersNotOlderSpecificDaysCount.addAll(tenderRepository.findCompletedTenderNotOlderThanByOuterIdIn(ZonedDateTime.now().minusDays(daysForQueue), chunk));
+                    .collect(toList());
+            completedTendersNotOlderSpecificDaysCount.addAll(tenderRepository.findCompletedTenderNotOlderThanByOuterIdIn(ZonedDateTime.now().minusDays(configuration.getTendersCompletedDays()), chunk));
             completedTendersNotOlderSpecificDaysCount.addAll(tenderRepository.findNotCompletedTenders(chunk));
             hasNext = chunk.size() == pageSize;
             pageCount++;
@@ -270,7 +278,8 @@ public class TenderRateService {
                 .build();
     }
 
-    private Map<String, Double> getTenderRiskScores(Map<String, Double> tenderIdScoreMap,
+    private Map<String, Double> getTenderRiskScores(ConfigurationDomain configuration,
+                                                    Map<String, Double> tenderIdScoreMap,
                                                     Map<String, Double> tenderAmountMap,
                                                     Map<String, String> tenderIdMap) {
         Map<String, Double> tenderIdScoreSortedMap = tenderIdScoreMap.entrySet().stream()
@@ -279,19 +288,22 @@ public class TenderRateService {
 
         if (isAmountBasedTenderRiskScore) {
             return getScoreWithAmountBasedTenderScoreRankCalculation(
+                    configuration,
                     tenderIdScoreSortedMap,
                     tenderAmountMap,
                     tenderIdMap
             );
         } else {
             return getScoreWithSimpleRankCalculation(
+                    configuration,
                     tenderIdScoreSortedMap,
                     tenderAmountMap
             );
         }
     }
 
-    private Map<String, Double> getScoreWithAmountBasedTenderScoreRankCalculation(Map<String, Double> tenderIdScoreSortedMap,
+    private Map<String, Double> getScoreWithAmountBasedTenderScoreRankCalculation(ConfigurationDomain configuration,
+                                                                                  Map<String, Double> tenderIdScoreSortedMap,
                                                                                   Map<String, Double> tenderAmountMap,
                                                                                   Map<String, String> tenderIdMap) {
         Map<String, Double> tenderRiskScoreMap = new HashMap<>();
@@ -348,15 +360,16 @@ public class TenderRateService {
         tenderScoreDataOuterIdMap.forEach((tenderScoreData, outerId) -> tenderScoreOuterIdRankMap.put(outerId, tenderScoreRankMap.get(tenderScoreData)));
 
         tenderIdScoreSortedMap.forEach((tenderOuterId, value) -> {
-            Double tenderRiskScore = Double.valueOf(tenderScoreOuterIdRankMap.get(tenderOuterId)) * RISK_IMPORTANCE_SHARE;
-            Double amountScore = Double.valueOf(amountScoreOuterIdRankMap.get(tenderOuterId)) * AMOUNT_IMPORTANCE_SHARE;
+            Double tenderRiskScore = Double.valueOf(tenderScoreOuterIdRankMap.get(tenderOuterId)) * configuration.getTenderScoreCoefficient();
+            Double amountScore = Double.valueOf(amountScoreOuterIdRankMap.get(tenderOuterId)) * configuration.getExpectedValueCoefficient();
             tenderRiskScoreMap.put(tenderOuterId, tenderRiskScore + amountScore);
         });
 
         return tenderRiskScoreMap;
     }
 
-    private Map<String, Double> getScoreWithSimpleRankCalculation(Map<String, Double> tenderIdScoreSortedMap,
+    private Map<String, Double> getScoreWithSimpleRankCalculation(ConfigurationDomain configuration,
+                                                                  Map<String, Double> tenderIdScoreSortedMap,
                                                                   Map<String, Double> tenderAmountMap) {
         Map<String, Double> tenderRiskScoreMap = new HashMap<>();
 
@@ -379,8 +392,8 @@ public class TenderRateService {
                 .collect(toMap(tenderAmounts::get, i -> i + 1));
 
         tenderIdScoreSortedMap.forEach((tenderOuterId, value) -> {
-            Double tenderRiskScore = Double.valueOf(tenderRiskScoreRankMap.get(value)) * RISK_IMPORTANCE_SHARE;
-            Double amountScore = Double.valueOf(tenderAmountsRankMap.get(tenderAmountMap.get(tenderOuterId))) * AMOUNT_IMPORTANCE_SHARE;
+            Double tenderRiskScore = Double.valueOf(tenderRiskScoreRankMap.get(value)) * configuration.getTenderScoreCoefficient();
+            Double amountScore = Double.valueOf(tenderAmountsRankMap.get(tenderAmountMap.get(tenderOuterId))) * configuration.getExpectedValueCoefficient();
             tenderRiskScoreMap.put(tenderOuterId, tenderRiskScore + amountScore);
         });
 

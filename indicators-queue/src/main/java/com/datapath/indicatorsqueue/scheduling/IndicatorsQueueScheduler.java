@@ -4,16 +4,12 @@ import com.datapath.indicatorsqueue.services.IndicatorsQueueUpdaterService;
 import com.datapath.indicatorsqueue.services.RegionIndicatorsQueueUpdaterService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
 public class IndicatorsQueueScheduler implements InitializingBean {
-
-    @Value("${com.datapath.scheduling.enabled}")
-    private boolean schedulingEnabled;
 
     private IndicatorsQueueUpdaterService indicatorsQueueUpdaterService;
     private RegionIndicatorsQueueUpdaterService regionIndicatorsQueueUpdaterService;
@@ -44,8 +40,6 @@ public class IndicatorsQueueScheduler implements InitializingBean {
 
     @Override
     public void afterPropertiesSet() {
-        if (schedulingEnabled) {
-            updateRegionIndicatorsQueue();
-        }
+        updateRegionIndicatorsQueue();
     }
 }
