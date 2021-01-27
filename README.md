@@ -1,8 +1,15 @@
 Release notes
 
+#### Version 2.0.1
+
+Removed queue calculations at start up
+
 #### Version 2.0.0
 
 Added new indicators
+
+Added new properties
+`risk-common.cron`, `prozorro.requests.url`
 
 #### Version 1.4.2
 

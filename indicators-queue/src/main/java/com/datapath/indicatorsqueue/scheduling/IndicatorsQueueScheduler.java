@@ -2,23 +2,18 @@ package com.datapath.indicatorsqueue.scheduling;
 
 import com.datapath.indicatorsqueue.services.IndicatorsQueueUpdaterService;
 import com.datapath.indicatorsqueue.services.RegionIndicatorsQueueUpdaterService;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-public class IndicatorsQueueScheduler implements InitializingBean {
+@AllArgsConstructor
+public class IndicatorsQueueScheduler {
 
     private IndicatorsQueueUpdaterService indicatorsQueueUpdaterService;
     private RegionIndicatorsQueueUpdaterService regionIndicatorsQueueUpdaterService;
-
-    public IndicatorsQueueScheduler(IndicatorsQueueUpdaterService indicatorsQueueUpdaterService,
-                                    RegionIndicatorsQueueUpdaterService regionIndicatorsQueueUpdaterService) {
-        this.indicatorsQueueUpdaterService = indicatorsQueueUpdaterService;
-        this.regionIndicatorsQueueUpdaterService = regionIndicatorsQueueUpdaterService;
-    }
 
     //    @Scheduled(cron = "0 0 0 * * *")
     public void updateIndicatorsQueue() {
@@ -36,10 +31,5 @@ public class IndicatorsQueueScheduler implements InitializingBean {
         } catch (Exception e) {
             log.error("Updating indicators queue failed.", e);
         }
-    }
-
-    @Override
-    public void afterPropertiesSet() {
-        updateRegionIndicatorsQueue();
     }
 }

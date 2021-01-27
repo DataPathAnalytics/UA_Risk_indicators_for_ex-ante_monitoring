@@ -20,7 +20,7 @@
   mv tranquility-distribution-0.8.3 tranquility`
   
   5 . Enable Tranquility Server
-  
+        
   In your conf/supervise/single-server/micro-quickstart.conf, uncomment the tranquility-server line.
   
   6 . From druid-integration module copy indicators-server.json file into 
@@ -37,5 +37,4 @@
   8 . To start druid , run the following command from root
   
   `./bin/start-micro-quickstart`
-  
   

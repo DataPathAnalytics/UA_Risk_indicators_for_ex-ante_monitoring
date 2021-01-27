@@ -96,15 +96,16 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
 
                     Tender tender = future.get();
 
+                    if (!tenderDataValidator.isProcessable(tender)) {
+                        log.info("Tender [{}[ is not processable", tender.getOuterId());
+                        continue;
+                    }
+
                     if (!tenderDataValidator.isValidTender(tender)) {
                         log.error("Tender validation failed. Tender outer id = {}", tender.getOuterId());
                         continue;
                     }
 
-                    if (!tenderDataValidator.isProcessable(tender)) {
-                        log.info("Tender [{}[ is not processable", tender.getOuterId());
-                        continue;
-                    }
                     Tender savedTender = tenderLoaderService.saveTender(tender);
                     loadBidLotAmountData(savedTender.getId());
                 }
@@ -277,13 +278,13 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
                 }
                 tender.setAgreements(agreements);
 
-                if (!tenderDataValidator.isValidTender(tender)) {
-                    log.error("Tender validation failed. Tender outer id = {}", tender.getOuterId());
+                if (!tenderDataValidator.isProcessable(tender)) {
+                    log.info("Tender [{}[ is not processable", tender.getOuterId());
                     continue;
                 }
 
-                if (!tenderDataValidator.isProcessable(tender)) {
-                    log.info("Tender [{}[ is not processable", tender.getOuterId());
+                if (!tenderDataValidator.isValidTender(tender)) {
+                    log.error("Tender validation failed. Tender outer id = {}", tender.getOuterId());
                     continue;
                 }
 

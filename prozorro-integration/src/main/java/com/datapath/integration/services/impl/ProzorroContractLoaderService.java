@@ -131,13 +131,13 @@ public class ProzorroContractLoaderService implements ContractLoaderService {
                 Tender tender = tenderParser.buildTenderEntity();
                 tender.setSource(EntitySource.CONTRACTING.toString());
 
-                if (!tenderDataValidator.isValidTender(tender)) {
-                    log.error("Tender validation failed while contract loading.");
+                if (!tenderDataValidator.isProcessable(tender)) {
+                    log.info("Tender [{}[ is not processable", tender.getOuterId());
                     return null;
                 }
 
-                if (!tenderDataValidator.isProcessable(tender)) {
-                    log.info("Tender [{}[ is not processable", tender.getOuterId());
+                if (!tenderDataValidator.isValidTender(tender)) {
+                    log.error("Tender validation failed while contract loading.");
                     return null;
                 }
 

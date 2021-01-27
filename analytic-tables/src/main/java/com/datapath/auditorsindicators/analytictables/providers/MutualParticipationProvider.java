@@ -3,19 +3,17 @@ package com.datapath.auditorsindicators.analytictables.providers;
 import com.datapath.persistence.entities.derivatives.MutualParticipation;
 import com.datapath.persistence.entities.derivatives.SupplierLot;
 import com.datapath.persistence.repositories.derivatives.AnalyticTableRepository;
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
+@AllArgsConstructor
 public class MutualParticipationProvider {
 
     private AnalyticTableRepository analyticTableRepository;
-
-    public MutualParticipationProvider(AnalyticTableRepository analyticTableRepository) {
-        this.analyticTableRepository = analyticTableRepository;
-    }
 
     public List<MutualParticipation> provide() {
         List<MutualParticipation> result = new ArrayList<>();
