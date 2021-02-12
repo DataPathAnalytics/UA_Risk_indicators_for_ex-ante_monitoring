@@ -12,6 +12,7 @@ import com.datapath.persistence.entities.Agreement;
 import com.datapath.persistence.entities.AgreementSupplier;
 import com.datapath.persistence.entities.Tender;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -29,7 +30,8 @@ import static java.util.Objects.nonNull;
 @Service
 public class ProzorroAgreementLoaderService implements AgreementLoaderService {
 
-    private static final String AGREEMENT_API_URL = "https://api.openprocurement.org/api/2.5/agreements";
+    @Value("${prozorro.agreements.url}")
+    private String apiUrl;
 
     private final RestTemplate template;
     private final AgreementService agreementService;
@@ -48,7 +50,7 @@ public class ProzorroAgreementLoaderService implements AgreementLoaderService {
 
     @Override
     public AgreementResponseEntity loadAgreement(AgreementUpdateInfo info) {
-        String url = ProzorroRequestUrlCreator.createAgreementUrl(AGREEMENT_API_URL, info.getId());
+        String url = ProzorroRequestUrlCreator.createAgreementUrl(apiUrl, info.getId());
         log.info("Agreement loading: {}", url);
         String responseData = template.getForObject(url, String.class);
         AgreementResponseEntity responseEntity = new AgreementResponseEntity();

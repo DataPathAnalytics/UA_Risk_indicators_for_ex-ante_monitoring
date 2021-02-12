@@ -112,15 +112,19 @@ public class Risk_1_3_AprilExtractor extends BaseExtractor {
 
                 int indicatorValue = IMPOSSIBLE_TO_DETECT;
 
-                for (Map.Entry<String, Pattern> causePattern : CAUSE_PATTERN.entrySet()) {
-                    if (causePattern.getValue().matcher(tender.getCauseDescription()).find()) {
-                        if (tender.getCause().equals(causePattern.getKey())) {
-                            indicatorValue = NOT_RISK;
-                            break;
-                        } else {
-                            indicatorValue = RISK;
+                if (tender.getCause() != null && tender.getCauseDescription() != null) {
+                    for (Map.Entry<String, Pattern> causePattern : CAUSE_PATTERN.entrySet()) {
+                        if (causePattern.getValue().matcher(tender.getCauseDescription()).find()) {
+                            if (tender.getCause().equals(causePattern.getKey())) {
+                                indicatorValue = NOT_RISK;
+                                break;
+                            } else {
+                                indicatorValue = RISK;
+                            }
                         }
                     }
+                } else {
+                    indicatorValue = CONDITIONS_NOT_MET;
                 }
 
                 tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, indicatorValue));

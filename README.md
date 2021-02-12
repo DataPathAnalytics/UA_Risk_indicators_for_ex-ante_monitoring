@@ -1,5 +1,10 @@
 Release notes
 
+#### Version 2.1.0
+
+Added new configuration property `prozorro.agreements.url`
+Changed 1-3 and 1-11 indicators to handle tenders with absent fields for calculations
+
 #### Version 2.0.1
 
 Removed queue calculations at start up
