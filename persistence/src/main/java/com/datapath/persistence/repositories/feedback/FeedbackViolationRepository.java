@@ -8,5 +8,5 @@ import java.util.List;
 public interface FeedbackViolationRepository extends JpaRepository<FeedbackViolation, Long> {
     FeedbackViolation findByTenderOuterId(String tenderOuterId);
 
-    List<FeedbackViolation> findByTenderOuterIdIn(List<String> ids);
+    List<FeedbackViolation> findByTenderIdIn(List<String> tenderIdBatch);
 }

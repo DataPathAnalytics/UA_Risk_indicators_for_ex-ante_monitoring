@@ -8,5 +8,5 @@ import java.util.List;
 public interface FeedbackMonitoringInfoRepository extends JpaRepository<FeedbackMonitoringInfo, Long> {
     FeedbackMonitoringInfo findByTenderOuterId(String tenderOuterId);
 
-    List<FeedbackMonitoringInfo> findByTenderOuterIdIn(List<String> ids);
+    List<FeedbackMonitoringInfo> findByTenderIdIn(List<String> ids);
 }

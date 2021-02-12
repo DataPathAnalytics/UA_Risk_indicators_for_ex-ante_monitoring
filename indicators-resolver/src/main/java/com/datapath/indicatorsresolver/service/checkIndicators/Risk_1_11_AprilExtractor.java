@@ -18,11 +18,11 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import static com.datapath.indicatorsresolver.IndicatorConstants.*;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static java.util.stream.Collectors.toList;
 import static org.springframework.util.CollectionUtils.isEmpty;
 
 
@@ -106,16 +106,21 @@ public class Risk_1_11_AprilExtractor extends BaseExtractor {
 
                 List<Complaint> complaints = tender.getAwards()
                         .stream()
-                        .flatMap(a -> a.getComplaints()
-                                .stream())
+                        .flatMap(a -> a.getComplaints().stream())
                         .filter(c -> c.getComplaintType().equals(CLAIM)
                                 && (!c.getStatus().equals(DRAFT) && !c.getStatus().equals(CANCELLED)))
-                        .collect(Collectors.toList());
+                        .collect(toList());
 
                 if (isEmpty(complaints)) {
                     indicatorValue = CONDITIONS_NOT_MET;
                 } else {
                     for (Complaint complaint : complaints) {
+
+                        if (complaint.getDateSubmitted() == null) {
+                            indicatorValue = CONDITIONS_NOT_MET;
+                            break;
+                        }
+
                         ZonedDateTime dateAnswered;
                         if (nonNull(complaint.getDateAnswered())) {
                             dateAnswered = toUaMidnight(complaint.getDateAnswered());

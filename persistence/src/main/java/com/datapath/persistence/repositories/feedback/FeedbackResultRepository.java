@@ -8,5 +8,5 @@ import java.util.List;
 public interface FeedbackResultRepository extends JpaRepository<FeedbackResult, Long> {
     FeedbackResult findByTenderOuterId(String tenderOuterId);
 
-    List<FeedbackResult> findByTenderOuterIdIn(List<String> ids);
+    List<FeedbackResult> findByTenderIdIn(List<String> tenderIdBatch);
 }

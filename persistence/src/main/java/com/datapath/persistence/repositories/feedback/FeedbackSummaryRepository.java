@@ -8,5 +8,5 @@ import java.util.List;
 public interface FeedbackSummaryRepository extends JpaRepository<FeedbackSummary, Long> {
     FeedbackSummary findByTenderOuterId(String tenderOuterId);
 
-    List<FeedbackSummary> findByTenderOuterIdIn(List<String> ids);
+    List<FeedbackSummary> findByTenderIdIn(List<String> tenderIdBatch);
 }

@@ -10,6 +10,7 @@ import com.datapath.integration.utils.EntitySource;
 import com.datapath.integration.utils.ProzorroRequestUrlCreator;
 import com.datapath.persistence.entities.Agreement;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.net.URLDecoder;
@@ -25,7 +26,8 @@ import java.util.concurrent.Future;
 @Service
 public class ProzorroAgreementUpdatesManage implements AgreementUpdatesManager {
 
-    private static final String AGREEMENT_SEARCH_URL = "https://api.openprocurement.org/api/2.5/agreements";
+    @Value("${prozorro.agreements.url}")
+    private String apiUrl;
 
     private final AgreementLoaderService agreementLoaderService;
 
@@ -39,7 +41,7 @@ public class ProzorroAgreementUpdatesManage implements AgreementUpdatesManager {
         try {
             ZonedDateTime dateOffset = agreementLoaderService.resolveDateOffset();
 
-            String url = ProzorroRequestUrlCreator.createAgreementsUrl(AGREEMENT_SEARCH_URL, dateOffset);
+            String url = ProzorroRequestUrlCreator.createAgreementsUrl(apiUrl, dateOffset);
 
             while (true) {
                 log.info("Fetch agreements from [{}]", url);

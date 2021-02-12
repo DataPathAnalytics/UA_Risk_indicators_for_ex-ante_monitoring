@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.client.RestTemplate;
 
@@ -25,6 +26,7 @@ import java.util.TimeZone;
 @EnableJpaRepositories(basePackages = {"com.datapath"})
 @EnableRetry
 @EnableTransactionManagement
+@EnableScheduling
 public class CoordinatorApplication {
 
     private static final ZoneId DEFAULT_TIMEZONE = ZoneId.of("UTC");
