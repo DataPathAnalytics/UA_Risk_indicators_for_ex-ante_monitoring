@@ -106,6 +106,12 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
                         continue;
                     }
 
+                    String subjectOfProcurement = tvResolver.getSubjectOfProcurement(tender);
+                    tender.setTvSubjectOfProcurement(subjectOfProcurement);
+
+                    String tenderCPV = tvResolver.getTenderCPV(tender);
+                    tender.setTvTenderCPV(tenderCPV);
+
                     Tender savedTender = tenderLoaderService.saveTender(tender);
                     loadBidLotAmountData(savedTender.getId());
                 }
@@ -131,12 +137,6 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
         TenderParser tenderParser = TenderParser.create(tenderResponse.getData());
         Tender tender = tenderParser.buildTenderEntity();
         tender.setSource(EntitySource.TENDERING.toString());
-
-        String subjectOfProcurement = tvResolver.getSubjectOfProcurement(tender);
-        tender.setTvSubjectOfProcurement(subjectOfProcurement);
-
-        String tenderCPV = tvResolver.getTenderCPV(tender);
-        tender.setTvTenderCPV(tenderCPV);
 
         for (TenderContract tenderContract : tender.getTenderContracts()) {
             ContractUpdateInfo contractUpdateInfo = new ContractUpdateInfo();
@@ -240,12 +240,6 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
                     continue;
                 }
 
-                String subjectOfProcurement = tvResolver.getSubjectOfProcurement(tender);
-                tender.setTvSubjectOfProcurement(subjectOfProcurement);
-
-                String tenderCPV = tvResolver.getTenderCPV(tender);
-                tender.setTvTenderCPV(tenderCPV);
-
                 for (TenderContract tenderContract : tender.getTenderContracts()) {
                     ContractUpdateInfo contractUpdateInfo = new ContractUpdateInfo();
                     contractUpdateInfo.setId(tenderContract.getOuterId());
@@ -287,6 +281,12 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
                     log.error("Tender validation failed. Tender outer id = {}", tender.getOuterId());
                     continue;
                 }
+
+                String subjectOfProcurement = tvResolver.getSubjectOfProcurement(tender);
+                tender.setTvSubjectOfProcurement(subjectOfProcurement);
+
+                String tenderCPV = tvResolver.getTenderCPV(tender);
+                tender.setTvTenderCPV(tenderCPV);
 
                 Tender savedTender = tenderLoaderService.saveTender(tender);
                 loadBidLotAmountData(savedTender.getId());

@@ -29,7 +29,7 @@ public class TransactionVariablesResolver {
         List<String> cpvs = tender.getItems().stream().map(TenderItem::getClassificationId).collect(Collectors.toList());
         List<CpvCatalogue> catalogues = cpvCatalogueService.getCatalogue(cpvs);
 
-        TransactionVariablesResolver.CpvLevel parentCpvLevel = getParentCpvLevel(catalogues);
+        TransactionVariablesResolver.CpvLevel parentCpvLevel = getParentCpvLevel(catalogues,tender.getOuterId());
         CpvCatalogue catalogue = cpvCatalogueService.findByCpv(parentCpvLevel.getCpv());
         //TODO need to discuss what to do when common parent doesn't exist in cpv canalogue
         if (catalogue == null) return parentCpvLevel.getCpv();
@@ -52,11 +52,11 @@ public class TransactionVariablesResolver {
         List<String> cpvs = tender.getItems().stream().map(TenderItem::getClassificationId).collect(Collectors.toList());
         List<CpvCatalogue> catalogues = cpvCatalogueService.getCatalogue(cpvs);
 
-        TransactionVariablesResolver.CpvLevel parentCpvLevel = getParentCpvLevel(catalogues);
+        TransactionVariablesResolver.CpvLevel parentCpvLevel = getParentCpvLevel(catalogues, tender.getOuterId());
         return parentCpvLevel.cpv;
     }
 
-    private TransactionVariablesResolver.CpvLevel getParentCpvLevel(List<CpvCatalogue> catalogue) {
+    private TransactionVariablesResolver.CpvLevel getParentCpvLevel(List<CpvCatalogue> catalogue, String tenderId) {
 
         Set<String> cpvSet = catalogue.stream().collect(groupingBy(CpvCatalogue::getCpv8)).keySet();
         if (cpvSet.size() == 1 && !cpvSet.contains("undefined")) {
@@ -81,7 +81,7 @@ public class TransactionVariablesResolver {
         cpvSet = catalogue.stream().collect(groupingBy(CpvCatalogue::getCpv2)).keySet();
         if (cpvSet.size() == 1 && !cpvSet.contains("undefined")) return new TransactionVariablesResolver.CpvLevel(cpvSet.iterator().next(), 2);
 
-        throw new RuntimeException("Can't find parent code for items in tender");
+        throw new RuntimeException("Can't find parent code for items in tender " + tenderId);
     }
 
     @Data

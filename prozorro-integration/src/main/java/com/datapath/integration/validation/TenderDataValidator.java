@@ -19,6 +19,7 @@ public class TenderDataValidator {
 
     private static final String TEST = "test";
     private static final String TESTING = "ТЕСТУВАННЯ";
+    private static final String PRICE_QUOTATION = "priceQuotation";
 
     @Value("${prozorro.tenders.skip-test}")
     private boolean skipTestTenders;
@@ -31,6 +32,10 @@ public class TenderDataValidator {
 
         if (tender.getTitle().contains(TESTING)) {
             log.info("Tender has invalid part in title");
+            return false;
+        }
+
+        if (tender.getProcurementMethodType().equalsIgnoreCase(PRICE_QUOTATION)) {
             return false;
         }
 

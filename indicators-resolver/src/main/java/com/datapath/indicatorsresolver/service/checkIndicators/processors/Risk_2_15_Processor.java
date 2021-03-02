@@ -12,6 +12,7 @@ import com.datapath.persistence.repositories.derivatives.WinsCountRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -30,6 +31,7 @@ public class Risk_2_15_Processor extends BaseExtractor {
     @Autowired
     private WinsCountRepository winsCountRepository;
 
+    @Transactional
     public List<TenderIndicator> process(Indicator indicator, List<Long> ids) {
 
         List<Tender> tenders = tenderRepository.findByIdIn(ids);

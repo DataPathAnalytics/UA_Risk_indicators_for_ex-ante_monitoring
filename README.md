@@ -1,5 +1,13 @@
 Release notes
 
+#### Version 2.1.1
+
+Ignore priceQuotation tenders
+
+Moved cpv calculation after filtration test tenders
+
+Added tender id to exception message when we can't calculate parent cpv
+
 #### Version 2.1.0
 
 Added new configuration property `prozorro.agreements.url`
