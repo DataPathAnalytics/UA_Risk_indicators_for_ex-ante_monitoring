@@ -48,49 +48,54 @@ public class Risk_2_15_Processor extends BaseExtractor {
 
             int indicatorValue = NOT_RISK;
 
-            List<Award> activeAward = tender.getAwards()
-                    .stream()
-                    .filter(a -> ACTIVE.equalsIgnoreCase(a.getStatus()))
-                    .collect(Collectors.toList());
+            try {
+                List<Award> activeAward = tender.getAwards()
+                        .stream()
+                        .filter(a -> ACTIVE.equalsIgnoreCase(a.getStatus()))
+                        .collect(Collectors.toList());
 
-            if (isEmpty(activeAward)) {
-                indicatorValue = CONDITIONS_NOT_MET;
-            } else {
-                for (Award award : activeAward) {
-                    String supplier = award.getSupplierIdentifierScheme() + award.getSupplierIdentifierId();
+                if (isEmpty(activeAward)) {
+                    indicatorValue = CONDITIONS_NOT_MET;
+                } else {
+                    for (Award award : activeAward) {
+                        String supplier = award.getSupplierIdentifierScheme() + award.getSupplierIdentifierId();
 
-                    WinsCount winsCount = winsCountRepository.findByProcuringEntityAndSupplier(tender.getTvProcuringEntity(), supplier);
+                        WinsCount winsCount = winsCountRepository.findByProcuringEntityAndSupplier(tender.getTvProcuringEntity(), supplier);
 
-                    if (isNull(winsCount)) {
-                        continue;
-                    }
+                        if (isNull(winsCount)) {
+                            continue;
+                        }
 
-                    if (winsCount.getCpvCount() >= 4) {
-                        indicatorValue = RISK;
-                        break;
-                    }
+                        if (winsCount.getCpvCount() >= 4) {
+                            indicatorValue = RISK;
+                            break;
+                        }
 
-                    if (winsCount.getCpvCount() == 3) {
-                        List<String> analyticCpv = Arrays.asList(winsCount.getCpvList().split(","));
+                        if (winsCount.getCpvCount() == 3) {
+                            List<String> analyticCpv = Arrays.asList(winsCount.getCpvList().split(","));
 
-                        List<String> tenderCpv = tender.getItems().stream()
-                                .filter(i -> i.getLot().getId().equals(award.getLot().getId()))
-                                .map(TenderItem::getClassificationId)
-                                .collect(Collectors.toList());
+                            List<String> tenderCpv = tender.getItems().stream()
+                                    .filter(i -> i.getLot().getId().equals(award.getLot().getId()))
+                                    .map(TenderItem::getClassificationId)
+                                    .collect(Collectors.toList());
 
-                        for (String cpv : tenderCpv) {
-                            if (!analyticCpv.contains(cpv)) {
-                                indicatorValue = RISK;
+                            for (String cpv : tenderCpv) {
+                                if (!analyticCpv.contains(cpv)) {
+                                    indicatorValue = RISK;
+                                    break;
+                                }
+                            }
+
+                            if (indicatorValue == RISK) {
                                 break;
                             }
                         }
 
-                        if (indicatorValue == RISK) {
-                            break;
-                        }
                     }
-
                 }
+            } catch (Exception e) {
+                logService.tenderIndicatorFailed(indicator.getId(), tender.getOuterId(), e);
+                indicatorValue = IMPOSSIBLE_TO_DETECT;
             }
 
             tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, indicatorValue));

@@ -39,8 +39,14 @@ public class Risk_1_14_Processor extends BaseExtractor {
             log.info("Process contract {}", contract.getOuterId());
 
             ContractDimensions contractDimensions = dimensionsMap.get(contract.getOuterId());
-            int indicatorValue = getContractIndicatorValue(contract);
-            contractIndicators.add(new ContractIndicator(contractDimensions, indicator, indicatorValue));
+
+            try {
+                int indicatorValue = getContractIndicatorValue(contract);
+                contractIndicators.add(new ContractIndicator(contractDimensions, indicator, indicatorValue));
+            } catch (Exception e) {
+                logService.contractIndicatorFailed(indicator.getId(), contract.getOuterId(), e);
+                contractIndicators.add(new ContractIndicator(contractDimensions, indicator, IMPOSSIBLE_TO_DETECT));
+            }
         });
         return contractIndicators;
     }

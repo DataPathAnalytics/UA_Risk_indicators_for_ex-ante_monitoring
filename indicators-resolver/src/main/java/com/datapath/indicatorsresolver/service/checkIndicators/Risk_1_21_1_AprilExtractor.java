@@ -47,7 +47,7 @@ public class Risk_1_21_1_AprilExtractor extends BaseExtractor {
     }
 
     @Async
-    @Scheduled(cron = "${risk1_21_1_april.cron}")
+    @Scheduled(cron = "${risk-1-21-1.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -99,31 +99,36 @@ public class Risk_1_21_1_AprilExtractor extends BaseExtractor {
 
 
             List<TenderIndicator> tenderIndicators = tenderRepository.getTenderWithEndDateAndMinDocDatePublished(
-                    String.join(",", tenders)).stream().map(tenderInfo -> {
-                String tenderId = tenderInfo[0].toString();
+                    String.join(",", tenders))
+                    .stream()
+                    .map(tenderInfo -> {
+                        String tenderId = tenderInfo[0].toString();
+                        TenderDimensions tenderDimensions = dimensionsMap.get(tenderId);
 
-                log.info("Process tender {}", tenderId);
+                        log.info("Process tender {}", tenderId);
 
-                ZonedDateTime endDate = isNull(tenderInfo[1])
-                        ? null
-                        : toZonedDateTime((Timestamp) tenderInfo[1]);
-                ZonedDateTime minDocDatePublishDate = isNull(tenderInfo[2])
-                        ? null
-                        : toZonedDateTime((Timestamp) tenderInfo[2]);
+                        int indicatorValue;
+                        try {
+                            ZonedDateTime endDate = isNull(tenderInfo[1])
+                                    ? null
+                                    : toZonedDateTime((Timestamp) tenderInfo[1]);
+                            ZonedDateTime minDocDatePublishDate = isNull(tenderInfo[2])
+                                    ? null
+                                    : toZonedDateTime((Timestamp) tenderInfo[2]);
 
-                int indicatorValue;
-
-                if (isNull(endDate)) {
-                    indicatorValue = CONDITIONS_NOT_MET;
-                } else {
-                    indicatorValue = (isNull(minDocDatePublishDate)) ||
-                            getDaysBetween(minDocDatePublishDate, endDate) < DAYS_LIMIT
-                            ? RISK : NOT_RISK;
-                }
-                TenderDimensions tenderDimensions = dimensionsMap.get(tenderId);
-                return new TenderIndicator(tenderDimensions, indicator, indicatorValue);
-
-            }).collect(Collectors.toList());
+                            if (isNull(endDate)) {
+                                indicatorValue = CONDITIONS_NOT_MET;
+                            } else {
+                                indicatorValue = (isNull(minDocDatePublishDate)) ||
+                                        getDaysBetween(minDocDatePublishDate, endDate) < DAYS_LIMIT
+                                        ? RISK : NOT_RISK;
+                            }
+                        } catch (Exception e) {
+                            logService.tenderIndicatorFailed(INDICATOR_CODE, tenderId, e);
+                            indicatorValue = IMPOSSIBLE_TO_DETECT;
+                        }
+                        return new TenderIndicator(tenderDimensions, indicator, indicatorValue);
+                    }).collect(Collectors.toList());
 
             tenderIndicators.forEach(tenderIndicator -> {
                 tenderIndicator.setTenderDimensions(dimensionsMap.get(tenderIndicator.getTenderDimensions().getId()));

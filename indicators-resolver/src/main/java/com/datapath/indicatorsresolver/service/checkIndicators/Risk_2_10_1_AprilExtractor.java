@@ -45,7 +45,7 @@ public class Risk_2_10_1_AprilExtractor extends BaseExtractor {
     }
 
     @Async
-    @Scheduled(cron = "${risk-common.cron}")
+    @Scheduled(cron = "${risk-2-10-1.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -54,7 +54,7 @@ public class Risk_2_10_1_AprilExtractor extends BaseExtractor {
         try {
             indicatorsResolverAvailable = false;
             Indicator indicator = getIndicator(INDICATOR_CODE);
-            if (indicator.isActive() ) {
+            if (indicator.isActive()) {
                 ZonedDateTime dateTime = isNull(indicator.getLastCheckedDateCreated())
                         ? ZonedDateTime.now(ZoneId.of("UTC")).minus(Period.ofYears(1)).withHour(0)
                         : indicator.getLastCheckedDateCreated();
@@ -148,11 +148,14 @@ public class Risk_2_10_1_AprilExtractor extends BaseExtractor {
                 Object[] lotInfo = (Object[]) lot;
                 String lotId = lotInfo[1].toString();
                 if (!checkedLots.contains(lotId)) {
-
-                    Integer unsuccessfulQualifications = Integer.parseInt(lotInfo[2].toString());
-
-                    Integer indicatorValue = unsuccessfulQualifications >= 3 ? RISK : NOT_RISK;
-
+                    Integer indicatorValue;
+                    try {
+                        Integer unsuccessfulQualifications = Integer.parseInt(lotInfo[2].toString());
+                        indicatorValue = unsuccessfulQualifications >= 3 ? RISK : NOT_RISK;
+                    } catch (Exception e) {
+                        logService.lotIndicatorFailed(INDICATOR_CODE, tenderId, lotId, e);
+                        indicatorValue = IMPOSSIBLE_TO_DETECT;
+                    }
                     if (!existedResultMap.containsKey(indicatorValue)) {
                         existedResultMap.put(indicatorValue, new HashSet<>());
                     }

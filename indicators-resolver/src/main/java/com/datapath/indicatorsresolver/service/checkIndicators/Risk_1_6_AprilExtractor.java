@@ -57,7 +57,7 @@ public class Risk_1_6_AprilExtractor extends BaseExtractor {
 
     @Async
     @Transactional
-    @Scheduled(cron = "${risk-common.cron}")
+    @Scheduled(cron = "${risk-1-6.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -99,8 +99,14 @@ public class Risk_1_6_AprilExtractor extends BaseExtractor {
             contracts.forEach(contract -> {
 
                 ContractDimensions contractDimensions = dimensionsMap.get(contract.getOuterId());
+                int indicatorValue;
+                try {
+                    indicatorValue = getContractIndicatorValue(contract);
+                } catch (Exception e) {
+                    logService.contractIndicatorFailed(INDICATOR_CODE, contract.getOuterId(), e);
+                    indicatorValue = IMPOSSIBLE_TO_DETECT;
+                }
 
-                int indicatorValue = getContractIndicatorValue(contract);
                 ContractIndicator contractIndicator = new ContractIndicator(contractDimensions, indicator, indicatorValue);
                 DruidContractIndicator druidIndicators = druidIndicatorMapper.transformToDruidContractIndicator(contractIndicator);
 

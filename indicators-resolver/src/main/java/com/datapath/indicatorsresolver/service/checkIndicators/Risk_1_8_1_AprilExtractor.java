@@ -46,7 +46,7 @@ public class Risk_1_8_1_AprilExtractor extends BaseExtractor {
     }
 
     @Async
-    @Scheduled(cron = "${risk-common.cron}")
+    @Scheduled(cron = "${risk-1-8-1.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -112,18 +112,23 @@ public class Risk_1_8_1_AprilExtractor extends BaseExtractor {
 
         activeLotsAmountAndGuaranteeAmountWithCurrencies.forEach(lotInfo -> {
             String tenderId = lotInfo[0].toString();
-
-            log.info("Process tender {}", tenderId);
-
             String lotId = lotInfo[1].toString();
-            Double amount = Double.parseDouble(lotInfo[2].toString());
+
+            log.info("Process tender {} lot {}", tenderId, lotId);
+
             Integer indicatorValue;
-            if (nonNull(lotInfo[3])) {
-                Double guaranteeAmount = Double.parseDouble(lotInfo[3].toString());
-                double guaranteeShare = (guaranteeAmount / amount) * 100;
-                indicatorValue = guaranteeShare > PERCENTAGE_DIFF_LIMIT ? RISK : NOT_RISK;
-            } else {
-                indicatorValue = CONDITIONS_NOT_MET;
+            try {
+                Double amount = Double.parseDouble(lotInfo[2].toString());
+                if (nonNull(lotInfo[3])) {
+                    Double guaranteeAmount = Double.parseDouble(lotInfo[3].toString());
+                    double guaranteeShare = (guaranteeAmount / amount) * 100;
+                    indicatorValue = guaranteeShare > PERCENTAGE_DIFF_LIMIT ? RISK : NOT_RISK;
+                } else {
+                    indicatorValue = CONDITIONS_NOT_MET;
+                }
+            } catch (Exception e) {
+                logService.lotIndicatorFailed(INDICATOR_CODE, tenderId, lotId, e);
+                indicatorValue = IMPOSSIBLE_TO_DETECT;
             }
 
             if (!resultMap.containsKey(tenderId)) {

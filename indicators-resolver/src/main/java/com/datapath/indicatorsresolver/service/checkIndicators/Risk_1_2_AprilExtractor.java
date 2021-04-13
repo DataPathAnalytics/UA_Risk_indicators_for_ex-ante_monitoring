@@ -58,7 +58,7 @@ public class Risk_1_2_AprilExtractor extends BaseExtractor {
 
     @Async
     @Transactional
-    @Scheduled(cron = "${risk-common.cron}")
+    @Scheduled(cron = "${risk-1-2.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -106,63 +106,69 @@ public class Risk_1_2_AprilExtractor extends BaseExtractor {
 
                 TenderDimensions tenderDimensions = dimensionsMap.get(tender.getOuterId());
 
-                int indicatorValue = NOT_RISK;
+                try {
+                    int indicatorValue = NOT_RISK;
 
-                if (!tender.getCause().equals(ADDITIONAL_PURCHASE)) {
-                    indicatorValue = CONDITIONS_NOT_MET;
-                } else {
-
-                    List<Award> activeAward = tender.getAwards()
-                            .stream()
-                            .filter(a -> ACTIVE.equalsIgnoreCase(a.getStatus()))
-                            .collect(Collectors.toList());
-
-                    if (isEmpty(activeAward)) {
+                    if (!tender.getCause().equals(ADDITIONAL_PURCHASE)) {
                         indicatorValue = CONDITIONS_NOT_MET;
                     } else {
-                        for (Award award : activeAward) {
-                            String supplier = award.getSupplierIdentifierScheme() + award.getSupplierIdentifierId();
 
-                            Map<String, List<Lot>> cpvLots = new HashMap<>();
+                        List<Award> activeAward = tender.getAwards()
+                                .stream()
+                                .filter(a -> ACTIVE.equalsIgnoreCase(a.getStatus()))
+                                .collect(Collectors.toList());
 
-                            tender.getItems().forEach(item -> {
-                                if (item.getLot().getId().equals(award.getLot().getId())) {
-                                    if (cpvLots.containsKey(item.getClassificationId())) {
-                                        cpvLots.get(item.getClassificationId()).add(item.getLot());
-                                    } else {
-                                        List<Lot> lots = new LinkedList<>();
-                                        lots.add(item.getLot());
-                                        cpvLots.put(item.getClassificationId(), lots);
+                        if (isEmpty(activeAward)) {
+                            indicatorValue = CONDITIONS_NOT_MET;
+                        } else {
+                            for (Award award : activeAward) {
+                                String supplier = award.getSupplierIdentifierScheme() + award.getSupplierIdentifierId();
+
+                                Map<String, List<Lot>> cpvLots = new HashMap<>();
+
+                                tender.getItems().forEach(item -> {
+                                    if (item.getLot().getId().equals(award.getLot().getId())) {
+                                        if (cpvLots.containsKey(item.getClassificationId())) {
+                                            cpvLots.get(item.getClassificationId()).add(item.getLot());
+                                        } else {
+                                            List<Lot> lots = new LinkedList<>();
+                                            lots.add(item.getLot());
+                                            cpvLots.put(item.getClassificationId(), lots);
+                                        }
                                     }
-                                }
-                            });
+                                });
 
-                            for (Map.Entry<String, List<Lot>> entry : cpvLots.entrySet()) {
-                                Optional<Contracts3Years> contracts3Years = repository.findByProcuringEntityAndSupplierAndCpv(
-                                        tender.getTvProcuringEntity(),
-                                        supplier,
-                                        entry.getKey()
-                                );
+                                for (Map.Entry<String, List<Lot>> entry : cpvLots.entrySet()) {
+                                    Optional<Contracts3Years> contracts3Years = repository.findByProcuringEntityAndSupplierAndCpv(
+                                            tender.getTvProcuringEntity(),
+                                            supplier,
+                                            entry.getKey()
+                                    );
 
-                                if (!contracts3Years.isPresent()) {
-                                    indicatorValue = RISK;
-                                    break;
-                                }
-
-                                for (Lot lot : entry.getValue()) {
-                                    Double amount = lot.getAmount();
-
-                                    if (!lot.getCurrency().equals(UAH_CURRENCY)) {
-                                        ZonedDateTime rateDate = isNull(tender.getStartDate()) ?
-                                                tender.getDate() :
-                                                tender.getStartDate();
-
-                                        ExchangeRate rate = exchangeRateService.getOneByCodeAndDate(lot.getCurrency(), rateDate);
-                                        amount = amount * rate.getRate();
-                                    }
-
-                                    if (amount / contracts3Years.get().getAmount() > 0.5) {
+                                    if (!contracts3Years.isPresent()) {
                                         indicatorValue = RISK;
+                                        break;
+                                    }
+
+                                    for (Lot lot : entry.getValue()) {
+                                        Double amount = lot.getAmount();
+
+                                        if (!lot.getCurrency().equals(UAH_CURRENCY)) {
+                                            ZonedDateTime rateDate = isNull(tender.getStartDate()) ?
+                                                    tender.getDate() :
+                                                    tender.getStartDate();
+
+                                            ExchangeRate rate = exchangeRateService.getOneByCodeAndDate(lot.getCurrency(), rateDate);
+                                            amount = amount * rate.getRate();
+                                        }
+
+                                        if (amount / contracts3Years.get().getAmount() > 0.5) {
+                                            indicatorValue = RISK;
+                                            break;
+                                        }
+                                    }
+
+                                    if (indicatorValue == RISK) {
                                         break;
                                     }
                                 }
@@ -171,15 +177,14 @@ public class Risk_1_2_AprilExtractor extends BaseExtractor {
                                     break;
                                 }
                             }
-
-                            if (indicatorValue == RISK) {
-                                break;
-                            }
                         }
                     }
-                }
 
-                tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, indicatorValue));
+                    tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, indicatorValue));
+                } catch (Exception e) {
+                    logService.tenderIndicatorFailed(INDICATOR_CODE, tender.getOuterId(), e);
+                    tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, IMPOSSIBLE_TO_DETECT));
+                }
             });
 
             tenderIndicators.forEach(this::uploadIndicator);

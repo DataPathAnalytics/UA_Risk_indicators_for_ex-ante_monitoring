@@ -55,7 +55,7 @@ public class Risk_2_19_1_AprilExtractor extends BaseExtractor {
 
     @Async
     @Transactional
-    @Scheduled(cron = "${risk-common.cron}")
+    @Scheduled(cron = "${risk-2-19-1.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -103,25 +103,38 @@ public class Risk_2_19_1_AprilExtractor extends BaseExtractor {
                 }
 
                 if (isEmpty(tender.getLots())) {
-                    long participantCount = tender.getBids()
-                            .stream().filter(b -> ACTIVE.equals(b.getStatus())).count();
-                    long disqualificationCount = tender.getAwards().stream()
-                            .filter(award -> UNSUCCESSFUL.equals(award.getStatus())).count();
+                    int indicatorValue;
+                    try {
+                        long participantCount = tender.getBids()
+                                .stream().filter(b -> ACTIVE.equals(b.getStatus())).count();
+                        long disqualificationCount = tender.getAwards().stream()
+                                .filter(award -> UNSUCCESSFUL.equals(award.getStatus())).count();
 
-                    if (disqualificationCount == 2 && (participantCount - disqualificationCount) > 2) {
-                        TenderIndicator tenderIndicator = new TenderIndicator(tenderDimensions, indicator, RISK);
-                        uploadIndicatorIfNotExists(tenderOuterId, INDICATOR_CODE, singletonList(tenderIndicator));
-                    } else {
-                        TenderIndicator tenderIndicator = new TenderIndicator(tenderDimensions, indicator, NOT_RISK);
-                        uploadIndicatorIfNotExists(tenderOuterId, INDICATOR_CODE, singletonList(tenderIndicator));
+                        if (disqualificationCount == 2 && (participantCount - disqualificationCount) > 2) {
+                            indicatorValue = RISK;
+                        } else {
+                            indicatorValue = NOT_RISK;
+                        }
+                    } catch (Exception e) {
+                        logService.tenderIndicatorFailed(INDICATOR_CODE, tenderOuterId, e);
+                        indicatorValue = IMPOSSIBLE_TO_DETECT;
                     }
+
+                    TenderIndicator tenderIndicator = new TenderIndicator(tenderDimensions, indicator, indicatorValue);
+                    uploadIndicatorIfNotExists(tenderOuterId, INDICATOR_CODE, singletonList(tenderIndicator));
 
                 } else {
                     Map<String, Integer> lotIndicators = new HashMap<>();
                     tender.getLots().stream()
                             .filter(lot -> lot.getAwards().stream().anyMatch(award -> UNSUCCESSFUL.equals(award.getStatus())))
                             .forEach(lot -> {
-                                int indicatorValue = checkLotIndicatorValue(lot);
+                                int indicatorValue;
+                                try {
+                                    indicatorValue = checkLotIndicatorValue(lot);
+                                } catch (Exception e) {
+                                    logService.lotIndicatorFailed(INDICATOR_CODE, tenderOuterId, lot.getOuterId(), e);
+                                    indicatorValue = IMPOSSIBLE_TO_DETECT;
+                                }
                                 lotIndicators.put(lot.getOuterId(), indicatorValue);
                             });
 

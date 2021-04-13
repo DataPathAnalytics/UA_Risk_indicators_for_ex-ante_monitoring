@@ -46,7 +46,7 @@ public class Risk_1_20_AprilExtractor extends BaseExtractor {
     }
 
     @Async
-    @Scheduled(cron = "${risk-common.cron}")
+    @Scheduled(cron = "${risk-1-20.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -117,23 +117,28 @@ public class Risk_1_20_AprilExtractor extends BaseExtractor {
 
                             log.info("Process tender {}", tenderId);
 
-                            ZonedDateTime minAwardDate = isNull(tenderItem[1])
-                                    ? null
-                                    : toZonedDateTime((Timestamp) tenderItem[1]);
-                            ZonedDateTime minDatePublished = isNull(tenderItem[2])
-                                    ? null
-                                    : toZonedDateTime((Timestamp) tenderItem[2]);
                             TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
                             Integer indicatorValue;
-                            if (isNull(minAwardDate)) {
-                                indicatorValue = CONDITIONS_NOT_MET;
-                            } else {
-                                indicatorValue = isNull(minDatePublished) || minDatePublished.isAfter(minAwardDate)
-                                        ? RISK
-                                        : NOT_RISK;
+                            try {
+                                ZonedDateTime minAwardDate = isNull(tenderItem[1])
+                                        ? null
+                                        : toZonedDateTime((Timestamp) tenderItem[1]);
+                                ZonedDateTime minDatePublished = isNull(tenderItem[2])
+                                        ? null
+                                        : toZonedDateTime((Timestamp) tenderItem[2]);
+
+                                if (isNull(minAwardDate)) {
+                                    indicatorValue = CONDITIONS_NOT_MET;
+                                } else {
+                                    indicatorValue = isNull(minDatePublished) || minDatePublished.isAfter(minAwardDate)
+                                            ? RISK
+                                            : NOT_RISK;
+                                }
+                            } catch (Exception e) {
+                                logService.tenderIndicatorFailed(INDICATOR_CODE, tenderId, e);
+                                indicatorValue = IMPOSSIBLE_TO_DETECT;
                             }
                             result.put(tenderId, new TenderIndicator(tenderDimensions, indicator, indicatorValue));
-
                         }
                 );
         return result;

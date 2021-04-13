@@ -53,7 +53,7 @@ public class Risk_1_18_AprilExtractor extends BaseExtractor {
 
     @Async
     @Transactional
-    @Scheduled(cron = "${risk-common.cron}")
+    @Scheduled(cron = "${risk-1-18.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -106,13 +106,17 @@ public class Risk_1_18_AprilExtractor extends BaseExtractor {
                 String tenderOuterId = tender.getOuterId();
                 TenderDimensions tenderDimensions = dimensionsMap.get(tenderOuterId);
                 tender.getLots().forEach(lot -> {
-
-                    if (maxTendersLotIterationData.get(tenderOuterId).containsKey(lot.getOuterId())
-                            && maxTendersLotIterationData.get(tenderOuterId).get(lot.getOuterId()).equals(RISK)) {
-                        lotIndicators.put(lot.getOuterId(), RISK);
-                    } else {
-                        int indicatorValue = checkLotIndicatorValue(lot);
-                        lotIndicators.put(lot.getOuterId(), indicatorValue);
+                    try {
+                        if (maxTendersLotIterationData.get(tenderOuterId).containsKey(lot.getOuterId())
+                                && maxTendersLotIterationData.get(tenderOuterId).get(lot.getOuterId()).equals(RISK)) {
+                            lotIndicators.put(lot.getOuterId(), RISK);
+                        } else {
+                            int indicatorValue = checkLotIndicatorValue(lot);
+                            lotIndicators.put(lot.getOuterId(), indicatorValue);
+                        }
+                    } catch (Exception e) {
+                        logService.lotIndicatorFailed(INDICATOR_CODE, tenderOuterId, lot.getOuterId(), e);
+                        lotIndicators.put(lot.getOuterId(), IMPOSSIBLE_TO_DETECT);
                     }
                 });
 

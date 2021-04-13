@@ -63,7 +63,7 @@ public class Risk_1_3_AprilExtractor extends BaseExtractor {
     }
 
     @Async
-    @Scheduled(cron = "${risk-common.cron}")
+    @Scheduled(cron = "${risk-1-3.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -112,19 +112,24 @@ public class Risk_1_3_AprilExtractor extends BaseExtractor {
 
                 int indicatorValue = IMPOSSIBLE_TO_DETECT;
 
-                if (tender.getCause() != null && tender.getCauseDescription() != null) {
-                    for (Map.Entry<String, Pattern> causePattern : CAUSE_PATTERN.entrySet()) {
-                        if (causePattern.getValue().matcher(tender.getCauseDescription()).find()) {
-                            if (tender.getCause().equals(causePattern.getKey())) {
-                                indicatorValue = NOT_RISK;
-                                break;
-                            } else {
-                                indicatorValue = RISK;
+                try {
+                    if (tender.getCause() != null && tender.getCauseDescription() != null) {
+                        for (Map.Entry<String, Pattern> causePattern : CAUSE_PATTERN.entrySet()) {
+                            if (causePattern.getValue().matcher(tender.getCauseDescription()).find()) {
+                                if (tender.getCause().equals(causePattern.getKey())) {
+                                    indicatorValue = NOT_RISK;
+                                    break;
+                                } else {
+                                    indicatorValue = RISK;
+                                }
                             }
                         }
+                    } else {
+                        indicatorValue = CONDITIONS_NOT_MET;
                     }
-                } else {
-                    indicatorValue = CONDITIONS_NOT_MET;
+                } catch (Exception e) {
+                    logService.tenderIndicatorFailed(INDICATOR_CODE, tender.getOuterId(), e);
+                    indicatorValue = IMPOSSIBLE_TO_DETECT;
                 }
 
                 tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, indicatorValue));

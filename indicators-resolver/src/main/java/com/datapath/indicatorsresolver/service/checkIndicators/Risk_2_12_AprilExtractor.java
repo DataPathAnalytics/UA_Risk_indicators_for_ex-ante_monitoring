@@ -54,7 +54,7 @@ public class Risk_2_12_AprilExtractor extends BaseExtractor {
 
     @Async
     @Transactional
-    @Scheduled(cron = "${risk-common.cron}")
+    @Scheduled(cron = "${risk-2-12.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -103,23 +103,28 @@ public class Risk_2_12_AprilExtractor extends BaseExtractor {
 
                 int indicatorValue = NOT_RISK;
 
-                List<NoMoney> byProcuringEntity = noMoneyRepository.findByProcuringEntity(tender.getTvProcuringEntity());
+                try {
+                    List<NoMoney> byProcuringEntity = noMoneyRepository.findByProcuringEntity(tender.getTvProcuringEntity());
 
-                if (!isEmpty(byProcuringEntity)) {
-                    Set<String> tenderCpv = tender.getItems()
-                            .stream()
-                            .map(TenderItem::getClassificationId)
-                            .collect(Collectors.toSet());
+                    if (!isEmpty(byProcuringEntity)) {
+                        Set<String> tenderCpv = tender.getItems()
+                                .stream()
+                                .map(TenderItem::getClassificationId)
+                                .collect(Collectors.toSet());
 
-                    boolean isRisk = byProcuringEntity
-                            .stream()
-                            .filter(p -> tenderCpv.contains(p.getCpv()))
-                            .anyMatch(p -> {
-                                ZonedDateTime date = ZonedDateTime.of(p.getDate(), ZoneId.of("UTC"));
-                                return getDaysBetween(date, ZonedDateTime.now()) < 30;
-                            });
+                        boolean isRisk = byProcuringEntity
+                                .stream()
+                                .filter(p -> tenderCpv.contains(p.getCpv()))
+                                .anyMatch(p -> {
+                                    ZonedDateTime date = ZonedDateTime.of(p.getDate(), ZoneId.of("UTC"));
+                                    return getDaysBetween(date, ZonedDateTime.now()) < 30;
+                                });
 
-                    indicatorValue = isRisk ? RISK : NOT_RISK;
+                        indicatorValue = isRisk ? RISK : NOT_RISK;
+                    }
+                } catch (Exception e) {
+                    logService.tenderIndicatorFailed(INDICATOR_CODE, tender.getOuterId(), e);
+                    indicatorValue = IMPOSSIBLE_TO_DETECT;
                 }
 
                 tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, indicatorValue));

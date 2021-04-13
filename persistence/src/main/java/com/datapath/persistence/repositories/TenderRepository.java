@@ -1323,7 +1323,8 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "       (EXISTS (SELECT * FROM feedback_monitoring_info WHERE tender_outer_id = tender.outer_id)) exists_monitoring_info,\n" +
             "       (EXISTS (SELECT * FROM feedback_result WHERE tender_outer_id = tender.outer_id)) exists_result,\n" +
             "       (EXISTS (SELECT * FROM feedback_summary WHERE tender_outer_id = tender.outer_id)) exists_summary,\n" +
-            "       (EXISTS (SELECT * FROM feedback_violation WHERE tender_outer_id = tender.outer_id)) exists_violation\n" +
+            "       (EXISTS (SELECT * FROM feedback_violation WHERE tender_outer_id = tender.outer_id)) exists_violation,\n" +
+            "       (EXISTS (SELECT * FROM feedback_indicator WHERE tender_outer_id = tender.outer_id)) exists_indicators\n" +
             "FROM tender\n" +
             "         LEFT JOIN procuring_entity ON tender.procuring_entity_id = procuring_entity.id\n" +
             "         LEFT JOIN cpv_catalogue cpv ON tender.tv_tender_cpv = cpv.cpv\n" +
@@ -1463,6 +1464,21 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
                              List<String> procedureType,
                              List<String> procuringEntityKind);
 
+
+    @Query(nativeQuery = true, value = "SELECT id FROM tender " +
+            "WHERE date_created > ?1\n" +
+            "AND date > now() - INTERVAL '1 year'\n" +
+            "AND procurement_method_type IN ?3\n" +
+            "AND procuring_entity_kind IN ?4\n" +
+            "AND main_procurement_category IN ?5\n" +
+            "AND status IN ?2\n" +
+            "ORDER BY date_created LIMIT 100")
+    List<Long> findTenderIds(ZonedDateTime date,
+                             List<String> procedureStatus,
+                             List<String> procedureType,
+                             List<String> procuringEntityKind,
+                             List<String> categories);
+
     @Query(value = "select * from tender where id in ?1", nativeQuery = true)
     List<Tender> findByIdIn(List<Long> ids);
 
@@ -1486,4 +1502,7 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "AND procuring_entity_kind IN ?2\n" +
             "ORDER BY date_created LIMIT 100")
     List<Tender> findTendersForContract(ZonedDateTime date, List<String> procuringEntityKind);
+
+    @Query(value = "SELECT outer_id FROM tender WHERE date_modified > ?1 ORDER BY date_modified", nativeQuery = true)
+    Page<String> findAllAfterDateModified(ZonedDateTime since, Pageable pageRequest);
 }

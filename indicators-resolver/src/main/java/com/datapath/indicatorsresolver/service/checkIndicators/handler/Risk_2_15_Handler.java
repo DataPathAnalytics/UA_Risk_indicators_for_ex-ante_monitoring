@@ -10,9 +10,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.ZonedDateTime;
-import java.util.Arrays;
 import java.util.List;
 
+import static java.util.Arrays.asList;
 import static org.springframework.util.CollectionUtils.isEmpty;
 
 @Component
@@ -20,9 +20,10 @@ import static org.springframework.util.CollectionUtils.isEmpty;
 public class Risk_2_15_Handler extends BaseExtractor {
 
     private static final String INDICATOR_CODE = "RISK-2-15";
+    private static final List<String> CATEGORIES = asList("goods", "services");
     private boolean indicatorAvailable;
 
-    private Risk_2_15_Processor processor;
+    private final Risk_2_15_Processor processor;
 
     public Risk_2_15_Handler(Risk_2_15_Processor processor) {
         this.processor = processor;
@@ -44,7 +45,7 @@ public class Risk_2_15_Handler extends BaseExtractor {
     }
 
     @Async
-    @Scheduled(cron = "${risk-common.cron}")
+    @Scheduled(cron = "${risk-2-15.cron}")
     public void handle() {
         if (!indicatorAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -69,9 +70,10 @@ public class Risk_2_15_Handler extends BaseExtractor {
 
         while (true) {
             List<Long> tenderIds = tenderRepository.findTenderIds(dateTime,
-                    Arrays.asList(indicator.getProcedureStatuses()),
-                    Arrays.asList(indicator.getProcedureTypes()),
-                    Arrays.asList(indicator.getProcuringEntityKind())
+                    asList(indicator.getProcedureStatuses()),
+                    asList(indicator.getProcedureTypes()),
+                    asList(indicator.getProcuringEntityKind()),
+                    CATEGORIES
             );
 
             if (isEmpty(tenderIds)) {

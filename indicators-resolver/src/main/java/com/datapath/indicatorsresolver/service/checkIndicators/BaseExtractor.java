@@ -9,6 +9,7 @@ import com.datapath.indicatorsresolver.model.ContractIndicator;
 import com.datapath.indicatorsresolver.model.TenderDimensions;
 import com.datapath.indicatorsresolver.model.TenderIndicator;
 import com.datapath.indicatorsresolver.service.DruidIndicatorMapper;
+import com.datapath.indicatorsresolver.service.IndicatorLogService;
 import com.datapath.nbu.service.ExchangeRateService;
 import com.datapath.persistence.entities.Indicator;
 import com.datapath.persistence.entities.Tender;
@@ -83,6 +84,12 @@ public class BaseExtractor {
     protected TenderItemRepository tenderItemRepository;
     protected UploadDataService uploadDataService;
     protected QualificationRepository qualificationRepository;
+    protected IndicatorLogService logService;
+
+    @Autowired
+    public void setLogService(IndicatorLogService logService) {
+        this.logService = logService;
+    }
 
     @Autowired
     public void setIndicatorRepository(IndicatorRepository indicatorRepository) {
@@ -276,7 +283,7 @@ public class BaseExtractor {
     }
 
 
-    List<String> findTenders(ZonedDateTime date,
+    protected List<String> findTenders(ZonedDateTime date,
                              List<String> procedureStatuses,
                              List<String> procedureTypes,
                              List<String> procuringEntityKind) {
@@ -299,12 +306,12 @@ public class BaseExtractor {
                 Arrays.asList(indicator.getProcuringEntityKind()));
     }
 
-    public Indicator getIndicator(String indicatorId) {
+    protected Indicator getIndicator(String indicatorId) {
         return indicatorRepository.findById(indicatorId)
                 .orElseThrow(() -> new RuntimeException("Can't find indicator with id " + indicatorId));
     }
 
-    public void uploadIndicator(TenderIndicator tenderIndicator) {
+    protected void uploadIndicator(TenderIndicator tenderIndicator) {
         DruidTenderIndicator druidIndicator = druidIndicatorMapper.transformToDruidTenderIndicator(tenderIndicator);
         Long lastIterationForIndicatorValue = extractDataService.findLastIterationForTenderIndicatorsData(Collections.singletonList(druidIndicator));
 
@@ -316,7 +323,7 @@ public class BaseExtractor {
         }
     }
 
-    void uploadIndicatorIfNotExists(String tenderId, String indicatorId, TenderIndicator tenderIndicator) {
+    protected void uploadIndicatorIfNotExists(String tenderId, String indicatorId, TenderIndicator tenderIndicator) {
         DruidTenderIndicator druidIndicator = druidIndicatorMapper.transformToDruidTenderIndicator(tenderIndicator);
         Boolean theLastTenderEqualsCurrent = extractDataService.theLastTenderEquals(tenderId,
                 indicatorId,
@@ -330,7 +337,7 @@ public class BaseExtractor {
         }
     }
 
-    void uploadIndicators(List<TenderIndicator> tenderIndicators, Long maxTenderIteration) {
+    protected void uploadIndicators(List<TenderIndicator> tenderIndicators, Long maxTenderIteration) {
         if (tenderIndicators.isEmpty()) return;
 
         List<DruidTenderIndicator> druidIndicators = druidIndicatorMapper.transformToDruidTenderIndicator(tenderIndicators);
@@ -345,7 +352,7 @@ public class BaseExtractor {
         }
     }
 
-    void uploadIndicatorIfNotExists(String tenderId, String indicatorId, List<TenderIndicator> tenderIndicators) {
+    protected void uploadIndicatorIfNotExists(String tenderId, String indicatorId, List<TenderIndicator> tenderIndicators) {
         if (tenderIndicators.isEmpty()) {
             return;
         }
@@ -362,7 +369,7 @@ public class BaseExtractor {
         }
     }
 
-    Map<String, TenderDimensions> getTenderDimensionsWithIndicatorLastIteration(Set<String> tenderIds, String indicatorId) {
+    protected Map<String, TenderDimensions> getTenderDimensionsWithIndicatorLastIteration(Set<String> tenderIds, String indicatorId) {
         log.debug("Start receiving tender dimensions");
         Map<String, TenderDimensions> tenderDimensions = getTenderDimensionsMap(tenderIds);
         Map<String, Long> maxTenderIndicatorIteration = extractDataService.getMaxTenderIndicatorIteration(tenderIds, indicatorId);
@@ -400,7 +407,7 @@ public class BaseExtractor {
         return result;
     }
 
-    public Map<String, TenderDimensions> getTenderDimensionsWithIndicatorLastIteration(List<Tender> tenders, String indicatorId) {
+    protected Map<String, TenderDimensions> getTenderDimensionsWithIndicatorLastIteration(List<Tender> tenders, String indicatorId) {
         Map<String, TenderDimensions> tenderDimensions = getTenderDimensionsMap(tenders);
 
         Set<String> tenderIds = tenders.stream().map(Tender::getOuterId).collect(toSet());
@@ -430,7 +437,7 @@ public class BaseExtractor {
     }
 
 
-    public Map<String, ContractDimensions> getContractDimensionsWithIndicatorLastIteration(Set<String> contractIds, String indicatorId) {
+    protected Map<String, ContractDimensions> getContractDimensionsWithIndicatorLastIteration(Set<String> contractIds, String indicatorId) {
         Map<String, ContractDimensions> contractDimensions = getContractDimensionsMap(contractIds);
         contractDimensions.forEach((key, value) -> {
             Long maxIteration = extractContractDataService.getMaxIndicatorIteration(key, indicatorId);
@@ -458,13 +465,13 @@ public class BaseExtractor {
         return contractDimensions;
     }
 
-    ZonedDateTime getMaxTenderDateCreated(Map<String, TenderDimensions> dimensionsMap, ZonedDateTime defaultDateTime) {
+    protected ZonedDateTime getMaxTenderDateCreated(Map<String, TenderDimensions> dimensionsMap, ZonedDateTime defaultDateTime) {
         return dimensionsMap.values()
                 .stream().map(TenderDimensions::getDateCreated)
                 .max(Comparator.comparing(item -> item)).orElse(defaultDateTime);
     }
 
-    public ZonedDateTime getMaxTenderDateCreated(List<TenderIndicator> tenderIndicators, ZonedDateTime defaultDateTime) {
+    protected ZonedDateTime getMaxTenderDateCreated(List<TenderIndicator> tenderIndicators, ZonedDateTime defaultDateTime) {
         return tenderIndicators
                 .stream()
                 .map(TenderIndicator::getTenderDimensions)
@@ -472,13 +479,13 @@ public class BaseExtractor {
                 .max(Comparator.comparing(item -> item)).orElse(defaultDateTime);
     }
 
-    public ZonedDateTime getMaxContractDateCreated(Map<String, ContractDimensions> dimensionsMap, ZonedDateTime defaultDateTime) {
+    protected ZonedDateTime getMaxContractDateCreated(Map<String, ContractDimensions> dimensionsMap, ZonedDateTime defaultDateTime) {
         return dimensionsMap.values()
                 .stream().map(ContractDimensions::getDateCreated)
                 .max(Comparator.comparing(item -> item)).orElse(defaultDateTime);
     }
 
-    public ZonedDateTime getMaxContractDateCreated(List<ContractIndicator> contractIndicators, ZonedDateTime defaultDateTime) {
+    protected ZonedDateTime getMaxContractDateCreated(List<ContractIndicator> contractIndicators, ZonedDateTime defaultDateTime) {
         return contractIndicators
                 .stream()
                 .map(ContractIndicator::getContractDimensions)
@@ -486,21 +493,21 @@ public class BaseExtractor {
                 .max(Comparator.comparing(item -> item)).orElse(defaultDateTime);
     }
 
-    List<LocalDate> dateBetween(LocalDate start, LocalDate end) {
+    protected List<LocalDate> dateBetween(LocalDate start, LocalDate end) {
         return LongStream.range(start.toEpochDay(), end.toEpochDay()).mapToObj(LocalDate::ofEpochDay).collect(toList());
     }
 
-    ZonedDateTime toUaMidnight(ZonedDateTime dateTime) {
+    protected ZonedDateTime toUaMidnight(ZonedDateTime dateTime) {
         return dateTime.withZoneSameInstant(UA_ZONE).with(LocalTime.MIDNIGHT);
     }
 
-    public ZonedDateTime getIndicatorLastCheckedDate(Indicator indicator) {
+    protected ZonedDateTime getIndicatorLastCheckedDate(Indicator indicator) {
         return isNull(indicator.getLastCheckedDateCreated())
                 ? ZonedDateTime.now().minus(Period.ofYears(1)).withHour(0)
                 : indicator.getLastCheckedDateCreated();
     }
 
-    public Set<String> getOuterIds(List<Tender> tenders) {
+    protected Set<String> getOuterIds(List<Tender> tenders) {
         return tenders.stream().map(Tender::getOuterId).collect(toSet());
     }
 }

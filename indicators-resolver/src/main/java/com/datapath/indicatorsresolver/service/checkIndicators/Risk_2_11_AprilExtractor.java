@@ -54,7 +54,7 @@ public class Risk_2_11_AprilExtractor extends BaseExtractor {
 
     @Async
     @Transactional
-    @Scheduled(cron = "${risk-common.cron}")
+    @Scheduled(cron = "${risk-2-11.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -103,19 +103,24 @@ public class Risk_2_11_AprilExtractor extends BaseExtractor {
 
                 int indicatorValue = NOT_RISK;
 
-                List<NoNeed> byProcuringEntity = noNeedRepository.findByProcuringEntity(tender.getTvProcuringEntity());
+                try {
+                    List<NoNeed> byProcuringEntity = noNeedRepository.findByProcuringEntity(tender.getTvProcuringEntity());
 
-                if (!isEmpty(byProcuringEntity)) {
-                    Set<String> tenderCpv = tender.getItems()
-                            .stream()
-                            .map(TenderItem::getClassificationId)
-                            .collect(Collectors.toSet());
+                    if (!isEmpty(byProcuringEntity)) {
+                        Set<String> tenderCpv = tender.getItems()
+                                .stream()
+                                .map(TenderItem::getClassificationId)
+                                .collect(Collectors.toSet());
 
-                    boolean isPresent = byProcuringEntity
-                            .stream()
-                            .anyMatch(p -> tenderCpv.contains(p.getCpv()));
+                        boolean isPresent = byProcuringEntity
+                                .stream()
+                                .anyMatch(p -> tenderCpv.contains(p.getCpv()));
 
-                    indicatorValue = isPresent ? RISK : NOT_RISK;
+                        indicatorValue = isPresent ? RISK : NOT_RISK;
+                    }
+                } catch (Exception e) {
+                    logService.tenderIndicatorFailed(INDICATOR_CODE, tender.getOuterId(), e);
+                    indicatorValue = IMPOSSIBLE_TO_DETECT;
                 }
 
                 tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, indicatorValue));

@@ -48,7 +48,7 @@ public class Risk_2_5_1_AprilExtractor extends BaseExtractor {
     }
 
     @Async
-    @Scheduled(cron = "${risk-common.cron}")
+    @Scheduled(cron = "${risk-2-5-1.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -87,29 +87,32 @@ public class Risk_2_5_1_AprilExtractor extends BaseExtractor {
 
             List<TenderIndicator> tenderIndicators = tenders.stream().map(tenderInfo -> {
                 String tenderId = tenderInfo[0].toString();
+                TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
 
                 log.info("Process tender {}", tenderId);
 
-                tenderIds.add(tenderId);
-                String procuringEntity = tenderInfo[1].toString();
-                Double amount = isNull(tenderInfo[3]) ? null : Double.parseDouble(tenderInfo[3].toString());
-                String cpv = tenderInfo[4].toString();
-
-                TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
                 int indicatorValue;
-                if (isNull(amount)) {
-                    indicatorValue = IMPOSSIBLE_TO_DETECT;
-                } else {
-                    Optional<NearThreshold> nearThreshold = nearThresholdRepository.findFirstByProcuringEntityAndCpv(procuringEntity, cpv);
-                    if (nearThreshold.isPresent()) {
-                        amount += nearThreshold.get().getAmount();
+                try {
+                    tenderIds.add(tenderId);
+                    String procuringEntity = tenderInfo[1].toString();
+                    Double amount = isNull(tenderInfo[3]) ? null : Double.parseDouble(tenderInfo[3].toString());
+                    String cpv = tenderInfo[4].toString();
+
+                    if (isNull(amount)) {
+                        indicatorValue = IMPOSSIBLE_TO_DETECT;
+                    } else {
+                        Optional<NearThreshold> nearThreshold = nearThresholdRepository.findFirstByProcuringEntityAndCpv(procuringEntity, cpv);
+                        if (nearThreshold.isPresent()) {
+                            amount += nearThreshold.get().getAmount();
+                        }
+
+                        indicatorValue = amount >= 1000000 ? RISK : NOT_RISK;
                     }
-
-                    indicatorValue = amount >= 1000000 ? RISK : NOT_RISK;
+                } catch (Exception e) {
+                    logService.tenderIndicatorFailed(INDICATOR_CODE, tenderId, e);
+                    indicatorValue = IMPOSSIBLE_TO_DETECT;
                 }
-
                 return new TenderIndicator(tenderDimensions, indicator, indicatorValue);
-
             }).collect(Collectors.toList());
 
             Map<String, TenderDimensions> dimensionsMap = getTenderDimensionsWithIndicatorLastIteration(tenderIds, INDICATOR_CODE);

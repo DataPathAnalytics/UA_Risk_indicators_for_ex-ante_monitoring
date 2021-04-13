@@ -44,41 +44,45 @@ public class Risk_2_14_Processor extends BaseExtractor {
 
             ContractDimensions contractDimensions = dimensionsMap.get(contract.getOuterId());
 
-            List<ZonedDateTime> signedDates = contract.getChanges()
-                    .stream()
-                    .filter(c -> ACTIVE.equals(c.getStatus()))
-                    .filter(c -> {
-                        for (String type : c.getRationaleTypes()) {
-                            if (ITEM_PRICE_VARIATION.equals(type)) {
-                                return true;
-                            }
-                        }
-                        return false;
-                    })
-                    .map(ContractChange::getDateSigned)
-                    .sorted()
-                    .collect(toList());
-
             int indicatorValue = NOT_RISK;
+            try {
+                List<ZonedDateTime> signedDates = contract.getChanges()
+                        .stream()
+                        .filter(c -> ACTIVE.equals(c.getStatus()))
+                        .filter(c -> {
+                            for (String type : c.getRationaleTypes()) {
+                                if (ITEM_PRICE_VARIATION.equals(type)) {
+                                    return true;
+                                }
+                            }
+                            return false;
+                        })
+                        .map(ContractChange::getDateSigned)
+                        .sorted()
+                        .collect(toList());
 
-            if (isEmpty(signedDates)) {
-                indicatorValue = CONDITIONS_NOT_MET;
-            } else {
-                ZonedDateTime first = null;
-                for (ZonedDateTime date : signedDates) {
-                    if (isNull(first)) {
-                        first = date;
-                    } else {
-                        long days = getDaysBetween(first, date);
-
-                        if (days < 90) {
-                            indicatorValue = RISK;
-                            break;
-                        } else {
+                if (isEmpty(signedDates)) {
+                    indicatorValue = CONDITIONS_NOT_MET;
+                } else {
+                    ZonedDateTime first = null;
+                    for (ZonedDateTime date : signedDates) {
+                        if (isNull(first)) {
                             first = date;
+                        } else {
+                            long days = getDaysBetween(first, date);
+
+                            if (days < 90) {
+                                indicatorValue = RISK;
+                                break;
+                            } else {
+                                first = date;
+                            }
                         }
                     }
                 }
+            } catch (Exception e) {
+                logService.contractIndicatorFailed(indicator.getId(), contract.getOuterId(), e);
+                indicatorValue = IMPOSSIBLE_TO_DETECT;
             }
             contractIndicators.add(new ContractIndicator(contractDimensions, indicator, indicatorValue));
         });

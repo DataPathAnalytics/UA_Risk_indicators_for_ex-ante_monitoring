@@ -19,8 +19,7 @@ public class Indicator {
     private String[] procedureStatuses;
     private String[] procuringEntityKind;
     private String risk;
-    private Boolean isActive;
-    private Integer checkingFrequency;
+    private Boolean active;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
     private ZonedDateTime lastCheckedDateCreated;

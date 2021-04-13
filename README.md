@@ -1,5 +1,13 @@
 Release notes
 
+#### Version 2.2.0
+
+Distributed indicators by time. 
+
+Disabled deprecated indicators. 
+
+Added new indicators cron properties according new names
+
 #### Version 2.1.1
 
 Ignore priceQuotation tenders

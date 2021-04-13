@@ -54,7 +54,7 @@ public class Risk_1_9_1_ApilExtractor extends BaseExtractor {
     }
 
     @Async
-    @Scheduled(cron = "${risk-common.cron}")
+    @Scheduled(cron = "${risk-1-9-1.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -95,39 +95,43 @@ public class Risk_1_9_1_ApilExtractor extends BaseExtractor {
 
                 Integer indicatorValue = null;
                 String tenderId = tenderInfo[0].toString();
+                TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
 
                 log.info("Process tender {}", tenderId);
 
-                tenderIds.add(tenderId);
+                try {
+                    tenderIds.add(tenderId);
 
-                Timestamp timestampStartDate = isNull(tenderInfo[1]) ?
-                        (Timestamp) tenderInfo[5] :
-                        (Timestamp) tenderInfo[1];
+                    Timestamp timestampStartDate = isNull(tenderInfo[1]) ?
+                            (Timestamp) tenderInfo[5] :
+                            (Timestamp) tenderInfo[1];
 
-                String kind = tenderInfo[2].toString();
-                String currency = tenderInfo[3].toString();
-                Double amount = Double.parseDouble(tenderInfo[4].toString());
+                    String kind = tenderInfo[2].toString();
+                    String currency = tenderInfo[3].toString();
+                    Double amount = Double.parseDouble(tenderInfo[4].toString());
 
-                TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
-
-                if (!currency.equals(UAH_CURRENCY)) {
-                    if (!isNull(timestampStartDate)) {
-                        ZonedDateTime date = toUaMidnight(toZonedDateTime(timestampStartDate));
-                        ExchangeRate firstByCodeAndDate = exchangeRateService.getOneByCodeAndDate(currency, date);
-                        if (!isNull(firstByCodeAndDate)) {
-                            amount *= firstByCodeAndDate.getRate();
+                    if (!currency.equals(UAH_CURRENCY)) {
+                        if (!isNull(timestampStartDate)) {
+                            ZonedDateTime date = toUaMidnight(toZonedDateTime(timestampStartDate));
+                            ExchangeRate firstByCodeAndDate = exchangeRateService.getOneByCodeAndDate(currency, date);
+                            if (!isNull(firstByCodeAndDate)) {
+                                amount *= firstByCodeAndDate.getRate();
+                            } else {
+                                indicatorValue = IMPOSSIBLE_TO_DETECT;
+                            }
                         } else {
                             indicatorValue = IMPOSSIBLE_TO_DETECT;
                         }
-                    } else {
-                        indicatorValue = IMPOSSIBLE_TO_DETECT;
                     }
+                    if (isNull(indicatorValue)) {
+                        indicatorValue = amount > paKindAmountLimitMap.get(kind) ? RISK : NOT_RISK;
+                    }
+                } catch (Exception e) {
+                    logService.tenderIndicatorFailed(INDICATOR_CODE, tenderId, e);
+                    indicatorValue = IMPOSSIBLE_TO_DETECT;
                 }
-                if (isNull(indicatorValue)) {
-                    indicatorValue = amount > paKindAmountLimitMap.get(kind) ? RISK : NOT_RISK;
-                }
-                return new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>());
 
+                return new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>());
             }).collect(Collectors.toList());
 
             Map<String, TenderDimensions> dimensionsMap = getTenderDimensionsWithIndicatorLastIteration(tenderIds, INDICATOR_CODE);

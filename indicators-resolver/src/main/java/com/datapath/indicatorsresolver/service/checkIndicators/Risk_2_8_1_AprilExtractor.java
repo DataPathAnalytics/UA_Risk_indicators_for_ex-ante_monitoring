@@ -48,7 +48,7 @@ public class Risk_2_8_1_AprilExtractor extends BaseExtractor {
     }
 
     @Async
-    @Scheduled(cron = "${risk2_8_1_april.cron}")
+    @Scheduled(cron = "${risk-2-8-1.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -89,35 +89,39 @@ public class Risk_2_8_1_AprilExtractor extends BaseExtractor {
 
             List<TenderIndicator> tenderIndicators = tenders.stream().map(tenderInfo -> {
                 String tenderId = tenderInfo[0].toString();
+                TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
 
                 log.info("Process tender {}", tenderId);
 
-                tenderIds.add(tenderId);
-
-                int pendingContractsCount = Integer.parseInt(tenderInfo[1].toString());
-                String procuringEntity = tenderInfo[2].toString();
-                List<String> suppliers = isNull(tenderInfo[3])
-                        ? null : Arrays.asList(tenderInfo[3].toString().split(","));
-                double amount = Double.parseDouble(tenderInfo[4].toString());
-
-                TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
                 int indicatorValue = NOT_RISK;
-                if (pendingContractsCount == 0) {
-                    indicatorValue = CONDITIONS_NOT_MET;
-                } else {
-                    if (amount > 4500000 && amount < 5000000) {
-                        indicatorValue = RISK;
-                    }
-                    if (indicatorValue == RISK) {
-                        Optional<NearThresholdOneSupplier> nearThreshold = nearThresholdOneSupplierRepository
-                                .findFirstByProcuringEntityAndSupplierIn(procuringEntity, suppliers);
-                        if (!nearThreshold.isPresent()) {
-                            indicatorValue = NOT_RISK;
+                try {
+                    tenderIds.add(tenderId);
+
+                    int pendingContractsCount = Integer.parseInt(tenderInfo[1].toString());
+                    String procuringEntity = tenderInfo[2].toString();
+                    List<String> suppliers = isNull(tenderInfo[3])
+                            ? null : Arrays.asList(tenderInfo[3].toString().split(","));
+                    double amount = Double.parseDouble(tenderInfo[4].toString());
+
+                    if (pendingContractsCount == 0) {
+                        indicatorValue = CONDITIONS_NOT_MET;
+                    } else {
+                        if (amount > 4500000 && amount < 5000000) {
+                            indicatorValue = RISK;
+                        }
+                        if (indicatorValue == RISK) {
+                            Optional<NearThresholdOneSupplier> nearThreshold = nearThresholdOneSupplierRepository
+                                    .findFirstByProcuringEntityAndSupplierIn(procuringEntity, suppliers);
+                            if (!nearThreshold.isPresent()) {
+                                indicatorValue = NOT_RISK;
+                            }
                         }
                     }
+                } catch (Exception e) {
+                    logService.tenderIndicatorFailed(INDICATOR_CODE, tenderId, e);
+                    indicatorValue = IMPOSSIBLE_TO_DETECT;
                 }
                 return new TenderIndicator(tenderDimensions, indicator, indicatorValue);
-
             }).collect(Collectors.toList());
 
             Map<String, TenderDimensions> dimensionsMap = getTenderDimensionsWithIndicatorLastIteration(tenderIds, INDICATOR_CODE);

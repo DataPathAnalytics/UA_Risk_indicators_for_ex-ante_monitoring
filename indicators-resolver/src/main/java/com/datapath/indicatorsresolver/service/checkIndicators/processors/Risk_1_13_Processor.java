@@ -36,36 +36,41 @@ public class Risk_1_13_Processor extends BaseExtractor {
 
             TenderDimensions tenderDimensions = dimensionsMap.get(tender.getOuterId());
 
-            List<Complaint> complaints = tender.getComplaints()
-                    .stream()
-                    .filter(c -> SATISFIED.equals(c.getStatus()) && COMPLAINT.equals(c.getComplaintType()))
-                    .collect(toList());
-
-            complaints.addAll(
-                    tender.getAwards()
-                            .stream()
-                            .flatMap(a -> a.getComplaints()
-                                    .stream()
-                                    .filter(c -> SATISFIED.equals(c.getStatus()) && COMPLAINT.equals(c.getComplaintType())))
-                            .collect(toList())
-            );
-
-            if (isEmpty(complaints)) {
-                tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, CONDITIONS_NOT_MET));
-            } else {
-                Optional<ZonedDateTime> minComplaintDate = complaints
+            try {
+                List<Complaint> complaints = tender.getComplaints()
                         .stream()
-                        .map(Complaint::getDateDecision)
-                        .filter(Objects::nonNull)
-                        .sorted()
-                        .findFirst();
+                        .filter(c -> SATISFIED.equals(c.getStatus()) && COMPLAINT.equals(c.getComplaintType()))
+                        .collect(toList());
 
-                if (!minComplaintDate.isPresent()) {
-                    tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, IMPOSSIBLE_TO_DETECT));
+                complaints.addAll(
+                        tender.getAwards()
+                                .stream()
+                                .flatMap(a -> a.getComplaints()
+                                        .stream()
+                                        .filter(c -> SATISFIED.equals(c.getStatus()) && COMPLAINT.equals(c.getComplaintType())))
+                                .collect(toList())
+                );
+
+                if (isEmpty(complaints)) {
+                    tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, CONDITIONS_NOT_MET));
                 } else {
-                    int indicatorValue = getDaysBetween(minComplaintDate.get(), ZonedDateTime.now()) > 30 ? RISK : NOT_RISK;
-                    tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, indicatorValue));
+                    Optional<ZonedDateTime> minComplaintDate = complaints
+                            .stream()
+                            .map(Complaint::getDateDecision)
+                            .filter(Objects::nonNull)
+                            .sorted()
+                            .findFirst();
+
+                    if (!minComplaintDate.isPresent()) {
+                        tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, IMPOSSIBLE_TO_DETECT));
+                    } else {
+                        int indicatorValue = getDaysBetween(minComplaintDate.get(), ZonedDateTime.now()) > 30 ? RISK : NOT_RISK;
+                        tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, indicatorValue));
+                    }
                 }
+            } catch (Exception e) {
+                logService.tenderIndicatorFailed(indicator.getId(), tender.getOuterId(), e);
+                tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, IMPOSSIBLE_TO_DETECT));
             }
         });
 

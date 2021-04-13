@@ -50,7 +50,7 @@ public class Risk_1_7_AprilExtractor extends BaseExtractor {
     }
 
     @Async
-    @Scheduled(cron = "${risk-common.cron}")
+    @Scheduled(cron = "${risk-1-7.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -131,29 +131,33 @@ public class Risk_1_7_AprilExtractor extends BaseExtractor {
 
         tenderLotdateDocComplaintCount.forEach(tenderLotData -> {
             String tenderId = tenderLotData[0].toString();
-
-            log.info("Process tender {}", tenderId);
-
             String lotId = tenderLotData[1].toString();
-            Object awardIdObj = tenderLotData[2];
-            Timestamp awardDateTimestamp = (Timestamp) tenderLotData[3];
-            int docCount = Integer.parseInt(tenderLotData[4].toString());
-            int complaintsCount = Integer.parseInt(tenderLotData[5].toString());
+
+            log.info("Process tender {} lot {}", tenderId, lotId);
 
             int indicatorValue;
+            try {
+                Object awardIdObj = tenderLotData[2];
+                Timestamp awardDateTimestamp = (Timestamp) tenderLotData[3];
+                int docCount = Integer.parseInt(tenderLotData[4].toString());
+                int complaintsCount = Integer.parseInt(tenderLotData[5].toString());
 
-            if (maxTendersLotIterationData.get(tenderId).containsKey(lotId) && maxTendersLotIterationData.get(tenderId).get(lotId).equals(1)) {
-                indicatorValue = RISK;
-            } else {
-                if (isNull(awardIdObj)) {
-                    indicatorValue = NOT_RISK;
+                if (maxTendersLotIterationData.get(tenderId).containsKey(lotId) && maxTendersLotIterationData.get(tenderId).get(lotId).equals(1)) {
+                    indicatorValue = RISK;
                 } else {
-                    ZonedDateTime awardDate = toUaMidnight(toZonedDateTime(awardDateTimestamp));
-                    indicatorValue = (!awardDate.isBefore(dateOfCurrentDateMinusNWorkingDays)
-                            || docCount > 0 || complaintsCount > 0)
-                            ? CONDITIONS_NOT_MET
-                            : RISK;
+                    if (isNull(awardIdObj)) {
+                        indicatorValue = NOT_RISK;
+                    } else {
+                        ZonedDateTime awardDate = toUaMidnight(toZonedDateTime(awardDateTimestamp));
+                        indicatorValue = (!awardDate.isBefore(dateOfCurrentDateMinusNWorkingDays)
+                                || docCount > 0 || complaintsCount > 0)
+                                ? CONDITIONS_NOT_MET
+                                : RISK;
+                    }
                 }
+            } catch (Exception e) {
+                logService.lotIndicatorFailed(INDICATOR_CODE, tenderId, lotId, e);
+                indicatorValue = IMPOSSIBLE_TO_DETECT;
             }
 
             if (!resultMap.containsKey(tenderId)) {

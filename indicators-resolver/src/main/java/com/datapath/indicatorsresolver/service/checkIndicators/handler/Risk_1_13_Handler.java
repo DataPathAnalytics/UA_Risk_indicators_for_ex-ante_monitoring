@@ -45,7 +45,7 @@ public class Risk_1_13_Handler extends BaseExtractor {
     }
 
     @Async
-    @Scheduled(cron = "${risk1_13_april.cron}")
+    @Scheduled(cron = "${risk-1-13.cron}")
     public void handle() {
         if (!indicatorAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));

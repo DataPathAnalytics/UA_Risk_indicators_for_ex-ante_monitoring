@@ -55,7 +55,7 @@ public class Risk_1_11_AprilExtractor extends BaseExtractor {
 
     @Async
     @Transactional
-    @Scheduled(cron = "${risk-common.cron}")
+    @Scheduled(cron = "${risk-1-11.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -102,42 +102,47 @@ public class Risk_1_11_AprilExtractor extends BaseExtractor {
 
                 TenderDimensions tenderDimensions = dimensionsMap.get(tender.getOuterId());
 
-                int indicatorValue = NOT_RISK;
+                try {
+                    int indicatorValue = NOT_RISK;
 
-                List<Complaint> complaints = tender.getAwards()
-                        .stream()
-                        .flatMap(a -> a.getComplaints().stream())
-                        .filter(c -> c.getComplaintType().equals(CLAIM)
-                                && (!c.getStatus().equals(DRAFT) && !c.getStatus().equals(CANCELLED)))
-                        .collect(toList());
+                    List<Complaint> complaints = tender.getAwards()
+                            .stream()
+                            .flatMap(a -> a.getComplaints().stream())
+                            .filter(c -> c.getComplaintType().equals(CLAIM)
+                                    && (!c.getStatus().equals(DRAFT) && !c.getStatus().equals(CANCELLED)))
+                            .collect(toList());
 
-                if (isEmpty(complaints)) {
-                    indicatorValue = CONDITIONS_NOT_MET;
-                } else {
-                    for (Complaint complaint : complaints) {
+                    if (isEmpty(complaints)) {
+                        indicatorValue = CONDITIONS_NOT_MET;
+                    } else {
+                        for (Complaint complaint : complaints) {
 
-                        if (complaint.getDateSubmitted() == null) {
-                            indicatorValue = CONDITIONS_NOT_MET;
-                            break;
-                        }
+                            if (complaint.getDateSubmitted() == null) {
+                                indicatorValue = CONDITIONS_NOT_MET;
+                                break;
+                            }
 
-                        ZonedDateTime dateAnswered;
-                        if (nonNull(complaint.getDateAnswered())) {
-                            dateAnswered = toUaMidnight(complaint.getDateAnswered());
-                        } else {
-                            dateAnswered = toUaMidnight(ZonedDateTime.now());
-                        }
+                            ZonedDateTime dateAnswered;
+                            if (nonNull(complaint.getDateAnswered())) {
+                                dateAnswered = toUaMidnight(complaint.getDateAnswered());
+                            } else {
+                                dateAnswered = toUaMidnight(ZonedDateTime.now());
+                            }
 
-                        long days = getDaysBetween(complaint.getDateSubmitted(), dateAnswered);
+                            long days = getDaysBetween(complaint.getDateSubmitted(), dateAnswered);
 
-                        if (days >= 6) {
-                            indicatorValue = RISK;
-                            break;
+                            if (days >= 6) {
+                                indicatorValue = RISK;
+                                break;
+                            }
                         }
                     }
-                }
 
-                tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, indicatorValue));
+                    tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, indicatorValue));
+                } catch (Exception e) {
+                    logService.tenderIndicatorFailed(INDICATOR_CODE, tender.getOuterId(), e);
+                    tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, IMPOSSIBLE_TO_DETECT));
+                }
             });
 
             tenderIndicators.forEach(this::uploadIndicator);

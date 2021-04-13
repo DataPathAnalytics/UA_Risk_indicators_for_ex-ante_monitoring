@@ -3,7 +3,9 @@ package com.datapath.indicatorsresolver.service.checkIndicators.processors;
 import com.datapath.indicatorsresolver.model.TenderDimensions;
 import com.datapath.indicatorsresolver.model.TenderIndicator;
 import com.datapath.indicatorsresolver.service.checkIndicators.BaseExtractor;
+import com.datapath.persistence.entities.Award;
 import com.datapath.persistence.entities.Indicator;
+import com.datapath.persistence.entities.Lot;
 import com.datapath.persistence.entities.Tender;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,17 +40,19 @@ public class Risk_2_16_Processor extends BaseExtractor {
             List<String> withoutRiskLotOuterIds = new LinkedList<>();
             List<String> conditionsNotMetLotOuterIds = new LinkedList<>();
 
-            tender.getLots().forEach(lot -> {
-                lot.getAwards().forEach(award -> {
-                    if (!isEmpty(award.getComplaints())) {
-                        conditionsNotMetLotOuterIds.add(lot.getOuterId());
-                    } else if (CANCELLED.equals(award.getStatus())) {
-                        withRiskLotOuterIds.add(lot.getOuterId());
-                    } else {
-                        withoutRiskLotOuterIds.add(lot.getOuterId());
-                    }
-                });
-            });
+            for (Lot lot : tender.getLots()) {
+                int indicatorValue;
+                try {
+                    indicatorValue = checkLotIndicator(lot);
+                } catch (Exception e) {
+                    logService.lotIndicatorFailed(indicator.getId(), tender.getOuterId(), lot.getOuterId(), e);
+                    indicatorValue = IMPOSSIBLE_TO_DETECT;
+                }
+
+                if (RISK.equals(indicatorValue)) withRiskLotOuterIds.add(lot.getOuterId());
+                else if (NOT_RISK.equals(indicatorValue)) withoutRiskLotOuterIds.add(lot.getOuterId());
+                else conditionsNotMetLotOuterIds.add(lot.getOuterId());
+            }
 
             if (!isEmpty(withRiskLotOuterIds))
                 tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, RISK, withRiskLotOuterIds));
@@ -59,5 +63,19 @@ public class Risk_2_16_Processor extends BaseExtractor {
         });
 
         return tenderIndicators;
+    }
+
+    private int checkLotIndicator(Lot lot) {
+        for (Award award : lot.getAwards()) {
+            if (!isEmpty(award.getComplaints())) {
+                return CONDITIONS_NOT_MET;
+            }
+        }
+        for (Award award : lot.getAwards()) {
+            if (CANCELLED.equals(award.getStatus())) {
+                return RISK;
+            }
+        }
+        return NOT_RISK;
     }
 }

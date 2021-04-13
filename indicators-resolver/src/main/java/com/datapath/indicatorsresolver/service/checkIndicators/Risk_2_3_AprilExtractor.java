@@ -46,7 +46,7 @@ public class Risk_2_3_AprilExtractor extends BaseExtractor {
     }
 
     @Async
-    @Scheduled(cron = "${risk2_3_april.cron}")
+    @Scheduled(cron = "${risk-2-3.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -101,29 +101,34 @@ public class Risk_2_3_AprilExtractor extends BaseExtractor {
 
             tenderLotWithActiveAwardDateMinDocumentPublishedAndDocsCount.forEach(tenderItem -> {
                 String tenderId = tenderItem[0].toString();
-
-                log.info("Process tender {}", tenderId);
-
                 String lotId = tenderItem[1].toString();
-                ZonedDateTime activeAwardDate = isNull(tenderItem[2])
-                        ? null :
-                        toUaMidnight(toZonedDateTime((Timestamp) tenderItem[2]));
-                ZonedDateTime minDocDatePublished = isNull(tenderItem[3])
-                        ? null :
-                        toUaMidnight(toZonedDateTime((Timestamp) tenderItem[3]));
 
-                int docsCount = Integer.parseInt(tenderItem[4].toString());
+                log.info("Process tender {} lot {}", tenderId, lotId);
 
                 int indicatorValue;
-                if (maxTendersLotIterationData.get(tenderId).containsKey(lotId) && maxTendersLotIterationData.get(tenderId).get(lotId).equals(1)) {
-                    indicatorValue = RISK;
-                } else {
-                    if (isNull(activeAwardDate)) indicatorValue = CONDITIONS_NOT_MET;
-                    else if ((nonNull(minDocDatePublished) && minDocDatePublished.isAfter(activeAwardDate)) ||
-                            isNull(minDocDatePublished) || docsCount == 0) indicatorValue = RISK;
-                    else indicatorValue = NOT_RISK;
+                try {
+                    ZonedDateTime activeAwardDate = isNull(tenderItem[2])
+                            ? null :
+                            toUaMidnight(toZonedDateTime((Timestamp) tenderItem[2]));
+                    ZonedDateTime minDocDatePublished = isNull(tenderItem[3])
+                            ? null :
+                            toUaMidnight(toZonedDateTime((Timestamp) tenderItem[3]));
 
+                    int docsCount = Integer.parseInt(tenderItem[4].toString());
+
+                    if (maxTendersLotIterationData.get(tenderId).containsKey(lotId) && maxTendersLotIterationData.get(tenderId).get(lotId).equals(1)) {
+                        indicatorValue = RISK;
+                    } else {
+                        if (isNull(activeAwardDate)) indicatorValue = CONDITIONS_NOT_MET;
+                        else if ((nonNull(minDocDatePublished) && minDocDatePublished.isAfter(activeAwardDate)) ||
+                                isNull(minDocDatePublished) || docsCount == 0) indicatorValue = RISK;
+                        else indicatorValue = NOT_RISK;
+                    }
+                } catch (Exception e) {
+                    logService.lotIndicatorFailed(INDICATOR_CODE, tenderId, lotId, e);
+                    indicatorValue = IMPOSSIBLE_TO_DETECT;
                 }
+
                 if (!resultMap.containsKey(tenderId)) {
                     resultMap.put(tenderId, new HashMap<>());
                 }
@@ -133,7 +138,6 @@ public class Risk_2_3_AprilExtractor extends BaseExtractor {
 
                 resultMap.get(tenderId).get(indicatorValue).add(lotId);
             });
-
 
             resultMap.forEach((tenderOuterId, value) -> {
                 TenderDimensions tenderDimensions = dimensionsMap.get(tenderOuterId);

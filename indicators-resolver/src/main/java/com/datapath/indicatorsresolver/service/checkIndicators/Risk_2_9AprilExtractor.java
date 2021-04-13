@@ -43,7 +43,7 @@ public class Risk_2_9AprilExtractor extends BaseExtractor {
     }
 
     @Async
-    @Scheduled(cron = "${risk-common.cron}")
+    @Scheduled(cron = "${risk-2-9.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -93,19 +93,24 @@ public class Risk_2_9AprilExtractor extends BaseExtractor {
 
             tendersWithLotUnsuccessfulAwardsSupplierAndCpvCount.forEach(tenderItem -> {
                 String tenderId = tenderItem[0].toString();
-
-                log.info("Process tender {}", tenderId);
-
                 String lotId = tenderItem[1].toString();
-                int unsuccessfulAwards = Integer.parseInt(tenderItem[2].toString());
-                String supplierScheme = isNull(tenderItem[3]) ? null : tenderItem[3].toString();
-                String supplierId = isNull(tenderItem[4]) ? null : tenderItem[4].toString();
-                Integer cpvCount = isNull(tenderItem[5]) ? null : Integer.parseInt(tenderItem[5].toString());
+
+                log.info("Process tender {} lot {}", tenderId, lotId);
 
                 int indicatorValue;
-                if (unsuccessfulAwards == 0 || isNull(supplierId)) indicatorValue = CONDITIONS_NOT_MET;
-                else if (!supplierScheme.equals("UA-EDR") || supplierId.length() != 10) indicatorValue = NOT_RISK;
-                else indicatorValue = isNull(cpvCount) || cpvCount < 3 ? NOT_RISK : RISK;
+                try {
+                    int unsuccessfulAwards = Integer.parseInt(tenderItem[2].toString());
+                    String supplierScheme = isNull(tenderItem[3]) ? null : tenderItem[3].toString();
+                    String supplierId = isNull(tenderItem[4]) ? null : tenderItem[4].toString();
+                    Integer cpvCount = isNull(tenderItem[5]) ? null : Integer.parseInt(tenderItem[5].toString());
+
+                    if (unsuccessfulAwards == 0 || isNull(supplierId)) indicatorValue = CONDITIONS_NOT_MET;
+                    else if (!supplierScheme.equals("UA-EDR") || supplierId.length() != 10) indicatorValue = NOT_RISK;
+                    else indicatorValue = isNull(cpvCount) || cpvCount < 3 ? NOT_RISK : RISK;
+                } catch (Exception e) {
+                    logService.lotIndicatorFailed(INDICATOR_CODE, tenderId, lotId, e);
+                    indicatorValue = IMPOSSIBLE_TO_DETECT;
+                }
 
                 if (!resultMap.containsKey(tenderId)) {
                     resultMap.put(tenderId, new HashMap<>());
@@ -116,7 +121,6 @@ public class Risk_2_9AprilExtractor extends BaseExtractor {
 
                 resultMap.get(tenderId).get(indicatorValue).add(lotId);
             });
-
 
             resultMap.forEach((tenderOuterId, value) -> {
                 TenderDimensions tenderDimensions = dimensionsMap.get(tenderOuterId);

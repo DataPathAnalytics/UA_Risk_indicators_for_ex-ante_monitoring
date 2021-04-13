@@ -5,16 +5,17 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.context.ApplicationPidFileWriter;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
-import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Duration;
 import java.time.ZoneId;
 import java.util.TimeZone;
 
@@ -43,9 +44,9 @@ public class CoordinatorApplication {
 
     @Bean
     public RestTemplate restTemplate() {
-        HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory();
-        factory.setReadTimeout(180000);
-        factory.setConnectTimeout(180000);
-        return new RestTemplate(factory);
+        return new RestTemplateBuilder()
+                .setConnectTimeout(Duration.ofMinutes(3))
+                .setReadTimeout(Duration.ofMinutes(3))
+                .build();
     }
 }

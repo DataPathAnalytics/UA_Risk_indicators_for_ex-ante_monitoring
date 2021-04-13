@@ -46,7 +46,7 @@ public class Risk_1_19_AprilExtractor extends BaseExtractor {
     }
 
     @Async
-    @Scheduled(cron = "${risk-common.cron}")
+    @Scheduled(cron = "${risk-1-19.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -86,42 +86,45 @@ public class Risk_1_19_AprilExtractor extends BaseExtractor {
 
             List<TenderIndicator> tenderIndicators = tenders.stream().map(tenderInfo -> {
 
-                Integer indicatorValue = null;
                 String tenderId = tenderInfo[0].toString();
-                log.info("Process tender {}", tenderId);
-                tenderIds.add(tenderId);
-
-                Timestamp timestampStartDate = isNull(tenderInfo[1]) ?
-                        (Timestamp) tenderInfo[5] :
-                        (Timestamp) tenderInfo[1];
-
-                String currency = tenderInfo[3].toString();
-                Double amount = Double.parseDouble(tenderInfo[4].toString());
-
                 TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
+                Integer indicatorValue = null;
 
-                if (!currency.equals(UAH_CURRENCY)) {
-                    if (!isNull(timestampStartDate)) {
-                        ZonedDateTime date = toUaMidnight(toZonedDateTime(timestampStartDate));
-                        ExchangeRate firstByCodeAndDate = exchangeRateService.getOneByCodeAndDate(currency, date);
-                        if (!isNull(firstByCodeAndDate)) {
-                            amount *= firstByCodeAndDate.getRate();
+                log.info("Process tender {}", tenderId);
+
+                try {
+                    tenderIds.add(tenderId);
+
+                    Timestamp timestampStartDate = isNull(tenderInfo[1]) ?
+                            (Timestamp) tenderInfo[5] :
+                            (Timestamp) tenderInfo[1];
+
+                    String currency = tenderInfo[3].toString();
+                    Double amount = Double.parseDouble(tenderInfo[4].toString());
+
+                    if (!currency.equals(UAH_CURRENCY)) {
+                        if (!isNull(timestampStartDate)) {
+                            ZonedDateTime date = toUaMidnight(toZonedDateTime(timestampStartDate));
+                            ExchangeRate firstByCodeAndDate = exchangeRateService.getOneByCodeAndDate(currency, date);
+                            if (!isNull(firstByCodeAndDate)) {
+                                amount *= firstByCodeAndDate.getRate();
+                            } else {
+                                indicatorValue = IMPOSSIBLE_TO_DETECT;
+                            }
                         } else {
                             indicatorValue = IMPOSSIBLE_TO_DETECT;
                         }
-                    } else {
-                        indicatorValue = IMPOSSIBLE_TO_DETECT;
                     }
+                    if ((isNull(indicatorValue) || indicatorValue != -IMPOSSIBLE_TO_DETECT)) {
+                        indicatorValue = amount > AMOUNT_LIMIT ? RISK : NOT_RISK;
+                    }
+                } catch (Exception e) {
+                    logService.tenderIndicatorFailed(INDICATOR_CODE, tenderId, e);
+                    indicatorValue = IMPOSSIBLE_TO_DETECT;
                 }
-                if ((isNull(indicatorValue) || indicatorValue != -IMPOSSIBLE_TO_DETECT)) {
-                    indicatorValue = amount > AMOUNT_LIMIT ? RISK : NOT_RISK;
-                }
-                return new TenderIndicator(tenderDimensions, indicator,
-                        indicatorValue, new ArrayList<>());
 
-
+                return new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>());
             }).collect(toList());
-
 
             Map<String, TenderDimensions> dimensionsMap = getTenderDimensionsWithIndicatorLastIteration(tenderIds, INDICATOR_CODE);
 
@@ -142,5 +145,4 @@ public class Risk_1_19_AprilExtractor extends BaseExtractor {
 
         log.info("{} indicator finished", INDICATOR_CODE);
     }
-
 }

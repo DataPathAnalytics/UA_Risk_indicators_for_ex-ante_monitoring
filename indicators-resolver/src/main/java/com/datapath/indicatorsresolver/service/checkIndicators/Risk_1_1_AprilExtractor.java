@@ -5,6 +5,7 @@ import com.datapath.indicatorsresolver.model.TenderIndicator;
 import com.datapath.persistence.entities.Indicator;
 import com.datapath.persistence.repositories.derivatives.UnsuccessfulAboveRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Period;
@@ -44,6 +45,7 @@ public class Risk_1_1_AprilExtractor extends BaseExtractor {
         }
     }
 
+    @Scheduled(cron = "${risk-1-1.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -94,38 +96,41 @@ public class Risk_1_1_AprilExtractor extends BaseExtractor {
             List<TenderIndicator> tenderIndicators = tenderIdPAndProcuringEntityAndCPVListWithPendingContract
                     .stream().map(tenderWithCPVInfo -> {
                         String tenderId = tenderWithCPVInfo[0].toString();
-
                         log.info("Process tender {}", tenderId);
 
-                        String procuringEntity = tenderWithCPVInfo[1].toString();
-                        int pendingContractsCount = Integer.parseInt(tenderWithCPVInfo[2].toString());
-                        List<String> tenderCpv = Arrays.asList(tenderWithCPVInfo[3].toString().split(COMMA_SEPARATOR));
-                        boolean twiceUnsuccessful = Boolean.parseBoolean(tenderWithCPVInfo[4].toString());
                         TenderDimensions tenderDimensions = dimensionsMap.get(tenderId);
+                        try {
+                            String procuringEntity = tenderWithCPVInfo[1].toString();
+                            int pendingContractsCount = Integer.parseInt(tenderWithCPVInfo[2].toString());
+                            List<String> tenderCpv = Arrays.asList(tenderWithCPVInfo[3].toString().split(COMMA_SEPARATOR));
+                            boolean twiceUnsuccessful = Boolean.parseBoolean(tenderWithCPVInfo[4].toString());
 
-                        Integer indicatorValue;
+                            Integer indicatorValue;
 
-                        if (!twiceUnsuccessful || pendingContractsCount == 0) {
-                            indicatorValue = CONDITIONS_NOT_MET;
-                        } else {
-                            List<Integer> lotsCount = unsuccessfulAboveRepository
-                                    .getUnsuccessfulAboveCountByProcuringEntityAndCpv(procuringEntity, tenderCpv);
-
-                            if (lotsCount.isEmpty()) {
-                                indicatorValue = RISK;
+                            if (!twiceUnsuccessful || pendingContractsCount == 0) {
+                                indicatorValue = CONDITIONS_NOT_MET;
                             } else {
+                                List<Integer> lotsCount = unsuccessfulAboveRepository
+                                        .getUnsuccessfulAboveCountByProcuringEntityAndCpv(procuringEntity, tenderCpv);
 
-                                List<Integer> lessThenTwoUnsuccessfulProcedures = lotsCount.stream()
-                                        .filter(item -> item < 2)
-                                        .collect(toList());
+                                if (lotsCount.isEmpty()) {
+                                    indicatorValue = RISK;
+                                } else {
 
-                                indicatorValue = (lessThenTwoUnsuccessfulProcedures.size() == lotsCount.size())
-                                        ? RISK
-                                        : NOT_RISK;
+                                    List<Integer> lessThenTwoUnsuccessfulProcedures = lotsCount.stream()
+                                            .filter(item -> item < 2)
+                                            .collect(toList());
+
+                                    indicatorValue = (lessThenTwoUnsuccessfulProcedures.size() == lotsCount.size())
+                                            ? RISK
+                                            : NOT_RISK;
+                                }
                             }
+                            return new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>());
+                        } catch (Exception e) {
+                            logService.tenderIndicatorFailed(INDICATOR_CODE, tenderId, e);
+                            return new TenderIndicator(tenderDimensions, indicator, IMPOSSIBLE_TO_DETECT, new ArrayList<>());
                         }
-                        return new TenderIndicator(tenderDimensions, indicator, indicatorValue, new ArrayList<>());
-
                     }).collect(toList());
 
             List<String> checkedTenders = tenderIndicators.stream()

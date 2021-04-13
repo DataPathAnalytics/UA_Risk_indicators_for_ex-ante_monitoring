@@ -50,15 +50,19 @@ public class Risk_1_10_Processor extends BaseExtractor {
         tenders.forEach(tender -> {
             log.info("Process tender {}", tender.getOuterId());
 
-            if (maxTendersIterationData.containsKey(tender.getOuterId()) &&
-                    maxTendersIterationData.get(tender.getOuterId()).equals(RISK)) {
-                return;
-            }
-
-            int indicatorValue = getIndicatorValue(tender);
-
             TenderDimensions tenderDimensions = dimensionsMap.get(tender.getOuterId());
-            tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, indicatorValue));
+            try {
+                if (maxTendersIterationData.containsKey(tender.getOuterId()) &&
+                        maxTendersIterationData.get(tender.getOuterId()).equals(RISK)) {
+                    return;
+                }
+
+                int indicatorValue = getIndicatorValue(tender);
+                tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, indicatorValue));
+            } catch (Exception e) {
+                logService.tenderIndicatorFailed(indicator.getId(), tender.getOuterId(), e);
+                tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, IMPOSSIBLE_TO_DETECT));
+            }
         });
 
         return tenderIndicators;

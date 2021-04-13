@@ -10,8 +10,6 @@ import com.datapath.persistence.entities.derivatives.WinsCount;
 import com.datapath.persistence.repositories.derivatives.WinsCountRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Period;
@@ -28,7 +26,7 @@ import static java.util.Objects.isNull;
 import static org.springframework.util.CollectionUtils.isEmpty;
 
 
-@Service
+//@Service
 @Slf4j
 @Deprecated
 //TODO remove it after check handler
@@ -62,7 +60,7 @@ public class Risk_2_15_AprilExtractor extends BaseExtractor {
 
     @Async
     @Transactional
-    @Scheduled(cron = "${risk-common.cron}")
+//    @Scheduled(cron = "${risk-common.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));

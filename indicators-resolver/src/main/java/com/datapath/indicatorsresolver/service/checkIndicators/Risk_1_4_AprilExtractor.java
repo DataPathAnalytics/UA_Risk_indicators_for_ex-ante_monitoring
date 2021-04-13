@@ -48,7 +48,7 @@ public class Risk_1_4_AprilExtractor extends BaseExtractor {
     }
 
     @Async
-    @Scheduled(cron = "${risk-common.cron}")
+    @Scheduled(cron = "${risk-1-4.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -90,50 +90,55 @@ public class Risk_1_4_AprilExtractor extends BaseExtractor {
 
             for (Object[] tenderData : tendersInfo) {
                 String tenderId = tenderData[0].toString();
+                TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
 
                 log.info("Process tender {}", tenderId);
 
-                String currency = tenderData[1].toString();
-                double amount = Double.parseDouble(tenderData[2].toString());
-                Timestamp timestampStartDate = (Timestamp) tenderData[3];
-                maxTenderDateCreated = toZonedDateTime((Timestamp) tenderData[4]);
-
-                tenders.add(tenderId);
-
                 Integer indicatorValue;
-                if (currency.equals(EUR_CURRENCY)) {
-                    indicatorValue = amount > EUR_LIMIT ? RISK : NOT_RISK;
-                } else {
-                    if (isNull(timestampStartDate)) {
-                        indicatorValue = IMPOSSIBLE_TO_DETECT;
+                try {
+                    String currency = tenderData[1].toString();
+                    double amount = Double.parseDouble(tenderData[2].toString());
+                    Timestamp timestampStartDate = (Timestamp) tenderData[3];
+                    maxTenderDateCreated = toZonedDateTime((Timestamp) tenderData[4]);
+
+                    tenders.add(tenderId);
+
+                    if (currency.equals(EUR_CURRENCY)) {
+                        indicatorValue = amount > EUR_LIMIT ? RISK : NOT_RISK;
                     } else {
-                        ZonedDateTime zonedDateTime = toZonedDateTime(timestampStartDate)
-                                .withZoneSameInstant(UA_ZONE)
-                                .withHour(0)
-                                .withMinute(0)
-                                .withSecond(0)
-                                .withNano(0);
-                        if (currency.equals(UAH_CURRENCY)) {
-                            ExchangeRate euroRate = exchangeRateService.getOneByCodeAndDate(EUR_CURRENCY, zonedDateTime);
-                            if (nonNull(euroRate)) {
-                                indicatorValue = amount / euroRate.getRate() > EUR_LIMIT ? RISK : NOT_RISK;
-                            } else {
-                                indicatorValue = IMPOSSIBLE_TO_DETECT;
-                            }
+                        if (isNull(timestampStartDate)) {
+                            indicatorValue = IMPOSSIBLE_TO_DETECT;
                         } else {
-                            ExchangeRate currencyRate = exchangeRateService.getOneByCodeAndDate(currency, zonedDateTime);
-                            ExchangeRate euroRate = exchangeRateService.getOneByCodeAndDate(EUR_CURRENCY, zonedDateTime);
-                            if (nonNull(currencyRate) && nonNull(euroRate)) {
-                                amount = amount * currencyRate.getRate() / euroRate.getRate();
-                                indicatorValue = amount > EUR_LIMIT ? RISK : NOT_RISK;
+                            ZonedDateTime zonedDateTime = toZonedDateTime(timestampStartDate)
+                                    .withZoneSameInstant(UA_ZONE)
+                                    .withHour(0)
+                                    .withMinute(0)
+                                    .withSecond(0)
+                                    .withNano(0);
+                            if (currency.equals(UAH_CURRENCY)) {
+                                ExchangeRate euroRate = exchangeRateService.getOneByCodeAndDate(EUR_CURRENCY, zonedDateTime);
+                                if (nonNull(euroRate)) {
+                                    indicatorValue = amount / euroRate.getRate() > EUR_LIMIT ? RISK : NOT_RISK;
+                                } else {
+                                    indicatorValue = IMPOSSIBLE_TO_DETECT;
+                                }
                             } else {
-                                indicatorValue = IMPOSSIBLE_TO_DETECT;
+                                ExchangeRate currencyRate = exchangeRateService.getOneByCodeAndDate(currency, zonedDateTime);
+                                ExchangeRate euroRate = exchangeRateService.getOneByCodeAndDate(EUR_CURRENCY, zonedDateTime);
+                                if (nonNull(currencyRate) && nonNull(euroRate)) {
+                                    amount = amount * currencyRate.getRate() / euroRate.getRate();
+                                    indicatorValue = amount > EUR_LIMIT ? RISK : NOT_RISK;
+                                } else {
+                                    indicatorValue = IMPOSSIBLE_TO_DETECT;
+                                }
                             }
                         }
                     }
+                } catch (Exception e) {
+                    logService.tenderIndicatorFailed(INDICATOR_CODE, tenderId, e);
+                    indicatorValue = IMPOSSIBLE_TO_DETECT;
                 }
 
-                TenderDimensions tenderDimensions = new TenderDimensions(tenderId);
                 tenderIndicators.add(new TenderIndicator(tenderDimensions, indicator, indicatorValue));
             }
 

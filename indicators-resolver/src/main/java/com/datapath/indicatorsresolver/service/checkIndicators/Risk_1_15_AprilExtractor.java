@@ -44,7 +44,7 @@ public class Risk_1_15_AprilExtractor extends BaseExtractor {
 
 
     @Async
-    @Scheduled(cron = "${risk-common.cron}")
+    @Scheduled(cron = "${risk-1-15.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -116,52 +116,60 @@ public class Risk_1_15_AprilExtractor extends BaseExtractor {
 
         for (Object[] tendersContractsWithDocument : tendersContractsWithDocuments) {
             String tenderId = tendersContractsWithDocument[0].toString();
-
-            log.info("Process tender {}", tenderId);
-
             String lotId = tendersContractsWithDocument[1].toString();
-            String contractId = isNull(tendersContractsWithDocument[2])
-                    ? null
-                    : tendersContractsWithDocument[2].toString();
-            List<String> tenderDocsFormats = isNull(tendersContractsWithDocument[3])
-                    ? null
-                    : Arrays.asList(tendersContractsWithDocument[3].toString().split(COMMA_SEPARATOR));
-            List<String> contractDocsFormats = isNull(tendersContractsWithDocument[4])
-                    ? null
-                    : Arrays.asList(tendersContractsWithDocument[4].toString().split(COMMA_SEPARATOR));
-            int indicatorValue;
-            if (isNull(contractId)) {
-                indicatorValue = CONDITIONS_NOT_MET;
-            } else {
-                if (nonNull(tenderDocsFormats)) {
-                    if (!tenderDocsFormats.stream()
-                            .filter(docFormat -> !docFormat.equals("application/pkcs7-signature"))
-                            .collect(Collectors.toList()).isEmpty()) {
-                        indicatorValue = NOT_RISK;
-                    } else {
-                        if (isNull(contractDocsFormats) || contractDocsFormats.stream()
-                                .filter(docFormat -> !docFormat.equals("application/pkcs7-signature"))
-                                .collect(Collectors.toList()).isEmpty()) {
-                            indicatorValue = RISK;
-                        } else {
-                            indicatorValue = NOT_RISK;
-                        }
-                    }
-                } else {
-                    if (isNull(contractDocsFormats)) {
-                        indicatorValue = CONDITIONS_NOT_MET;
-                    } else {
-                        if (contractDocsFormats.stream()
-                                .filter(docFormat -> !docFormat.equals("application/pkcs7-signature"))
-                                .collect(Collectors.toList()).isEmpty()) {
-                            indicatorValue = RISK;
-                        } else {
-                            indicatorValue = NOT_RISK;
-                        }
-                    }
-                }
 
+            log.info("Process tender {} lot {}", tenderId, lotId);
+
+            int indicatorValue;
+
+            try {
+                String contractId = isNull(tendersContractsWithDocument[2])
+                        ? null
+                        : tendersContractsWithDocument[2].toString();
+                List<String> tenderDocsFormats = isNull(tendersContractsWithDocument[3])
+                        ? null
+                        : Arrays.asList(tendersContractsWithDocument[3].toString().split(COMMA_SEPARATOR));
+                List<String> contractDocsFormats = isNull(tendersContractsWithDocument[4])
+                        ? null
+                        : Arrays.asList(tendersContractsWithDocument[4].toString().split(COMMA_SEPARATOR));
+
+                if (isNull(contractId)) {
+                    indicatorValue = CONDITIONS_NOT_MET;
+                } else {
+                    if (nonNull(tenderDocsFormats)) {
+                        if (!tenderDocsFormats.stream()
+                                .filter(docFormat -> !docFormat.equals("application/pkcs7-signature"))
+                                .collect(Collectors.toList()).isEmpty()) {
+                            indicatorValue = NOT_RISK;
+                        } else {
+                            if (isNull(contractDocsFormats) || contractDocsFormats.stream()
+                                    .filter(docFormat -> !docFormat.equals("application/pkcs7-signature"))
+                                    .collect(Collectors.toList()).isEmpty()) {
+                                indicatorValue = RISK;
+                            } else {
+                                indicatorValue = NOT_RISK;
+                            }
+                        }
+                    } else {
+                        if (isNull(contractDocsFormats)) {
+                            indicatorValue = CONDITIONS_NOT_MET;
+                        } else {
+                            if (contractDocsFormats.stream()
+                                    .filter(docFormat -> !docFormat.equals("application/pkcs7-signature"))
+                                    .collect(Collectors.toList()).isEmpty()) {
+                                indicatorValue = RISK;
+                            } else {
+                                indicatorValue = NOT_RISK;
+                            }
+                        }
+                    }
+
+                }
+            } catch (Exception e) {
+                logService.lotIndicatorFailed(INDICATOR_CODE, tenderId, lotId, e);
+                indicatorValue = IMPOSSIBLE_TO_DETECT;
             }
+
             if (!resultMap.containsKey(tenderId)) {
                 resultMap.put(tenderId, new HashMap<>());
             }

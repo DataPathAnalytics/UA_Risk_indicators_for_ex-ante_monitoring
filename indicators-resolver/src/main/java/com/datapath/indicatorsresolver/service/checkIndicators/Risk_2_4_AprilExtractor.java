@@ -45,7 +45,7 @@ public class Risk_2_4_AprilExtractor extends BaseExtractor {
     }
 
     @Async
-    @Scheduled(cron = "${risk-common.cron}")
+    @Scheduled(cron = "${risk-2-4.cron}")
     public void checkIndicator() {
         if (!indicatorsResolverAvailable) {
             log.info(String.format(INDICATOR_NOT_AVAILABLE_MESSAGE_FORMAT, INDICATOR_CODE));
@@ -90,21 +90,26 @@ public class Risk_2_4_AprilExtractor extends BaseExtractor {
 
             lotWinnerDisqualsParticipationsByTenderId.forEach(lotInfo -> {
                 String tenderId = lotInfo[0].toString();
-
-                log.info("Process tender {}", tenderId);
-
                 String lotId = lotInfo[1].toString();
-                int winner = Integer.parseInt(lotInfo[2].toString());
-                int disquals = Integer.parseInt(lotInfo[3].toString());
-                int participation = Integer.parseInt(lotInfo[4].toString());
+
+                log.info("Process tender {} lot {}", tenderId, lotId);
 
                 int indicatorValue;
+                try {
+                    int winner = Integer.parseInt(lotInfo[2].toString());
+                    int disquals = Integer.parseInt(lotInfo[3].toString());
+                    int participation = Integer.parseInt(lotInfo[4].toString());
 
-                if (disquals == 0 || winner == 0) {
-                    indicatorValue = CONDITIONS_NOT_MET;
-                } else {
-                    indicatorValue = (disquals > 2) && ((winner + disquals) == participation) ? RISK : NOT_RISK;
+                    if (disquals == 0 || winner == 0) {
+                        indicatorValue = CONDITIONS_NOT_MET;
+                    } else {
+                        indicatorValue = (disquals > 2) && ((winner + disquals) == participation) ? RISK : NOT_RISK;
+                    }
+                } catch (Exception e) {
+                    logService.lotIndicatorFailed(INDICATOR_CODE, tenderId, lotId, e);
+                    indicatorValue = IMPOSSIBLE_TO_DETECT;
                 }
+
                 if (!resultMap.containsKey(tenderId)) {
                     resultMap.put(tenderId, new HashMap<>());
                 }
