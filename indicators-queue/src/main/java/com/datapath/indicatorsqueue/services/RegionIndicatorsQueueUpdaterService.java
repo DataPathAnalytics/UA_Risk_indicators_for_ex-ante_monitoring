@@ -118,6 +118,12 @@ public class RegionIndicatorsQueueUpdaterService {
         indicatorsByRegion.forEach((s, regionIndicatorsQueueItems) ->
                 allIndicatorsQueue.addAll(regionIndicatorsQueueItems));
 
+        ZonedDateTime queueDateModified = ZonedDateTime.now(ZoneId.of("UTC"));
+        for (RegionIndicatorsQueueItem item : allIndicatorsQueue) {
+            item.setDateModified(queueDateModified);
+            queueDateModified = queueDateModified.plusSeconds(10);
+        }
+
         List<RegionIndicatorsQueueItem> queueWithoutMonitoringTenders = disableTendersOnMonitoring(allIndicatorsQueue);
 
         updateLeftDateForPreviousQueueItems();
@@ -125,15 +131,13 @@ public class RegionIndicatorsQueueUpdaterService {
 
         List<RegionIndicatorsQueueItem> indicatorsQueueItems = saveQueue(queueWithoutMonitoringTenders);
 
-        ZonedDateTime saveNewQueueDate = ZonedDateTime.now(ZoneId.of("UTC"));
-
-        saveQueueHistory(indicatorsQueueItems, saveNewQueueDate);
+        saveQueueHistory(indicatorsQueueItems, queueDateModified);
 
         log.info("Updating region queue items finished. Saved {} items.", indicatorsQueueItems.size());
 
         IndicatorsQueueHistory history = new IndicatorsQueueHistory();
         history.setId(indicatorsQueueHistoryService.getMaxId() + 1);
-        history.setDateCreated(saveNewQueueDate);
+        history.setDateCreated(queueDateModified);
 
         IndicatorsQueueHistory savedHistory = indicatorsQueueHistoryService.save(history);
         queueId = savedHistory.getId();

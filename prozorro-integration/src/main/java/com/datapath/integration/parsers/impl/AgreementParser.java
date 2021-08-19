@@ -10,6 +10,10 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
+
+import static java.util.Collections.emptyList;
+import static java.util.Objects.isNull;
 
 public class AgreementParser {
 
@@ -43,6 +47,8 @@ public class AgreementParser {
     }
 
     private static List<AgreementContract> parseContract(JsonNode contractNode, List<AgreementItem> items) {
+        if (isNull(contractNode)) return emptyList();
+
         List<AgreementContract> contracts = new LinkedList<>();
         for (JsonNode node : contractNode) {
             AgreementContract contract = new AgreementContract();
@@ -65,6 +71,8 @@ public class AgreementParser {
     }
 
     private static List<AgreementSupplier> parseSupplier(JsonNode supplierNode) {
+        if (isNull(supplierNode)) return emptyList();
+
         List<AgreementSupplier> suppliers = new LinkedList<>();
         for (JsonNode node : supplierNode) {
             AgreementSupplier supplier = new AgreementSupplier();
@@ -79,6 +87,8 @@ public class AgreementParser {
     }
 
     private static List<UnitPrice> parseUnitPrice(JsonNode unitPriceNode, List<AgreementItem> items) {
+        if (isNull(unitPriceNode)) return emptyList();
+
         List<UnitPrice> unitPrices = new LinkedList<>();
         for (JsonNode node : unitPriceNode) {
             UnitPrice unitPrice = new UnitPrice();
@@ -87,7 +97,7 @@ public class AgreementParser {
             unitPrice.setValueAddedTaxIncluded(node.at("/value/currency").booleanValue());
 
             String relatedItem = JsonUtils.getString(node, "/relatedItem");
-            AgreementItem item = items.stream().filter(i -> relatedItem.equals(i.getOuterId())).findFirst().orElse(null);
+            AgreementItem item = items.stream().filter(i -> Objects.equals(relatedItem, i.getOuterId())).findFirst().orElse(null);
             unitPrice.setItem(item);
 
             unitPrices.add(unitPrice);
@@ -96,6 +106,8 @@ public class AgreementParser {
     }
 
     private static List<AgreementItem> parseItems(JsonNode itemNode) {
+        if (isNull(itemNode)) return emptyList();
+
         List<AgreementItem> items = new LinkedList<>();
         for (JsonNode node : itemNode) {
             AgreementItem item = new AgreementItem();
@@ -114,6 +126,8 @@ public class AgreementParser {
     }
 
     private static List<AgreementDocument> parseDocuments(JsonNode documentNode) {
+        if (isNull(documentNode)) return emptyList();
+
         List<AgreementDocument> documents = new LinkedList<>();
         for (JsonNode node : documentNode) {
             AgreementDocument document = new AgreementDocument();

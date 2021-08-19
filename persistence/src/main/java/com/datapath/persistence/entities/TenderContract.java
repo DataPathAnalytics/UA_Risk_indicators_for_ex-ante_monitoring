@@ -80,7 +80,7 @@ public class TenderContract {
     @JoinColumn(name = "supplier_id")
     private Supplier supplier;
 
-    @OneToOne(cascade = CascadeType.ALL)
+    @ManyToOne(cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)
     @JoinColumn(name = "award_id")
     private Award award;
 

@@ -6,7 +6,6 @@ import com.datapath.indicatorsresolver.model.ContractIndicator;
 import com.datapath.indicatorsresolver.service.checkIndicators.BaseExtractor;
 import com.datapath.persistence.entities.Indicator;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.time.Duration;

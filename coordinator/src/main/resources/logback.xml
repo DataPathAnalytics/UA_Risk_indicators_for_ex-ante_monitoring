@@ -65,22 +65,27 @@
     </appender>
 
     <appender name="async-failed-indicators" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>512</queueSize>
         <appender-ref ref="failed-indicators"/>
     </appender>
 
     <appender name="async-indicators" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>512</queueSize>
         <appender-ref ref="indicators"/>
     </appender>
 
     <appender name="async-validation" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>512</queueSize>
         <appender-ref ref="validation"/>
     </appender>
 
     <appender name="async-main" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>512</queueSize>
         <appender-ref ref="main"/>
     </appender>
 
     <appender name="async-console" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>512</queueSize>
         <appender-ref ref="console"/>
     </appender>
 

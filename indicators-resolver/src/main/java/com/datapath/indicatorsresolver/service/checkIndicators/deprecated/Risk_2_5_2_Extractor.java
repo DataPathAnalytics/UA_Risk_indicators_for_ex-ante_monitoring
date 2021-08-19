@@ -7,7 +7,6 @@ import com.datapath.persistence.entities.Indicator;
 import com.datapath.persistence.entities.derivatives.NearThreshold;
 import com.datapath.persistence.repositories.derivatives.NearThresholdRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 import java.time.Period;
 import java.time.ZoneId;
@@ -20,6 +19,15 @@ import static java.util.stream.Collectors.toList;
 @Slf4j
 @Deprecated
 public class Risk_2_5_2_Extractor extends BaseExtractor {
+
+    private final static List<String> GENERAL_ENTITY_KINDS = Arrays.asList(
+            "general",
+            "authority",
+            "central",
+            "social"
+    );
+
+    private final static String SPECIAL_ENTITY_KIND = "special";
 
     private final String INDICATOR_CODE = "RISK2-5_2";
     private boolean indicatorsResolverAvailable;
@@ -103,17 +111,14 @@ public class Risk_2_5_2_Extractor extends BaseExtractor {
                     Optional<NearThreshold> nearThreshold = nearThresholdRepository.findFirstByProcuringEntityAndCpv(procuringEntity, cpv);
                     if (nearThreshold.isPresent()) {
                         amount += nearThreshold.get().getAmount();
-                        switch (procuringEntityKind) {
-                            case "general":
-                                if (amount >= 200000) {
-                                    indicatorValue = RISK;
-                                }
-                                break;
-                            case "special":
-                                if (amount >= 1000000) {
-                                    indicatorValue = RISK;
-                                }
-                                break;
+                        if (GENERAL_ENTITY_KINDS.contains(procuringEntityKind)) {
+                            if (amount >= 200000) {
+                                indicatorValue = RISK;
+                            }
+                        } else if (SPECIAL_ENTITY_KIND.equals(procuringEntityKind)) {
+                            if (amount >= 1000000) {
+                                indicatorValue = RISK;
+                            }
                         }
                     }
                 }

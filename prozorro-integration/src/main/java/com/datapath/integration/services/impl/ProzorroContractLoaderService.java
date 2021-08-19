@@ -6,19 +6,20 @@ import com.datapath.integration.parsers.impl.AgreementParser;
 import com.datapath.integration.parsers.impl.TenderParser;
 import com.datapath.integration.resolvers.TransactionVariablesResolver;
 import com.datapath.integration.services.AgreementLoaderService;
-import com.datapath.integration.services.AuctionDatabaseLoadService;
 import com.datapath.integration.services.ContractLoaderService;
 import com.datapath.integration.services.TenderLoaderService;
 import com.datapath.integration.utils.DateUtils;
 import com.datapath.integration.utils.EntitySource;
 import com.datapath.integration.utils.ProzorroRequestUrlCreator;
 import com.datapath.integration.validation.TenderDataValidator;
-import com.datapath.persistence.entities.*;
+import com.datapath.persistence.entities.Agreement;
+import com.datapath.persistence.entities.Contract;
+import com.datapath.persistence.entities.Tender;
+import com.datapath.persistence.entities.TenderContract;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestTemplate;
 
 import javax.transaction.Transactional;
@@ -28,8 +29,6 @@ import java.time.ZonedDateTime;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
-
-import static org.springframework.util.StringUtils.isEmpty;
 
 @Service
 @Slf4j
@@ -44,9 +43,8 @@ public class ProzorroContractLoaderService implements ContractLoaderService {
     private TenderLoaderService tenderLoaderService;
     private TransactionVariablesResolver tvResolver;
     private TenderDataValidator tenderDataValidator;
-    private BidLotAmountUploadService bidLotAmountUploadService;
-    private AuctionDatabaseLoadService auctionDatabaseLoadService;
     private AgreementLoaderService agreementLoaderService;
+    private TenderAuctionUpdateService tenderAuctionService;
 
     public ProzorroContractLoaderService(RestTemplate restTemplate,
                                          ContractService integrationContractService,
@@ -54,18 +52,16 @@ public class ProzorroContractLoaderService implements ContractLoaderService {
                                          TenderLoaderService tenderLoaderService,
                                          TransactionVariablesResolver tvResolver,
                                          TenderDataValidator tenderDataValidator,
-                                         BidLotAmountUploadService bidLotAmountUploadService,
-                                         AuctionDatabaseLoadService auctionDatabaseLoadService,
-                                         AgreementLoaderService agreementLoaderService) {
+                                         AgreementLoaderService agreementLoaderService,
+                                         TenderAuctionUpdateService tenderAuctionService) {
         this.restTemplate = restTemplate;
         this.contractService = integrationContractService;
         this.tenderContractService = tenderContractService;
         this.tenderLoaderService = tenderLoaderService;
         this.tvResolver = tvResolver;
         this.tenderDataValidator = tenderDataValidator;
-        this.bidLotAmountUploadService = bidLotAmountUploadService;
-        this.auctionDatabaseLoadService = auctionDatabaseLoadService;
         this.agreementLoaderService = agreementLoaderService;
+        this.tenderAuctionService = tenderAuctionService;
     }
 
     @Override
@@ -164,7 +160,7 @@ public class ProzorroContractLoaderService implements ContractLoaderService {
                 tender.setAgreements(agreements);
 
                 Tender existingTender = tenderLoaderService.saveTender(tender);
-                loadBidLotAmountData(existingTender.getId());
+                tenderAuctionService.persistBidLotAmountAuctionData(existingTender.getId());
 
                 Optional<TenderContract> optionalTenderContract = existingTender.getTenderContracts().stream()
                         .filter(tc -> tc.getOuterId().equals(contract.getOuterId())).findFirst();
@@ -199,48 +195,5 @@ public class ProzorroContractLoaderService implements ContractLoaderService {
                 .filter(exChange -> exChange.getOuterId().equalsIgnoreCase(change.getOuterId()))
                 .findFirst()
                 .ifPresent(exChange -> change.setId(exChange.getId())));
-    }
-
-    private void loadBidLotAmountData(Long tenderId) {
-        List<BidLotAmount> bidLots = new LinkedList<>();
-
-        List<Bid> bids = bidLotAmountUploadService.findBidsByTenderId(tenderId);
-
-        if (!CollectionUtils.isEmpty(bids)) {
-            bids.stream()
-                    .filter(b -> "active".equalsIgnoreCase(b.getStatus()))
-                    .forEach(b -> {
-                                List<Lot> lots = bidLotAmountUploadService.findLotsByBidIdAndTenderId(b.getId(), tenderId);
-
-                                if (!CollectionUtils.isEmpty(lots)) {
-                                    lots.forEach(l -> {
-                                        if (!isEmpty(l.getAuctionUrl()) && !l.getAuctionUrl().contains("esco-tenders")) {
-
-                                            AuctionDatabaseResponseEntity auctionDatabaseResponse = auctionDatabaseLoadService
-                                                    .loadAuctionDatabaseResponse(l.getAuctionUrl());
-
-                                            BidLotAmount bidLotAmount = new BidLotAmount(b, l);
-
-                                            auctionDatabaseResponse.getInitialBids()
-                                                    .stream()
-                                                    .filter(bid -> bid.getBidderId().equalsIgnoreCase(b.getOuterId()))
-                                                    .findFirst()
-                                                    .ifPresent(bid -> bidLotAmount.setInitialAmount(bid.getAmount()));
-
-                                            auctionDatabaseResponse.getResults()
-                                                    .stream()
-                                                    .filter(bid -> bid.getBidderId().equalsIgnoreCase(b.getOuterId()))
-                                                    .findFirst()
-                                                    .ifPresent(bid -> bidLotAmount.setResultAmount(bid.getAmount()));
-
-                                            bidLots.add(bidLotAmount);
-                                        }
-                                    });
-                                }
-                            }
-                    );
-
-            bidLotAmountUploadService.save(bidLots);
-        }
     }
 }

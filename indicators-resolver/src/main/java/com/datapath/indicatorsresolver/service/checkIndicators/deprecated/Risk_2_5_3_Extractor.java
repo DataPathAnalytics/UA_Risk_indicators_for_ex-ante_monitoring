@@ -7,7 +7,6 @@ import com.datapath.persistence.entities.Indicator;
 import com.datapath.persistence.entities.derivatives.NearThresholdOneSupplier;
 import com.datapath.persistence.repositories.derivatives.NearThresholdOneSupplierRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 import java.time.Period;
 import java.time.ZoneId;

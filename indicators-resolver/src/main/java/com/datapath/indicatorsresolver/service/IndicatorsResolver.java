@@ -65,7 +65,7 @@ public class IndicatorsResolver {
     @Autowired
     private Risk_1_2_1_AprilExtractor risk_1_2_1_aprilExtractor;
     @Autowired
-    private Risk_1_11_AprilExtractor risk_1_11_aprilExtractor;
+    private Risk_1_11_Handler risk_1_11_handler;
     @Autowired
     private Risk_1_3_AprilExtractor risk_1_3_aprilExtractor;
     @Autowired
@@ -224,7 +224,7 @@ public class IndicatorsResolver {
     @Async
     public void checkRisk_1_11_april(ZonedDateTime yearAgo) {
         LOG.info("Start daily RISK-1-11 recalculation");
-        risk_1_11_aprilExtractor.checkIndicator(yearAgo);
+        risk_1_11_handler.handle(yearAgo);
         LOG.info("Finish daily RISK-1-11 recalculation");
     }
 

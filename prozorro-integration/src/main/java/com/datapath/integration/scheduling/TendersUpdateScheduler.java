@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class TendersUpdateScheduler {
 
-    private static final int TENDERS_UPDATES_RATE = 100_000;
+    private static final int TENDERS_UPDATES_RATE = 900_000;
     private static final int TENDERS_UPDATES_DELAY = 1_000;
 
     private static final int CONTRACTS_UPDATES_RATE = 100_000;

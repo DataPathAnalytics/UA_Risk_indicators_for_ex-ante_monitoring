@@ -12,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
@@ -73,41 +72,14 @@ public class Risk_1_8_2ExtractorUpdated extends BaseExtractor {
             TenderDimensions tenderDimensions = new TenderDimensions(tender.getOuterId());
 
             for (Lot lot : tender.getLots()) {
-                int indicatorValue = NOT_RISK;
+                int indicatorValue;
 
                 if (maxTendersLotIterationData.get(tender.getOuterId()).containsKey(lot.getOuterId()) && maxTendersLotIterationData.get(tender.getOuterId()).get(lot.getOuterId()).equals(1)) {
                     indicatorValue = RISK;
                 } else if (Arrays.asList("cancelled", "unsuccessful").contains(lot.getStatus())) {
                     indicatorValue = CONDITIONS_NOT_MET;
                 } else {
-                    boolean hasActiveContractsWithoutFormat = lot.getAwards()
-                            .stream()
-                            .filter(award -> award.getTenderContract() != null
-                                    && ACTIVE_STATUS.equalsIgnoreCase(award.getTenderContract().getStatus())
-                            )
-                            .flatMap(award -> award.getTenderContract().getDocuments().stream())
-                            .anyMatch(document -> !"application/pkcs7-signature".equalsIgnoreCase(document.getFormat()));
-
-                    List<Document> contractDocuments = lot.getAwards().stream()
-                            .filter(award -> award.getTenderContract() != null)
-                            .flatMap(award -> award.getTenderContract().getDocuments().stream())
-                            .filter(doc -> "contract".equalsIgnoreCase(doc.getDocumentOf()))
-                            .collect(toList());
-
-                    boolean hasAnotherFormat = contractDocuments.stream().anyMatch(doc -> !"application/pkcs7-signature".equalsIgnoreCase(doc.getFormat()));
-
-                    boolean expiredAwardDate = lot.getAwards().stream()
-                            .filter(award -> ACTIVE_STATUS.equalsIgnoreCase(award.getStatus()))
-                            .anyMatch(award ->
-                                    (isEmpty(award.getComplaints()) && Duration.between(award.getDate(), ZonedDateTime.now()).toDays() > 22)
-                                            || (!isEmpty(award.getComplaints()) && Duration.between(award.getDate(), ZonedDateTime.now()).toDays() > 37)
-                            );
-
-                    if (!hasActiveContractsWithoutFormat
-                            && (isEmpty(contractDocuments) || hasAnotherFormat)
-                            && expiredAwardDate) {
-                        indicatorValue = RISK;
-                    }
+                    indicatorValue = calcLotIndicatorValue(lot);
                 }
 
                 lotIndicators.put(lot.getOuterId(), indicatorValue);
@@ -140,4 +112,45 @@ public class Risk_1_8_2ExtractorUpdated extends BaseExtractor {
         });
     }
 
+    private Integer calcLotIndicatorValue(Lot lot) {
+        int indicatorValue = NOT_RISK;
+
+        boolean hasManyContractsToAward = lot.getAwards()
+                .stream()
+                .anyMatch(a -> a.getTenderContracts().size() > 1);
+
+        if (hasManyContractsToAward) return CONDITIONS_NOT_MET;
+
+        boolean hasActiveContractsWithoutFormat = lot.getAwards()
+                .stream()
+                .filter(award -> !isEmpty(award.getTenderContracts()))
+                .flatMap(award -> award.getTenderContracts().stream())
+                .filter(c -> ACTIVE_STATUS.equalsIgnoreCase(c.getStatus()))
+                .flatMap(c -> c.getDocuments().stream())
+                .anyMatch(document -> !"application/pkcs7-signature".equalsIgnoreCase(document.getFormat()));
+
+        List<Document> contractDocuments = lot.getAwards().stream()
+                .filter(award -> !isEmpty(award.getTenderContracts()))
+                .flatMap(award -> award.getTenderContracts().stream())
+                .flatMap(c -> c.getDocuments().stream())
+                .filter(doc -> "contract".equalsIgnoreCase(doc.getDocumentOf()))
+                .collect(toList());
+
+        boolean hasAnotherFormat = contractDocuments.stream().anyMatch(doc -> !"application/pkcs7-signature".equalsIgnoreCase(doc.getFormat()));
+
+        boolean expiredAwardDate = lot.getAwards().stream()
+                .filter(award -> ACTIVE_STATUS.equalsIgnoreCase(award.getStatus()))
+                .anyMatch(award ->
+                        (isEmpty(award.getComplaints()) && Duration.between(award.getDate(), ZonedDateTime.now()).toDays() > 22)
+                                || (!isEmpty(award.getComplaints()) && Duration.between(award.getDate(), ZonedDateTime.now()).toDays() > 37)
+                );
+
+        if (!hasActiveContractsWithoutFormat
+                && (isEmpty(contractDocuments) || hasAnotherFormat)
+                && expiredAwardDate) {
+            indicatorValue = RISK;
+        }
+
+        return indicatorValue;
+    }
 }

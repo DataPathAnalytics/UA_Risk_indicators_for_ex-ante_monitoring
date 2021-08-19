@@ -70,9 +70,4 @@ public class Indicator {
     @Column(name = "checking_frequency")
     private Integer checkingFrequency;
 
-    @Column(name = "base_question", columnDefinition = "text")
-    private String baseQuestion;
-
-    @Column(name = "algorithm_description", columnDefinition = "text")
-    private String algorithmDescription;
 }

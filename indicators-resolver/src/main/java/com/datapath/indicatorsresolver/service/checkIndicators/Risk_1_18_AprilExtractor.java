@@ -173,15 +173,16 @@ public class Risk_1_18_AprilExtractor extends BaseExtractor {
         }
 
         boolean hasNonPKCS7Docs = awards.stream()
-                .filter(a -> nonNull(a.getTenderContract()))
-                .flatMap(a -> Stream.of(a.getTenderContract()))
+                .filter(a -> !isEmpty(a.getTenderContracts()))
+                .flatMap(a -> a.getTenderContracts().stream())
                 .filter(a -> nonNull(a.getContract()))
                 .flatMap(c -> Stream.of(c.getContract()))
                 .flatMap(c -> c.getDocuments().stream())
                 .anyMatch(d -> !d.getFormat().equalsIgnoreCase(PKCS7_SIGNATURE));
 
-        boolean hasContractDocs = awards.stream().filter(a -> nonNull(a.getTenderContract()))
-                .flatMap(a -> Stream.of(a.getTenderContract()))
+        boolean hasContractDocs = awards.stream()
+                .filter(a -> !isEmpty(a.getTenderContracts()))
+                .flatMap(a -> a.getTenderContracts().stream())
                 .filter(c -> ACTIVE.equals(c.getStatus()))
                 .filter(c -> isEmpty(c.getDocuments()))
                 .flatMap(c -> c.getDocuments().stream())

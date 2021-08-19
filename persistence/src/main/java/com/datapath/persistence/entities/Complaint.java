@@ -10,7 +10,8 @@ import java.time.ZonedDateTime;
 @Entity
 @Table(name = "complaint",
         indexes = {
-                @Index(columnList = "award_id", name = "complaint_award_id_idx")
+                @Index(columnList = "award_id", name = "complaint_award_id_idx"),
+                @Index(columnList = "tender_id", name = "complaint_tender_id_idx")
         })
 public class Complaint {
 

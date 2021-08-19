@@ -29,13 +29,10 @@ public class DBInitializer implements InitializingBean {
         Resource queueRegions = new ClassPathResource("sql/queueRegion.sql");
         Resource queueConfig = new ClassPathResource("sql/queueConfig.sql");
         Resource configuration = new ClassPathResource("sql/configuration.sql");
-        Resource indicatorBaseQuestion = new ClassPathResource("sql/indicator_base_question.sql");
-        Resource indicatorEvaluations = new ClassPathResource("sql/indicator_evaluations.sql");
-        Resource indicatorResponses = new ClassPathResource("sql/feedback_indicator_responses.sql");
         Resource getTenderAmountUah = new ClassPathResource("sql/get_tender_amount_uah.sql");
         Resource workDateCount = new ClassPathResource("sql/workDateCount.sql");
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
-        populator.addScripts(indicatorsResource, cpvResource, natureMonopolyProcuringEntity, queueRegions, queueConfig, configuration, indicatorBaseQuestion, indicatorEvaluations, indicatorResponses);
+        populator.addScripts(indicatorsResource, cpvResource, natureMonopolyProcuringEntity, queueRegions, queueConfig, configuration);
         populator.execute(dataSource);
         log.info("Database tables initialization completed successfully");
     }

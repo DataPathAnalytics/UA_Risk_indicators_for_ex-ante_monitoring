@@ -5,26 +5,31 @@ import com.datapath.integration.parsers.impl.AgreementParser;
 import com.datapath.integration.parsers.impl.ContractParser;
 import com.datapath.integration.parsers.impl.TenderParser;
 import com.datapath.integration.resolvers.TransactionVariablesResolver;
-import com.datapath.integration.services.*;
+import com.datapath.integration.services.AgreementLoaderService;
+import com.datapath.integration.services.ContractLoaderService;
+import com.datapath.integration.services.TenderLoaderService;
+import com.datapath.integration.services.TenderUpdatesManager;
 import com.datapath.integration.utils.EntitySource;
 import com.datapath.integration.utils.ProzorroRequestUrlCreator;
 import com.datapath.integration.validation.TenderDataValidator;
-import com.datapath.persistence.entities.*;
+import com.datapath.persistence.entities.Agreement;
+import com.datapath.persistence.entities.Contract;
+import com.datapath.persistence.entities.Tender;
+import com.datapath.persistence.entities.TenderContract;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.ResourceAccessException;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
-import static org.springframework.util.StringUtils.isEmpty;
 
 @Slf4j
 @Service
@@ -37,24 +42,21 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
     private ContractLoaderService contractLoaderService;
     private TransactionVariablesResolver tvResolver;
     private TenderDataValidator tenderDataValidator;
-    private AuctionDatabaseLoadService auctionDatabaseLoadService;
-    private BidLotAmountUploadService bidLotAmountUploadService;
     private AgreementLoaderService agreementLoaderService;
+    private TenderAuctionUpdateService tenderAuctionService;
 
     public ProzorroTenderUpdatesManager(TenderLoaderService tenderLoaderService,
                                         TransactionVariablesResolver tvResolver,
                                         ContractLoaderService contractLoaderService,
                                         TenderDataValidator tenderDataValidator,
-                                        AuctionDatabaseLoadService auctionDatabaseLoadService,
-                                        BidLotAmountUploadService bidLotAmountUploadService,
-                                        AgreementLoaderService agreementLoaderService) {
+                                        AgreementLoaderService agreementLoaderService,
+                                        TenderAuctionUpdateService tenderAuctionService) {
         this.tenderLoaderService = tenderLoaderService;
         this.tvResolver = tvResolver;
         this.contractLoaderService = contractLoaderService;
         this.tenderDataValidator = tenderDataValidator;
-        this.auctionDatabaseLoadService = auctionDatabaseLoadService;
-        this.bidLotAmountUploadService = bidLotAmountUploadService;
         this.agreementLoaderService = agreementLoaderService;
+        this.tenderAuctionService = tenderAuctionService;
     }
 
     @Override
@@ -113,7 +115,7 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
                     tender.setTvTenderCPV(tenderCPV);
 
                     Tender savedTender = tenderLoaderService.saveTender(tender);
-                    loadBidLotAmountData(savedTender.getId());
+                    tenderAuctionService.persistBidLotAmountAuctionData(savedTender.getId());
                 }
 
                 log.info("All tenders from page {} saved.", url);
@@ -171,57 +173,6 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
         tender.setAgreements(agreements);
 
         return tender;
-    }
-
-    private void loadBidLotAmountData(Long tenderId) {
-        List<BidLotAmount> bidLots = new LinkedList<>();
-
-        List<Bid> bids = bidLotAmountUploadService.findBidsByTenderId(tenderId);
-
-        Map<String, AuctionDatabaseResponseEntity> urlAuctionResponseMap = new HashMap<>();
-
-        if (!CollectionUtils.isEmpty(bids)) {
-            bids.stream()
-                    .filter(b -> "active".equalsIgnoreCase(b.getStatus()))
-                    .forEach(b -> {
-                                List<Lot> lots = bidLotAmountUploadService.findLotsByBidIdAndTenderId(b.getId(), tenderId);
-
-                                if (!CollectionUtils.isEmpty(lots)) {
-                                    lots.forEach(l -> {
-                                        if (!isEmpty(l.getAuctionUrl()) && !l.getAuctionUrl().contains("esco-tenders")) {
-
-                                            AuctionDatabaseResponseEntity auctionDatabaseResponse;
-                                            if (urlAuctionResponseMap.containsKey(l.getAuctionUrl())) {
-                                                auctionDatabaseResponse = urlAuctionResponseMap.get(l.getAuctionUrl());
-                                            } else {
-                                                auctionDatabaseResponse = auctionDatabaseLoadService
-                                                        .loadAuctionDatabaseResponse(l.getAuctionUrl());
-                                                urlAuctionResponseMap.put(l.getAuctionUrl(), auctionDatabaseResponse);
-                                            }
-
-                                            BidLotAmount bidLotAmount = new BidLotAmount(b, l);
-
-                                            auctionDatabaseResponse.getInitialBids()
-                                                    .stream()
-                                                    .filter(bid -> bid.getBidderId().equalsIgnoreCase(b.getOuterId()))
-                                                    .findFirst()
-                                                    .ifPresent(bid -> bidLotAmount.setInitialAmount(bid.getAmount()));
-
-                                            auctionDatabaseResponse.getResults()
-                                                    .stream()
-                                                    .filter(bid -> bid.getBidderId().equalsIgnoreCase(b.getOuterId()))
-                                                    .findFirst()
-                                                    .ifPresent(bid -> bidLotAmount.setResultAmount(bid.getAmount()));
-
-                                            bidLots.add(bidLotAmount);
-                                        }
-                                    });
-                                }
-                            }
-                    );
-
-            bidLotAmountUploadService.save(bidLots);
-        }
     }
 
     @Override
@@ -289,7 +240,7 @@ public class ProzorroTenderUpdatesManager implements TenderUpdatesManager {
                 tender.setTvTenderCPV(tenderCPV);
 
                 Tender savedTender = tenderLoaderService.saveTender(tender);
-                loadBidLotAmountData(savedTender.getId());
+                tenderAuctionService.persistBidLotAmountAuctionData(savedTender.getId());
                 log.info("Tender saved {} ", savedTender.getId());
             } catch (ResourceAccessException e) {
                 log.error("Error in loading tender {}", tenderUpdateInfo.getId(), e);

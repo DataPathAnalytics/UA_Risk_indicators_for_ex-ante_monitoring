@@ -6,7 +6,6 @@ import com.datapath.indicatorsresolver.service.checkIndicators.BaseExtractor;
 import com.datapath.persistence.entities.Indicator;
 import com.datapath.persistence.entities.nbu.ExchangeRate;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.time.Period;
@@ -28,6 +27,9 @@ public class Risk_1_10_1_Extractor extends BaseExtractor {
 
     private Map<String, Long> paKindAmountLimitMap = new HashMap<String, Long>() {{
         put("general", 200000L);
+        put("authority", 200000L);
+        put("central", 200000L);
+        put("social", 200000L);
         put("special", 1000000L);
     }};
 

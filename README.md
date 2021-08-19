@@ -1,5 +1,15 @@
 Release notes
 
+#### Version 2.3.0
+
+Added the logic to process phone numbers due to incorrectly used a phone number field. Some users add more than 1000 characters.
+
+Updated auction bid lot amount data loading (added 404 http error processing)
+
+Updated agreement data loading (added empty data processing)
+
+Added multiple contracts to award supporting. Updated indicators which use a contract and award for calculating (1-15, 1-16, 1-17, 1-18, 2-1-2)
+
 #### Version 2.2.0
 
 Distributed indicators by time. 

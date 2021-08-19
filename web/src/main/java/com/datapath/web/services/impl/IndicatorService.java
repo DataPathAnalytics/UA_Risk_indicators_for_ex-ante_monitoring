@@ -20,7 +20,6 @@ public class IndicatorService {
 
     public List<Indicator> getIndicators() {
         return indicatorRepository.findAll().stream()
-                .filter(indicator -> indicator.isActive())
                 .map(item -> (Indicator) GeneralBeanMapper.map(item, Indicator.class))
                 .collect(Collectors.toList());
     }

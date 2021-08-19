@@ -1,27 +1,24 @@
 package com.datapath.persistence.entities;
 
 import lombok.Data;
-import org.hibernate.annotations.Type;
 
 import javax.persistence.*;
 
+import static javax.persistence.FetchType.LAZY;
+
 @Data
 @Entity
-@Table(name = "tender_data",
-        indexes = {
-                @Index(columnList = "tender_id", name = "tender_data_tender_id_idx"),
-        })
+@Table(name = "tender_data")
 public class TenderData {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "data")
-    @Type(type = "org.hibernate.type.TextType")
+    @Column(name = "data", columnDefinition = "text")
     private String data;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tender_id")
+    @OneToOne(fetch = LAZY)
+    @MapsId
+    @JoinColumn(name = "id")
     private Tender tender;
 }

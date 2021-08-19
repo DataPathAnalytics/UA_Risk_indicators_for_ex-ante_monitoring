@@ -81,4 +81,7 @@ public class Bid {
 
     @Transient
     private List<String> relatedLots;
+
+    @Column(name = "amount")
+    private Double amount;
 }

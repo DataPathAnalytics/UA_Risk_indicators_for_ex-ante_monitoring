@@ -7,6 +7,8 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+//fixme id should be integer value instead of string
+
 @Data
 @Entity(name = "monitoring")
 public class MonitoringEntity {
@@ -21,6 +23,7 @@ public class MonitoringEntity {
     private boolean appeal;
     private ZonedDateTime startDate;
     private ZonedDateTime endDate;
+    //fixme changed to some instant type instead of String
     private String modifiedDate;
     private String tenderId;
     @Column(columnDefinition = "text")

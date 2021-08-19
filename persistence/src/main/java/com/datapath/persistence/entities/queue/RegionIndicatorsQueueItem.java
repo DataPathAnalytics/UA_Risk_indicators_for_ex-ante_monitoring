@@ -4,6 +4,7 @@ import lombok.Data;
 import lombok.ToString;
 
 import javax.persistence.*;
+import java.time.ZonedDateTime;
 
 @Data
 @Entity
@@ -44,5 +45,8 @@ public class RegionIndicatorsQueueItem {
 
     @Column(name = "risk_stage")
     private String riskStage;
-}
 
+    @Column(name = "date_modified")
+    private ZonedDateTime dateModified;
+
+}

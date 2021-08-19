@@ -1,17 +1,41 @@
 package com.datapath.integration.parsers.impl;
 
+import java.io.IOException;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import com.datapath.integration.parsers.exceptions.TenderDateNotFoundException;
 import com.datapath.integration.parsers.exceptions.TenderValidationException;
 import com.datapath.integration.utils.DateUtils;
 import com.datapath.integration.utils.JsonUtils;
-import com.datapath.persistence.entities.*;
+import com.datapath.persistence.entities.Award;
+import com.datapath.persistence.entities.Bid;
+import com.datapath.persistence.entities.Cancellation;
+import com.datapath.persistence.entities.Complaint;
+import com.datapath.persistence.entities.Document;
+import com.datapath.persistence.entities.EligibilityDocument;
+import com.datapath.persistence.entities.FinancialDocument;
+import com.datapath.persistence.entities.Lot;
+import com.datapath.persistence.entities.ProcuringEntity;
+import com.datapath.persistence.entities.Qualification;
+import com.datapath.persistence.entities.Question;
+import com.datapath.persistence.entities.Supplier;
+import com.datapath.persistence.entities.Tender;
+import com.datapath.persistence.entities.TenderContract;
+import com.datapath.persistence.entities.TenderData;
+import com.datapath.persistence.entities.TenderItem;
+import com.datapath.persistence.entities.TenderPlan;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import java.io.IOException;
-import java.time.ZonedDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
 
 public class TenderParser {
 
@@ -58,7 +82,7 @@ public class TenderParser {
         tenderParser.defineAutocreatedLot();
         tenderParser.parseProcuringEntity();
         tenderParser.parseTender();
-        tenderParser.parseTenderData();
+//        tenderParser.parseTenderData();
         tenderParser.parseTenderComplaints();
         tenderParser.parseTenderDocuments();
         tenderParser.parseTenderEligibilityDocuments();
@@ -78,7 +102,7 @@ public class TenderParser {
     }
 
     public Tender buildTenderEntity() {
-        tenderData.setTender(tender);
+//        tenderData.setTender(tender);
         tenderAwards.forEach(award -> award.setTender(tender));
         tenderItems.forEach(items -> items.setTender(tender));
         tenderLots.forEach(lot -> lot.setTender(tender));
@@ -91,7 +115,7 @@ public class TenderParser {
         tender.setEligibilityDocuments(tenderEligibilityDocuments);
         tender.setFinancialDocuments(tenderFinancialDocuments);
         tender.setAwards(tenderAwards);
-        tender.setData(tenderData);
+//        tender.setData(tenderData);
         tender.setItems(tenderItems);
         tender.setTenderContracts(tenderContracts);
         tender.setBids(tenderBids);
@@ -104,7 +128,7 @@ public class TenderParser {
             contract.setTender(tender);
             tender.getAwards().forEach(award -> {
                 if (award.getOuterId().equals(contract.getAwardId())) {
-                    award.setTenderContract(contract);
+                    award.getTenderContracts().add(contract);
                     contract.setAward(award);
                     if (contract.getSupplier() != null) {
                         if (contract.getSupplier().equals(award.getSupplier())) {
@@ -740,6 +764,7 @@ public class TenderParser {
             award.setLotId(lotId);
             award.setComplaints(complaints);
             award.setBidId(bidId);
+            award.setTenderContracts(new ArrayList<>());
 
             if (supplier != null) {
                 award.setSupplierIdentifierId(supplier.getIdentifierId());
@@ -835,6 +860,7 @@ public class TenderParser {
         for (JsonNode bidNode : node) {
             String outerId = bidNode.at("/id").asText();
             String status = bidNode.at("/status").asText();
+            Double amount = JsonUtils.getDouble(bidNode, "/value/amount");
 
             List<String> relatedLots = new ArrayList<>();
             if (hasAutocreatedLot) {
@@ -873,6 +899,7 @@ public class TenderParser {
 
             bid.setOuterId(outerId);
             bid.setStatus(status);
+            bid.setAmount(amount);
             bid.setRelatedLots(relatedLots);
             bid.setLots(new ArrayList<>());
 
@@ -934,7 +961,7 @@ public class TenderParser {
             supplier.setIdentifierId(id);
             supplier.setIdentifierLegalName(legalName);
             supplier.setIdentifierScheme(scheme);
-            supplier.setTelephone(telephone);
+            supplier.setTelephone(StringUtils.substring(telephone, 0, 2000));
             supplier.setEmail(email);
         }
         return supplier;

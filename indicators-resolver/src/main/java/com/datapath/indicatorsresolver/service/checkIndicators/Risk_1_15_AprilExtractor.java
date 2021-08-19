@@ -11,10 +11,10 @@ import org.springframework.stereotype.Service;
 import java.time.Period;
 import java.time.ZonedDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static java.util.stream.Collectors.toList;
 
 
 @Service
@@ -139,12 +139,12 @@ public class Risk_1_15_AprilExtractor extends BaseExtractor {
                     if (nonNull(tenderDocsFormats)) {
                         if (!tenderDocsFormats.stream()
                                 .filter(docFormat -> !docFormat.equals("application/pkcs7-signature"))
-                                .collect(Collectors.toList()).isEmpty()) {
+                                .collect(toList()).isEmpty()) {
                             indicatorValue = NOT_RISK;
                         } else {
                             if (isNull(contractDocsFormats) || contractDocsFormats.stream()
                                     .filter(docFormat -> !docFormat.equals("application/pkcs7-signature"))
-                                    .collect(Collectors.toList()).isEmpty()) {
+                                    .collect(toList()).isEmpty()) {
                                 indicatorValue = RISK;
                             } else {
                                 indicatorValue = NOT_RISK;
@@ -156,7 +156,7 @@ public class Risk_1_15_AprilExtractor extends BaseExtractor {
                         } else {
                             if (contractDocsFormats.stream()
                                     .filter(docFormat -> !docFormat.equals("application/pkcs7-signature"))
-                                    .collect(Collectors.toList()).isEmpty()) {
+                                    .collect(toList()).isEmpty()) {
                                 indicatorValue = RISK;
                             } else {
                                 indicatorValue = NOT_RISK;
@@ -176,7 +176,8 @@ public class Risk_1_15_AprilExtractor extends BaseExtractor {
             if (!resultMap.get(tenderId).containsKey(indicatorValue)) {
                 resultMap.get(tenderId).put(indicatorValue, new ArrayList<>());
             }
-            resultMap.get(tenderId).get(indicatorValue).add(lotId);
+
+            addPriorityLotIndicatorValue(indicatorValue, lotId, resultMap.get(tenderId));
         }
         resultMap.forEach((tenderOuterId, value) -> {
             TenderDimensions tenderDimensions = new TenderDimensions(tenderOuterId);

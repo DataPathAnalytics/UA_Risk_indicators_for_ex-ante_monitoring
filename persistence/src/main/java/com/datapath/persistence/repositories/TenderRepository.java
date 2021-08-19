@@ -1334,6 +1334,46 @@ public interface TenderRepository extends PagingAndSortingRepository<Tender, Lon
             "WHERE tender.outer_id = ANY (SELECT regexp_split_to_table(?1, ','))", nativeQuery = true)
     List<Object[]> getTendersCommonInfo(String tenderIds);
 
+    @Query(value = "SELECT tender.outer_id,\n" +
+            "       tender.tender_id,\n" +
+            "       tender.status,\n" +
+            "       tender.procurement_method_type,\n" +
+            "       tender.amount,\n" +
+            "       tender.currency,\n" +
+            "       tender.tv_tender_cpv,\n" +
+            "       cpv.name,\n" +
+            "       cpv2.cpv                                                                                             cpv2,\n" +
+            "       cpv2.name                                                                                            cpv2_name,\n" +
+            "       tender.tv_procuring_entity,\n" +
+            "       tender.procuring_entity_kind,\n" +
+            "       procuring_entity.identifier_legal_name,\n" +
+            "       indicators_queue_region.correct_name,\n" +
+            "       (SELECT count(*) > 0\n" +
+            "        FROM (SELECT *\n" +
+            "              FROM award\n" +
+            "                       JOIN complaint c2 ON award.id = c2.award_id\n" +
+            "              WHERE award.tender_id = tender.id\n" +
+            "                AND c2.complaint_type = 'complaint'\n" +
+            "                AND c2.status IN ('accepted', 'declined', 'satisfied', 'stopping')) a),\n" +
+            "       tender.title,\n" +
+            "       (SELECT COUNT(id) > 0\n" +
+            "        FROM complaint\n" +
+            "        WHERE tender_id = tender.id\n" +
+            "          AND complaint_type = 'complaint'\n" +
+            "          AND status IN ('accepted', 'declined', 'satisfied', 'stopping'))                                  has_tender_complaints,\n" +
+            "       region_indicators_queue_item.materiality_score,\n" +
+            "       tender.procurement_method_rationale,\n" +
+            "       tender.main_procurement_category," +
+            "       tender.date_modified\n" +
+            "FROM tender\n" +
+            "         JOIN procuring_entity ON tender.procuring_entity_id = procuring_entity.id\n" +
+            "         LEFT JOIN cpv_catalogue cpv ON tender.tv_tender_cpv = cpv.cpv\n" +
+            "         LEFT JOIN cpv_catalogue cpv2 ON cpv.cpv2 = cpv2.cpv\n" +
+            "         LEFT JOIN region_indicators_queue_item ON tender.outer_id = region_indicators_queue_item.tender_outer_id\n" +
+            "         LEFT JOIN indicators_queue_region ON procuring_entity.region = indicators_queue_region.original_name\n" +
+            "WHERE tender.outer_id = ANY (SELECT regexp_split_to_table(?1, ','))", nativeQuery = true)
+    List<Object[]> getTendersInfo(String tenderIds);
+
     @Query(value = "SELECT t.*\n" +
             "FROM tender t\n" +
             "JOIN procuring_entity pe ON t.procuring_entity_id = pe.id\n" +

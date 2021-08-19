@@ -18,7 +18,7 @@ import java.util.List;
                 @Index(columnList = "lot_id", name = "award_lot_id_idx"),
                 @Index(columnList = "bid_id", name = "award_bid_id_idx"),
         })
-@ToString(exclude = {"tender", "tenderContract", "lot", "complaints", "documents"})
+@ToString(exclude = {"tender", "tenderContracts", "lot", "complaints", "documents"})
 public class Award {
 
     @Id
@@ -56,8 +56,8 @@ public class Award {
     @Column(name = "supplier_telephone")
     private String supplierTelephone;
 
-    @OneToOne(mappedBy = "award", cascade = CascadeType.ALL)
-    private TenderContract tenderContract;
+    @OneToMany(mappedBy = "award", cascade = CascadeType.ALL)
+    private List<TenderContract> tenderContracts;
 
     @OneToMany(mappedBy = "award", cascade = CascadeType.ALL)
     private List<Document> documents;

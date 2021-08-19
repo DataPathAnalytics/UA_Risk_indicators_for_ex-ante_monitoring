@@ -136,8 +136,8 @@ public class Risk_2_1_2_ApilExtractor extends BaseExtractor {
             if (!resultMap.get(tenderId).containsKey(indicatorValue)) {
                 resultMap.get(tenderId).put(indicatorValue, new ArrayList<>());
             }
-            resultMap.get(tenderId).get(indicatorValue).add(lotId);
 
+            addPriorityLotIndicatorValue(indicatorValue, lotId, resultMap.get(tenderId));
         }
 
         resultMap.forEach((tenderOuterId, value) -> {

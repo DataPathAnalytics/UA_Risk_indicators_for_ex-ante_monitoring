@@ -26,6 +26,7 @@ import java.sql.Timestamp;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
@@ -64,6 +65,13 @@ public class BaseExtractor {
     protected static final List<String> weekEndDays = Arrays.asList("SATURDAY", "SUNDAY");
 
     protected final String COMMA_SEPARATOR = ",";
+
+    private final Map<Integer, Integer> INDICATOR_VALUE_PRIORITIES = new HashMap<Integer, Integer>() {{
+        put(RISK, 1);
+        put(CONDITIONS_NOT_MET, 2);
+        put(IMPOSSIBLE_TO_DETECT, 3);
+        put(NOT_RISK, 4);
+    }};
 
     protected AwardRepository awardRepository;
     protected ContractRepository contractRepository;
@@ -284,9 +292,9 @@ public class BaseExtractor {
 
 
     protected List<String> findTenders(ZonedDateTime date,
-                             List<String> procedureStatuses,
-                             List<String> procedureTypes,
-                             List<String> procuringEntityKind) {
+                                       List<String> procedureStatuses,
+                                       List<String> procedureTypes,
+                                       List<String> procuringEntityKind) {
         if (!procedureStatuses.isEmpty() && !procedureTypes.isEmpty()) {
             return tenderRepository.findTenderIdByProcedureStatusAndProcedureType(date, procedureStatuses,
                     procedureTypes, procuringEntityKind);
@@ -509,5 +517,38 @@ public class BaseExtractor {
 
     protected Set<String> getOuterIds(List<Tender> tenders) {
         return tenders.stream().map(Tender::getOuterId).collect(toSet());
+    }
+
+    protected void addPriorityLotIndicatorValue(Integer indicatorValue, String lotId, Map<Integer, List<String>> tenderLotsIndicators) {
+        if (tenderLotsIndicators.get(indicatorValue).contains(lotId)) return;
+
+        int currentPriority = INDICATOR_VALUE_PRIORITIES.get(indicatorValue);
+
+        List<Integer> higherPriorityIndicatorValues = filterPriorityMapBy(e -> e.getValue() < currentPriority);
+        for (Integer value : higherPriorityIndicatorValues) {
+            if (tenderLotsIndicators.containsKey(value) && tenderLotsIndicators.get(value).contains(lotId)) return;
+        }
+
+        List<Integer> lowerPriorityIndicatorValues = filterPriorityMapBy(e -> e.getValue() > currentPriority);
+        for (Integer value : lowerPriorityIndicatorValues) {
+            if (tenderLotsIndicators.containsKey(value) && tenderLotsIndicators.get(value).contains(lotId)) {
+                List<String> clearedLotIds = tenderLotsIndicators.get(value)
+                        .stream()
+                        .filter(id -> !id.equals(lotId))
+                        .collect(toList());
+
+                tenderLotsIndicators.put(value, clearedLotIds);
+            }
+        }
+
+        tenderLotsIndicators.get(indicatorValue).add(lotId);
+    }
+
+    private List<Integer> filterPriorityMapBy(Predicate<Map.Entry<Integer, Integer>> predicate) {
+        return INDICATOR_VALUE_PRIORITIES.entrySet()
+                .stream()
+                .filter(predicate)
+                .map(Map.Entry::getKey)
+                .collect(toList());
     }
 }

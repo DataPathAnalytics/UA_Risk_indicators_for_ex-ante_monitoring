@@ -133,10 +133,6 @@ public class ProzorroContractUpdatesManager implements ContractUpdatesManager {
         changeServiceStatus(ServiceStatus.ENABLED);
     }
 
-    @Override
-    public void removeExpiredContacts() {
-
-    }
 
     @Override
     public void changeServiceStatus(ServiceStatus serviceStatus) {
@@ -148,12 +144,6 @@ public class ProzorroContractUpdatesManager implements ContractUpdatesManager {
         return serviceStatus;
     }
 
-    @Override
-    public boolean isUpdatesAvailable() {
-        boolean updatesAvailable = this.updatesAvailable;
-        setUpdatesAvailability(false);
-        return updatesAvailable;
-    }
 
     @Override
     public void setUpdatesAvailability(boolean availability) {
