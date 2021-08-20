@@ -1,5 +1,13 @@
 Release notes
 
+#### Version 2.3.1
+
+Added new handler for 1-11 indicator. 
+
+Added gitignore 
+
+Added  classes for working with auctions and bid-lots
+
 #### Version 2.3.0
 
 Added the logic to process phone numbers due to incorrectly used a phone number field. Some users add more than 1000 characters.
