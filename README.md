@@ -1,4 +1,7 @@
 Release notes
+#### Version 2.3.2
+
+The response code was changed from 500 to 404 for tenders that don’t have any risk indicators
 
 #### Version 2.3.1
 

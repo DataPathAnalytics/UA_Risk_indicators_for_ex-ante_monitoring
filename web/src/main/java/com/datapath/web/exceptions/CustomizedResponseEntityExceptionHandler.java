@@ -1,6 +1,7 @@
 package com.datapath.web.exceptions;
 
 import com.datapath.web.api.rest.exceptions.ResourceNotFoundException;
+import com.datapath.web.api.rest.exceptions.TenderNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.HttpStatus;
@@ -42,8 +43,8 @@ public class CustomizedResponseEntityExceptionHandler {
         return new ResponseEntity<>(errorDetails, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    @ExceptionHandler({ResourceNotFoundException.class, RecordNotFoundException.class})
-    public final ResponseEntity<ErrorDetails> handleUserNotFoundException(RecordNotFoundException ex, WebRequest request) {
+    @ExceptionHandler({ResourceNotFoundException.class, RecordNotFoundException.class, TenderNotFoundException.class})
+    public final ResponseEntity<ErrorDetails> handleUserNotFoundException(RuntimeException ex, WebRequest request) {
         log.error(ex.getMessage(), ex);
         ErrorDetails errorDetails = new ErrorDetails(HttpStatus.NOT_FOUND.toString(), new Date(), ex.getLocalizedMessage(),
                 request.getDescription(true), ex.getClass().getSimpleName());
