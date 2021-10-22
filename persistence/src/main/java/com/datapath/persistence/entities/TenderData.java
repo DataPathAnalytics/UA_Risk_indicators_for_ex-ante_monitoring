@@ -21,4 +21,7 @@ public class TenderData {
     @MapsId
     @JoinColumn(name = "id")
     private Tender tender;
+
+    @Column
+    private Long tenderId;
 }
